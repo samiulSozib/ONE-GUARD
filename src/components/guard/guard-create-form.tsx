@@ -17,6 +17,7 @@ import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelSelect } from "../ui/floating-select"
 import { Textarea } from "../ui/textarea"
 import { Plus, UploadCloud } from "lucide-react"
+import { DialogActionFooter } from "../shared/dialog-action-footer"
 
 interface LiveMapDialogProps {
     trigger: ReactNode
@@ -207,16 +208,7 @@ export function GuardCreateForm({ trigger, isOpen, onOpenChange }: LiveMapDialog
                 </div>
 
                 {/* Footer Actions */}
-                <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
-                    <DialogClose asChild>
-                        <Button variant="outline" size="lg" type="button" className="w-full sm:w-auto dark:border-red-600">
-                            Cancel
-                        </Button>
-                    </DialogClose>
-                    <Button type="submit" size="lg" variant="default" className="w-full sm:w-auto bg-green-600 dark:bg-gray-700 dark:text-white">
-                        Add
-                    </Button>
-                </DialogFooter>
+                <DialogActionFooter/>
             </DialogContent>
         </Dialog>
     )

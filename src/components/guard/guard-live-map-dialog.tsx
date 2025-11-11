@@ -11,7 +11,7 @@ import Image from "next/image"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group"
 import { SearchIcon, MapPin, Phone, Mail, Calendar, Clock, AlertCircle, MessageCircle, AlertTriangle } from "lucide-react"
-import { GuardLiveCard } from "../cards/guard-live-card"
+import { GuardLiveCard } from "./guard-live-card"
 import { Card, CardContent, CardHeader } from "../ui/card"
 import { useAlert } from "../contexts/AlertContext"
 

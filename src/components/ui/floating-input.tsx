@@ -6,23 +6,23 @@ import { Label } from '@/components/ui/label';
 export interface FloatingInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   prefixIcon?: React.ReactNode;
-  postfixIcon?: React.ReactNode;
+  postfixIcon?: React.ReactNode; // suffix icon
   onPrefixClick?: () => void;
-  onPostfixClick?: () => void;
-  inputSize?: 'sm' | 'md' | 'lg'; // Renamed from 'size' to 'inputSize'
+  onPostfixClick?: () => void; // suffix click
+  inputSize?: 'sm' | 'md' | 'lg';
 }
 
 const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps>(
-  ({ 
-    className, 
-    id, 
-    label, 
-    prefixIcon, 
-    postfixIcon, 
-    onPrefixClick, 
+  ({
+    className,
+    id,
+    label,
+    prefixIcon,
+    postfixIcon,
+    onPrefixClick,
     onPostfixClick,
-    inputSize = 'md', // Updated prop name
-    ...props 
+    inputSize = 'md',
+    ...props
   }, ref) => {
     const generatedId = React.useId();
     const inputId = id || generatedId;
@@ -33,19 +33,22 @@ const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps
         input: 'h-9 text-sm',
         label: 'text-xs scale-75',
         icon: 'text-sm',
-        padding: prefixIcon ? 'pl-8' : '',
+        paddingLeft: prefixIcon ? 'pl-8' : '',
+        paddingRight: postfixIcon ? 'pr-8' : '',
       },
       md: {
         input: 'h-11 text-base',
         label: 'text-sm scale-75',
         icon: 'text-base',
-        padding: prefixIcon ? 'pl-10' : '',
+        paddingLeft: prefixIcon ? 'pl-10' : '',
+        paddingRight: postfixIcon ? 'pr-10' : '',
       },
       lg: {
         input: 'h-14 text-lg',
         label: 'text-base scale-75',
         icon: 'text-lg',
-        padding: prefixIcon ? 'pl-12' : '',
+        paddingLeft: prefixIcon ? 'pl-12' : '',
+        paddingRight: postfixIcon ? 'pr-12' : '',
       }
     };
 
@@ -53,46 +56,50 @@ const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps
       <div className="relative">
         {/* Prefix Icon */}
         {prefixIcon && (
-          <div 
+          <div
             className={cn(
               "absolute left-3 top-1/2 transform -translate-y-1/2 z-10",
               sizeConfig[inputSize].icon,
-              onPrefixClick ? "cursor-pointer hover:text-primary transition-colors" : "pointer-events-none text-muted-foreground"
+              onPrefixClick
+                ? "cursor-pointer hover:text-primary transition-colors"
+                : "pointer-events-none text-muted-foreground"
             )}
             onClick={onPrefixClick}
           >
             {prefixIcon}
           </div>
         )}
-        
-        <Input 
-          placeholder=" " 
+
+        <Input
+          placeholder=" "
           className={cn(
             'peer block w-full appearance-none',
             sizeConfig[inputSize].input,
-            prefixIcon && sizeConfig[inputSize].padding,
-            postfixIcon && 'pr-10',
+            sizeConfig[inputSize].paddingLeft,
+            sizeConfig[inputSize].paddingRight,
             className
-          )} 
-          ref={ref} 
-          id={inputId} 
-          {...props} 
+          )}
+          ref={ref}
+          id={inputId}
+          {...props}
         />
-        
-        {/* Postfix Icon */}
+
+        {/* Postfix / Suffix Icon */}
         {postfixIcon && (
-          <div 
+          <div
             className={cn(
               "absolute right-3 top-1/2 transform -translate-y-1/2 z-10",
               sizeConfig[inputSize].icon,
-              onPostfixClick ? "cursor-pointer hover:text-primary transition-colors" : "pointer-events-none text-muted-foreground"
+              onPostfixClick
+                ? "cursor-pointer hover:text-primary transition-colors"
+                : "pointer-events-none text-muted-foreground"
             )}
             onClick={onPostfixClick}
           >
             {postfixIcon}
           </div>
         )}
-        
+
         <Label
           htmlFor={inputId}
           className={cn(
@@ -110,8 +117,9 @@ const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps
         </Label>
       </div>
     );
-  },
+  }
 );
+
 FloatingLabelInput.displayName = 'FloatingLabelInput';
 
 export { FloatingLabelInput };

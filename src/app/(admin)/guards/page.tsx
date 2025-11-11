@@ -1,7 +1,7 @@
 "use client";
 
-import GuardTopCard from "@/components/cards/guard-top-card";
-import { GuardDataTable } from "@/components/dataviews/guard-data-table";
+import GuardTopCard from "@/components/guard/guard-top-card";
+import { GuardDataTable } from "@/components/guard/guard-data-table";
 
 export default function page() {
   return (

@@ -1,10 +1,10 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { HomeInfo } from "@/components/cards/home-info";
-import { ClientGurdRequestOverview } from "@/components/dataviews/home-client-guard-request-overview";
-import { OnGoingShifts } from "@/components/dataviews/home-ongoing-shifts";
-import { ClientReviewCard } from "@/components/cards/home-client-review";
+import { HomeInfo } from "@/components/home/home-info";
+import { ClientGurdRequestOverview } from "@/components/home/home-client-guard-request-overview";
+import { OnGoingShifts } from "@/components/home/home-ongoing-shifts";
+import { ClientReviewCard } from "@/components/home/home-client-review";
 
 export default function Page() {
   return (

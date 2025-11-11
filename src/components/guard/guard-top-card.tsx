@@ -4,8 +4,8 @@ import { ButtonGroup } from '../ui/button-group'
 import { Button } from '../ui/button'
 import { IconBrandGoogleMaps } from '@tabler/icons-react'
 import { PlusIcon, MapPin, Users, User } from 'lucide-react'
-import { GuardLiveMap } from '../dialog/guard-live-map-dialog'
-import { GuardCreateForm } from '../forms/guard-create-form'
+import { GuardLiveMap } from './guard-live-map-dialog'
+import { GuardCreateForm } from './guard-create-form'
 
 const GuardTopCard = () => {
     return (
