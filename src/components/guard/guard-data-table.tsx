@@ -104,7 +104,7 @@ export function GuardDataTable() {
                 </CardTitle>
 
                 <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
-                    <Checkbox id="terms" />
+                    <Checkbox id="terms" className="dark:bg-white dark:border-black"/>
                     <Label htmlFor="terms">Select</Label>
                 </CardTitle>
             </div>

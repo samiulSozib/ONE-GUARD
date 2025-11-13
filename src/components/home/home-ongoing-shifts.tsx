@@ -63,7 +63,7 @@ export function OnGoingShifts() {
                     <Table>
                         <TableBody>
                             {requests.map((req) => (
-                                <TableRow key={req.id} className="hover:bg-gray-50">
+                                <TableRow key={req.id} className="hover:bg-gray-500">
                                     {/* Client Info */}
                                     <TableCell>
                                         <div className="flex items-center gap-3">
