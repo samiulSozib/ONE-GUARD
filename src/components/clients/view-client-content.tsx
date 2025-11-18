@@ -15,6 +15,7 @@ import {
 import { ViewClientTopCardProps } from "@/app/types/client";
 import PersonalInformation from "./tabContents/personal-information";
 import { Message } from "./tabContents/message";
+import { Site } from "./tabContents/site";
 
 
 export default function ViewClientContent({ client }: ViewClientTopCardProps) {
@@ -121,8 +122,8 @@ export default function ViewClientContent({ client }: ViewClientTopCardProps) {
               <PersonalInformation/>
             </TabsContent>
 
-            <TabsContent value="availability" className="m-2">
-              {/* <Availability/> */}
+            <TabsContent value="sites" className="m-2">
+              <Site/>
             </TabsContent>
 
             <TabsContent value="message" className="m-2">

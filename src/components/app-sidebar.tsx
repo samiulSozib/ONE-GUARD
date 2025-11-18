@@ -69,6 +69,54 @@ const data = {
       icon: Bot,
       
     },
+    {
+      title: "Leave",
+      url: "/leave",
+      icon: Bot,
+      
+    },
+     {
+      title: "Expense",
+      url: "/expense",
+      icon: Bot,
+      
+    },
+    {
+      title: "Complainant",
+      url: "/complainant",
+      icon: Bot,
+      
+    },
+     {
+      title: "Contacts",
+      url: "/contacts",
+      icon: Bot,
+      
+    },
+     {
+      title: "Notes",
+      url: "/notes",
+      icon: Bot,
+      
+    },
+    {
+      title: "Guard Type",
+      url: "/guard-type",
+      icon: Bot,
+      
+    },
+    {
+      title: "Duty List",
+      url: "/duty",
+      icon: Bot,
+      
+    },
+    {
+      title: "Duty Time Type",
+      url: "/duty-time-type",
+      icon: Bot,
+      
+    },
    
   ],
   projects: [

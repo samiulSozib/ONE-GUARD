@@ -5,6 +5,7 @@ import { IconBrandGoogleMaps } from "@tabler/icons-react";
 import { ChevronLeft, Edit2Icon, PlusIcon } from "lucide-react";
 import { ViewGuardTopCardProps } from "@/app/types/guard";
 import { ViewClientTopCardProps } from "@/app/types/client";
+import { AddSiteForm } from "./add-site-form";
 
 
 
@@ -43,7 +44,7 @@ const ViewClientTopCard = ({ client }: ViewClientTopCardProps) => {
             </Button>
           {/* } /> */}
 
-          {/* <AddTrainingForm trigger={ */}
+          <AddSiteForm trigger={
             <Button
               className="flex-shrink-0 justify-center text-xs sm:text-sm bg-[#5F0015] hover:bg-[#7a1a2b] text-white"
               variant="default"
@@ -51,7 +52,7 @@ const ViewClientTopCard = ({ client }: ViewClientTopCardProps) => {
               <PlusIcon/>
               Add New Site
             </Button>
-          {/* } /> */}
+           } /> 
 
           
         </div>
