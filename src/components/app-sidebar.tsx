@@ -117,6 +117,12 @@ const data = {
       icon: Bot,
       
     },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Bot,
+      
+    },
    
   ],
   projects: [
