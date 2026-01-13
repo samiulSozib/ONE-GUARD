@@ -1,9 +1,11 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "./ui/mode-toggle"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group"
-import { Search, Bell, MessageSquare, Plus, Menu, User, Settings, LogOut, EllipsisVertical, Power } from "lucide-react"
+import { Search, Bell, MessageSquare, Plus, Menu, User, Settings, LogOut, EllipsisVertical, Power, PanelLeft, PanelRight, SwitchCamera } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +16,12 @@ import {
 import { useState } from "react"
 import { NotificationPopover } from "./shared/notification-dialog"
 import { useRouter } from 'next/navigation'
+import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider"
 
 export function SiteHeader() {
   const router = useRouter()
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const { activeSidebar, toggleSidebar } = useSidebarToggle()
 
   const handleMessagesClick = () => {
     router.push('/messages')
@@ -41,6 +45,27 @@ export function SiteHeader() {
           </InputGroup>
 
           <div className="ml-auto flex items-center gap-2">
+            {/* Sidebar Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSidebar}
+              className="h-9 gap-1 hidden sm:flex"
+              title={`Switch to ${activeSidebar === "main" ? "Secondary" : "Main"} Sidebar`}
+            >
+              {activeSidebar === "main" ? (
+                <>
+                  <PanelRight className="h-4 w-4" />
+                  <span className="hidden lg:inline">Secondary</span>
+                </>
+              ) : (
+                <>
+                  <PanelLeft className="h-4 w-4" />
+                  <span className="hidden lg:inline">Main</span>
+                </>
+              )}
+            </Button>
+
             <div className="hidden sm:flex items-center gap-1">
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={() => setNotificationOpen(true)}>
                 <NotificationPopover/>
@@ -85,6 +110,25 @@ export function SiteHeader() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  
+                  {/* Sidebar Toggle in Mobile Menu */}
+                  <DropdownMenuItem 
+                    className="flex items-center gap-2" 
+                    onClick={toggleSidebar}
+                  >
+                    {activeSidebar === "main" ? (
+                      <>
+                        <PanelRight className="h-4 w-4" />
+                        Switch to Secondary
+                      </>
+                    ) : (
+                      <>
+                        <PanelLeft className="h-4 w-4" />
+                        Switch to Main
+                      </>
+                    )}
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem className="flex items-center gap-2" onClick={() => setNotificationOpen(true)}>
                     <NotificationPopover/>
                     Notifications

@@ -123,6 +123,12 @@ const data = {
       icon: Bot,
       
     },
+    {
+      title: "Incident",
+      url: "/incident",
+      icon: Bot,
+      
+    },
    
   ],
   projects: [
