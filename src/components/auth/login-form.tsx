@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -8,11 +10,74 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { login } from "@/store/slices/authSlice"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { Loader2 } from "lucide-react"
+import SweetAlertService from "@/lib/sweetAlert"
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { LoginFormData, loginSchema } from "@/lib/validation/auth";
+
+interface LoginFormProps extends React.ComponentProps<"div"> {
+  onSuccess?: () => void;
+}
 
 export function LoginForm({
   className,
+  onSuccess,
   ...props
-}: React.ComponentProps<"div">) {
+}: LoginFormProps) {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const { isLoading } = useAppSelector((state) => state.auth)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    setFocus,
+    reset,
+    clearErrors,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: ""
+    },
+    mode: "onChange"
+  })
+
+  // Clear form errors on mount
+  useEffect(() => {
+    clearErrors()
+    setFocus('email')
+  }, [clearErrors, setFocus])
+
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      const result = await dispatch(login(data))
+
+      if (login.fulfilled.match(result)) {
+        reset()
+
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          // Wait for SweetAlert to finish before redirecting
+          setTimeout(() => {
+            router.push('/')
+          }, 1600); // Wait 1.6 seconds for SweetAlert to complete
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      // Error is handled by Redux slice
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -54,34 +119,28 @@ export function LoginForm({
               Login
             </h2>
 
-            {/* LOGIN TYPE */}
-            <div className="mb-6 flex flex-wrap gap-4 text-sm md:gap-6">
-              <label className="flex items-center gap-2">
-                <input type="radio" name="loginType" defaultChecked />
-                Phone No
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" name="loginType" />
-                ID Number
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" name="loginType" />
-                Card Number
-              </label>
-            </div>
-
-            <form className="flex-1">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex-1">
               <FieldGroup>
+                {/* Email Field */}
                 <Field>
                   <FieldLabel className="sr-only">
-                    ID Number
+                    Email
                   </FieldLabel>
                   <Input
-                    placeholder="ID Number"
-                    className="bg-white text-black"
+                    type="email"
+                    placeholder="Email Address"
+                    className={`bg-white text-black placeholder:text-gray-500 ${errors.email ? 'border-red-500' : ''}`}
+                    {...register('email')}
+                    autoComplete="email"
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-300">
+                      {errors.email.message}
+                    </p>
+                  )}
                 </Field>
 
+                {/* Password Field */}
                 <Field>
                   <FieldLabel className="sr-only">
                     Password
@@ -89,29 +148,140 @@ export function LoginForm({
                   <Input
                     type="password"
                     placeholder="Password"
-                    className="bg-white text-black"
+                    className={`bg-white text-black placeholder:text-gray-500 ${errors.password ? 'border-red-500' : ''}`}
+                    {...register('password')}
+                    autoComplete="current-password"
                   />
+                  {errors.password && (
+                    <p className="mt-1 text-xs text-red-300">
+                      {errors.password.message}
+                    </p>
+                  )}
                 </Field>
 
-                <div className="text-right text-xs">
-                  <a href="#" className="underline">
-                    Forgot your password?
-                  </a>
-                </div>
+                {/* Forgot Password Link */}
+                {/* <div className="text-right text-xs">
+                  <button
+                    type="button"
+                    className="underline hover:text-[#b9a58b] transition-colors"
+                    onClick={async () => {
+                      const { value: email } = await SweetAlertService.info({
+                        title: 'Reset Password',
+                        input: 'email',
+                        inputLabel: 'Enter your email address',
+                        inputPlaceholder: 'Enter your email',
+                        inputAttributes: {
+                          autocapitalize: 'off'
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'Send Reset Link',
+                        confirmButtonColor: '#6b0016',
+                        cancelButtonText: 'Cancel',
+                        cancelButtonColor: '#6b7280',
+                        inputValidator: (value) => {
+                          if (!value) {
+                            return 'Please enter your email address!'
+                          }
+                          if (!/^\S+@\S+\.\S+$/.test(value)) {
+                            return 'Please enter a valid email address!'
+                          }
+                          return null
+                        }
+                      })
 
+                      if (email) {
+                        // Call your API to send reset password email
+                        try {
+                          // api.post('/forgot-password', { email })
+                          await SweetAlertService.success(
+                            'Reset Link Sent!',
+                            'Check your email for password reset instructions.',
+                            {
+                              confirmButtonColor: '#6b0016',
+                            }
+                          )
+                        } catch (error) {
+                          SweetAlertService.error(
+                            'Failed to Send',
+                            'Please try again or contact support.',
+                            {
+                              confirmButtonColor: '#6b0016',
+                            }
+                          )
+                        }
+                      }
+                    }}
+                  >
+                    Forgot your password?
+                  </button>
+                </div> */}
+
+                {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="mt-4 w-full bg-[#b9a58b] text-black hover:bg-[#a89478]"
+                  disabled={isLoading || !isValid}
+                  className="mt-4 w-full bg-[#b9a58b] text-black hover:bg-[#a89478] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Enter
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    'Enter'
+                  )}
                 </Button>
 
-                <p className="mt-6 text-center text-xs text-neutral-200">
+                {/* Support Text */}
+                {/* <p className="mt-6 text-center text-xs text-neutral-200">
                   Having trouble logging in?{" "}
-                  <a href="#" className="underline">
+                  <button
+                    type="button"
+                    className="underline hover:text-[#b9a58b] transition-colors"
+                    onClick={async () => {
+                      const { value: formValues } = await SweetAlertService.fire({
+                        title: 'Contact Support',
+                        html: `
+                          <input id="swal-input1" class="swal2-input" placeholder="Your Name">
+                          <input id="swal-input2" class="swal2-input" placeholder="Your Email">
+                          <textarea id="swal-input3" class="swal2-textarea" placeholder="Describe your issue"></textarea>
+                        `,
+                        focusConfirm: false,
+                        preConfirm: () => {
+                          const name = (document.getElementById('swal-input1') as HTMLInputElement).value
+                          const email = (document.getElementById('swal-input2') as HTMLInputElement).value
+                          const issue = (document.getElementById('swal-input3') as HTMLTextAreaElement).value
+                          
+                          if (!name || !email || !issue) {
+                            SweetAlertService.showValidationMessage('Please fill all fields')
+                            return false
+                          }
+                          
+                          return { name, email, issue }
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'Send Message',
+                        confirmButtonColor: '#6b0016',
+                        cancelButtonText: 'Cancel',
+                        cancelButtonColor: '#6b7280',
+                      })
+
+                      if (formValues) {
+                        // Handle support request submission
+                        await SweetAlertService.success(
+                          'Message Sent!',
+                          'Our support team will contact you shortly.',
+                          {
+                            timer: 2000,
+                            showConfirmButton: false,
+                          }
+                        )
+                      }
+                    }}
+                  >
                     Contact Support
-                  </a>
-                </p>
+                  </button>
+                </p> */}
               </FieldGroup>
             </form>
           </div>

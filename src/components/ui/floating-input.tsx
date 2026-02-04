@@ -10,6 +10,7 @@ export interface FloatingInputProps extends React.InputHTMLAttributes<HTMLInputE
   onPrefixClick?: () => void;
   onPostfixClick?: () => void; // suffix click
   inputSize?: 'sm' | 'md' | 'lg';
+  error?: string; // Add error prop
 }
 
 const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps>(
@@ -22,6 +23,7 @@ const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps
     onPrefixClick,
     onPostfixClick,
     inputSize = 'md',
+    error, // Add error to destructuring
     ...props
   }, ref) => {
     const generatedId = React.useId();
@@ -77,6 +79,7 @@ const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps
             sizeConfig[inputSize].input,
             sizeConfig[inputSize].paddingLeft,
             sizeConfig[inputSize].paddingRight,
+            error && 'border-red-500 focus:ring-red-500 focus:border-red-500', // Add error styles
             className
           )}
           ref={ref}
@@ -111,10 +114,18 @@ const FloatingLabelInput = React.forwardRef<HTMLInputElement, FloatingInputProps
             sizeConfig[inputSize].label,
             prefixIcon && 'left-8',
             'peer-placeholder-shown:text-muted-foreground',
+            error && 'text-red-500 peer-focus:text-red-500', // Add error styles to label
           )}
         >
           {label}
         </Label>
+
+        {/* Error message display */}
+        {error && (
+          <p className="mt-1 text-sm text-red-500">
+            {error}
+          </p>
+        )}
       </div>
     );
   }

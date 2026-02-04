@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/sidebar";
 import { AlertProvider } from "@/components/contexts/AlertContext";
 import { SidebarToggleProvider } from "@/components/providers/sidebar-toggle-provider";
+import { Provider } from "react-redux";
+import { store } from "@/store/store";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,45 +44,50 @@ export default function RootLayout({
   const isAuthPage = noLayoutRoutes.includes(pathname);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {isAuthPage ? (
-            <AlertProvider>
-              <main className="flex flex-1 flex-col h-full">
-                {children}
-              </main>
-            </AlertProvider>
-          ) : (
-            <SidebarToggleProvider>
-              <SidebarProvider
-                style={
-                  {
-                    "--sidebar-width": "calc(var(--spacing) * 72)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                  } as React.CSSProperties
-                }
-              >
-                <ConditionalSidebar />
-                <SidebarInset>
-                  <SiteHeader />
-                  <AlertProvider>
-                    <main className="flex flex-1 flex-col h-full">
-                      {children}
-                    </main>
-                  </AlertProvider>
-                </SidebarInset>
-              </SidebarProvider>
-            </SidebarToggleProvider>
-          )}
-        </ThemeProvider>
+        {/* Wrap EVERYTHING in Redux Provider */}
+        <Provider store={store}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SweetAlertProvider/>
+            {isAuthPage ? (
+              <AlertProvider>
+                <main className="flex flex-1 flex-col h-full">
+                  {children}
+                </main>
+              </AlertProvider>
+            ) : (
+              <SidebarToggleProvider>
+                <SidebarProvider
+                  style={
+                    {
+                      "--sidebar-width": "calc(var(--spacing) * 72)",
+                      "--header-height": "calc(var(--spacing) * 12)",
+                    } as React.CSSProperties
+                  }
+                >
+                  <ConditionalSidebar />
+                  <SidebarInset>
+                    <SiteHeader />
+                    <AlertProvider>
+                      
+                      <main className="flex flex-1 flex-col h-full">
+                        {children}
+                      </main>
+                    </AlertProvider>
+                  </SidebarInset>
+                </SidebarProvider>
+              </SidebarToggleProvider>
+            )}
+          </ThemeProvider>
+        </Provider>
       </body>
     </html>
   );
@@ -97,3 +104,4 @@ function ConditionalSidebar() {
 
 // Move the useSidebarToggle import inside the function
 import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider";
+import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";

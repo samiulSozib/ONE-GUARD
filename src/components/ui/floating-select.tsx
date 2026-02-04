@@ -10,6 +10,7 @@ export interface FloatingSelectProps extends React.SelectHTMLAttributes<HTMLSele
   onPostfixClick?: () => void;
   inputSize?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
+  error?: string; // Added error prop
 }
 
 const FloatingLabelSelect = React.forwardRef<HTMLSelectElement, FloatingSelectProps>(
@@ -23,6 +24,7 @@ const FloatingLabelSelect = React.forwardRef<HTMLSelectElement, FloatingSelectPr
     onPostfixClick,
     inputSize = 'md',
     children,
+    error, // Added error to destructuring
     ...props 
   }, ref) => {
     const generatedId = React.useId();
@@ -74,6 +76,7 @@ const FloatingLabelSelect = React.forwardRef<HTMLSelectElement, FloatingSelectPr
             sizeConfig[inputSize].input,
             sizeConfig[inputSize].padding,
             postfixIcon && 'pr-10',
+            error && 'border-red-500 focus-visible:ring-red-500', // Added error styles
             className
           )}
           ref={ref}
@@ -123,11 +126,19 @@ const FloatingLabelSelect = React.forwardRef<HTMLSelectElement, FloatingSelectPr
             prefixIcon && 'left-8',
             'peer-placeholder-shown:text-muted-foreground',
             // For select, we need to check if a value is selected instead of placeholder
-            'peer-not-placeholder-shown:top-2 peer-not-placeholder-shown:-translate-y-4 peer-not-placeholder-shown:scale-75'
+            'peer-not-placeholder-shown:top-2 peer-not-placeholder-shown:-translate-y-4 peer-not-placeholder-shown:scale-75',
+            error && 'text-red-500 peer-focus:text-red-500', // Added error styles for label
           )}
         >
           {label}
         </Label>
+
+        {/* Error message display */}
+        {error && (
+          <p className="mt-1 text-sm text-red-500">
+            {error}
+          </p>
+        )}
       </div>
     );
   },
