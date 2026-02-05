@@ -127,7 +127,7 @@ const guardSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Fetch Single Guard
       .addCase(fetchGuard.pending, (state) => {
         state.isLoading = true;
@@ -141,22 +141,26 @@ const guardSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Create Guard
       .addCase(createGuard.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
+      // Update the createGuard.fulfilled case
       .addCase(createGuard.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.guards.unshift(action.payload);
+        // Add new guard to the beginning of the array
+        state.guards = [action.payload, ...state.guards];
         state.currentGuard = action.payload;
+        // Increment total count
+        state.pagination.total += 1;
       })
       .addCase(createGuard.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Update Guard
       .addCase(updateGuard.pending, (state) => {
         state.isLoading = true;
@@ -176,7 +180,7 @@ const guardSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Delete Guard
       .addCase(deleteGuard.pending, (state) => {
         state.isLoading = true;
@@ -193,7 +197,7 @@ const guardSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Toggle Status
       .addCase(toggleGuardStatus.pending, (state) => {
         state.isLoading = true;
@@ -216,10 +220,10 @@ const guardSlice = createSlice({
   },
 });
 
-export const { 
-  clearGuardError, 
-  clearCurrentGuard, 
+export const {
+  clearGuardError,
+  clearCurrentGuard,
   setGuards,
-  updateGuardInList 
+  updateGuardInList
 } = guardSlice.actions;
 export default guardSlice.reducer;

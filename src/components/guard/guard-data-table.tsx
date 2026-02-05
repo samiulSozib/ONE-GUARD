@@ -52,7 +52,7 @@ const typeColors: Record<string, string> = {
     "Security Officer": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
     "guard": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     "admin": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-    
+
 };
 
 const statusColors: Record<string, string> = {
@@ -124,7 +124,8 @@ export function GuardDataTable() {
 
     const viewDetails = (e: React.MouseEvent, guard: Guard) => {
         e.stopPropagation();
-        router.push(`/guards/${guard.id}`);
+        const encodedGuard = encodeURIComponent(JSON.stringify(guard));
+        router.push(`/guards/${guard.id}?guard=${encodedGuard}`);
     };
 
     const handleEditClick = (e: React.MouseEvent, guard: Guard) => {
@@ -218,7 +219,7 @@ export function GuardDataTable() {
                 for (const guardId of selectedGuards) {
                     await dispatch(deleteGuard(guardId));
                 }
-                
+
                 SweetAlertService.success(
                     'Guards Deleted',
                     `${selectedGuards.length} guard(s) have been deleted successfully.`,
@@ -227,9 +228,9 @@ export function GuardDataTable() {
                         showConfirmButton: false,
                     }
                 );
-                
+
                 setSelectedGuards([]);
-                
+
                 // Refresh the guard list
                 dispatch(fetchGuards({
                     page: pagination.current_page,
@@ -264,7 +265,7 @@ export function GuardDataTable() {
         // This would need to be determined from assignments/attendance data
         // For now, using is_active as a fallback
         if (!guard.is_active) return "Off Duty";
-        
+
         // You would typically check assignments/attendance here
         // Returning a placeholder for now
         const statuses = ["On Duty", "Available", "Day off", "In Progress"];
@@ -317,8 +318,8 @@ export function GuardDataTable() {
                     Filters
                 </CardTitle>
 
-                <Button 
-                    variant="ghost" 
+                <Button
+                    variant="ghost"
                     size="sm"
                     onClick={handleExport}
                     className="text-sm flex items-center gap-1 dark:text-black"
@@ -328,7 +329,7 @@ export function GuardDataTable() {
                 </Button>
 
                 <div className="text-sm flex items-center gap-1 dark:text-black">
-                    <Checkbox 
+                    <Checkbox
                         id="select-all"
                         checked={selectedGuards.length === guards.length && guards.length > 0}
                         onCheckedChange={handleSelectAll}
@@ -355,8 +356,8 @@ export function GuardDataTable() {
                     {/* Search Inputs */}
                     <div className="sm:col-span-3">
                         <InputGroup>
-                            <InputGroupInput 
-                                placeholder="Guard Name..." 
+                            <InputGroupInput
+                                placeholder="Guard Name..."
                                 value={nameSearch}
                                 onChange={(e) => setNameSearch(e.target.value)}
                             />
@@ -365,11 +366,11 @@ export function GuardDataTable() {
                             </InputGroupAddon>
                         </InputGroup>
                     </div>
-                    
+
                     <div className="sm:col-span-3">
                         <InputGroup>
-                            <InputGroupInput 
-                                placeholder="ID Number..." 
+                            <InputGroupInput
+                                placeholder="ID Number..."
                                 value={idSearch}
                                 onChange={(e) => setIdSearch(e.target.value)}
                             />
@@ -378,11 +379,11 @@ export function GuardDataTable() {
                             </InputGroupAddon>
                         </InputGroup>
                     </div>
-                    
+
                     <div className="sm:col-span-3">
                         <InputGroup>
-                            <InputGroupInput 
-                                placeholder="Phone Number..." 
+                            <InputGroupInput
+                                placeholder="Phone Number..."
                                 value={phoneSearch}
                                 onChange={(e) => setPhoneSearch(e.target.value)}
                             />
@@ -391,11 +392,11 @@ export function GuardDataTable() {
                             </InputGroupAddon>
                         </InputGroup>
                     </div>
-                    
+
                     <div className="sm:col-span-3">
                         <InputGroup>
-                            <InputGroupInput 
-                                placeholder="Driver License..." 
+                            <InputGroupInput
+                                placeholder="Driver License..."
                                 value={licenseSearch}
                                 onChange={(e) => setLicenseSearch(e.target.value)}
                             />
@@ -422,7 +423,7 @@ export function GuardDataTable() {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     <div className="sm:col-span-3">
                         <Select value={cityFilter} onValueChange={setCityFilter}>
                             <SelectTrigger className="w-full">
@@ -440,7 +441,7 @@ export function GuardDataTable() {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     <div className="sm:col-span-3">
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                             <SelectTrigger className="w-full">
@@ -458,7 +459,7 @@ export function GuardDataTable() {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     <div className="sm:col-span-3">
                         <Select value={locationFilter} onValueChange={setLocationFilter}>
                             <SelectTrigger className="w-full">
@@ -525,8 +526,8 @@ export function GuardDataTable() {
                                     </TableRow>
                                 ) : (
                                     guards.map((guard: Guard) => (
-                                        <TableRow 
-                                            key={guard.id} 
+                                        <TableRow
+                                            key={guard.id}
                                             className="hover:bg-gray-50 dark:hover:bg-black cursor-pointer"
                                             onClick={() => router.push(`/guards/${guard.id}`)}
                                         >
@@ -534,7 +535,7 @@ export function GuardDataTable() {
                                             <TableCell onClick={(e) => e.stopPropagation()}>
                                                 <Checkbox
                                                     checked={selectedGuards.includes(guard.id)}
-                                                    onCheckedChange={(checked) => 
+                                                    onCheckedChange={(checked) =>
                                                         handleSelectGuard(guard.id, checked as boolean)
                                                     }
                                                 />
@@ -627,7 +628,7 @@ export function GuardDataTable() {
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-2">
                                                     <span className="text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                                                        <StarIcon size="14px" /> 
+                                                        <StarIcon size="14px" />
                                                         {getLocationRating(guard)}
                                                     </span>
                                                     <span className="text-lg">{getLocationIcon(guard)}</span>
@@ -645,7 +646,7 @@ export function GuardDataTable() {
                                                             <DropdownMenuItem onClick={(e) => handleEditClick(e, guard)}>
                                                                 Edit guard
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem 
+                                                            <DropdownMenuItem
                                                                 onClick={(e) => handleDeleteClick(e, guard)}
                                                                 className="text-red-600 focus:text-red-600"
                                                             >

@@ -55,6 +55,37 @@ export interface Guard {
     emergency_contact_relation?: string;
     notes?: string;
   };
+
+    profile?: {
+    place_of_birth?: string;
+    country_of_origin?: string;
+    current_country?: string;
+    current_city?: string;
+    current_address?: string;
+    citizenship?: string;
+    visa_countries?: string[];
+    visa_expiry_date?: string;
+    has_work_permit?: boolean;
+    father_name?: string;
+    mother_name?: string;
+    national_id_number?: string;
+    marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
+    height?: string;
+    weight?: string;
+    blood_group?: string;
+    experience_years?: number;
+    skills?: string;
+    languages?: string[];
+    highest_education_level?: string;
+    education_field?: string;
+    institution_name?: string;
+    graduation_year?: number;
+    has_security_training?: boolean;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    emergency_contact_relation?: string;
+    notes?: string;
+  };
   
   // Document types for upload
   document_types?: string[];
@@ -120,4 +151,9 @@ export interface GuardState {
   };
   isLoading: boolean;
   error: string | null;
+}
+
+
+export interface ViewGuardTopCardProps{
+  guard:Guard
 }

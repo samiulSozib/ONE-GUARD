@@ -79,8 +79,8 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
                   />
                 </div>
                 <div className="flex-1 min-w-0 ml-24 sm:ml-0 sm:pl-4 text-white mb-1">
-                  <h2 className="font-bold text-lg sm:text-xl truncate">Carlota Monteiro</h2>
-                  <p className="text-sm opacity-80">Guard</p>
+                  <h2 className="font-bold text-lg sm:text-xl truncate">{guard.full_name}</h2>
+                  <p className="text-sm opacity-80">{guard.guard_code}</p>
                 </div>
               </div>
 
@@ -130,7 +130,7 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
           <CardContent className="p-0">
             {/* Tab Contents */}
             <TabsContent value="personal" className="m-2">
-              <PersonalInformation/>
+              <PersonalInformation guard={guard}/>
             </TabsContent>
 
             <TabsContent value="availability" className="m-2">
