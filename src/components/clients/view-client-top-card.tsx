@@ -16,10 +16,10 @@ const ViewClientTopCard = ({ client }: ViewClientTopCardProps) => {
       {/* Guard Info */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
         <span className="font-bold text-base sm:text-lg text-black dark:text-white break-words">
-          {client?.name}
+          {client?.full_name}
         </span>
         <span className="font-medium text-gray-400 text-xs sm:text-sm">
-          ID: {client.idNumber}
+          ID: {client.client_code}
         </span>
       </div>
 

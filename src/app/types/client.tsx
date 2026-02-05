@@ -122,3 +122,7 @@ export interface PaginatedClientsResponse {
     per_page: number;
   };
 }
+
+export interface ViewClientTopCardProps{
+  client:Client
+}
