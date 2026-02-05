@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 import { Client } from '@/app/types/client';
 import { ApiResponse, LoginCredentials, LoginResponse, User } from '@/app/types/api.types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-ogs-v1.milliekit.com/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
