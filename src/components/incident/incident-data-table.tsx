@@ -40,7 +40,7 @@ import { useRouter } from "next/navigation";
 import { DeleteDialog } from "../shared/delete-dialog";
 import { useState } from "react";
 import { Client } from "@/app/types/client";
-import { clients } from "@/app/(admin)/clients/data";
+
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { FloatingLabelInput } from "../ui/floating-input";
 import { Calendar } from "../ui/calender";
