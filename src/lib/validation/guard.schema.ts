@@ -69,4 +69,4 @@ export const guardBasicSchema = z.object({
         graduation_year: z.number().min(1900).max(new Date().getFullYear()).optional(),
     }).optional().default({}),
 })
-export type GuardFormData = z.infer<typeof guardBasicSchema>
+export type GuardFormData = z.input<typeof guardBasicSchema>
