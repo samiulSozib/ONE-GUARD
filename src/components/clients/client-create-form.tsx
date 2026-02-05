@@ -530,7 +530,7 @@ export function ClientCreateForm({
         }
 
         if (fieldsToValidate.length > 0) {
-            const result = await triggerValidation(fieldsToValidate as any, { shouldFocus: true })
+            const result = await triggerValidation(fieldsToValidate as [], { shouldFocus: true })
             return result
         }
 
@@ -770,7 +770,7 @@ export function ClientCreateForm({
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                                 error={errors.full_name?.message}
-                                                icon={<User size={16} />}
+                                                //icon={<User size={16} />}
                                             />
                                         )}
                                     />
@@ -787,7 +787,7 @@ export function ClientCreateForm({
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                                 error={errors.company_name?.message}
-                                                icon={<Building size={16} />}
+                                                //icon={<Building size={16} />}
                                             />
                                         )}
                                     />
@@ -826,7 +826,7 @@ export function ClientCreateForm({
                                                 onChange={field.onChange}
                                                 type="tel"
                                                 error={errors.phone?.message}
-                                                icon={<Phone size={16} />}
+                                                //icon={<Phone size={16} />}
                                             />
                                         )}
                                     />
@@ -859,7 +859,7 @@ export function ClientCreateForm({
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                                 placeholder="e.g., TRN-789012345"
-                                                icon={<Award size={16} />}
+                                                //icon={<Award size={16} />}
                                             />
                                         )}
                                     />
@@ -879,7 +879,7 @@ export function ClientCreateForm({
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                                 error={errors.country?.message}
-                                                icon={<Globe size={16} />}
+                                                //icon={<Globe size={16} />}
                                             >
                                                 <option value="">Select Country...</option>
                                                 {COUNTRIES.map(country => (
@@ -903,7 +903,7 @@ export function ClientCreateForm({
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                                 error={errors.city?.message}
-                                                icon={<MapPin size={16} />}
+                                                //icon={<MapPin size={16} />}
                                             />
                                         )}
                                     />
@@ -995,7 +995,7 @@ export function ClientCreateForm({
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                                 max={getCurrentDate()}
-                                                icon={<Calendar size={16} />}
+                                                //icon={<Calendar size={16} />}
                                             />
                                         )}
                                     />
@@ -1016,7 +1016,7 @@ export function ClientCreateForm({
                                                 onChange={field.onChange}
                                                 type="url"
                                                 placeholder="https://example.com"
-                                                icon={<Link size={16} />}
+                                                //icon={<Link size={16} />}
                                             />
                                         )}
                                     />

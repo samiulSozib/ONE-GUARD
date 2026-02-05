@@ -77,7 +77,7 @@ export const clientBasicSchema = z.object({
 });
 
 // Type Definitions
-export type SiteLocationFormData = z.infer<typeof siteLocationSchema>;
-export type SiteFormData = z.infer<typeof siteSchema>;
-export type ContactFormData = z.infer<typeof contactSchema>;
-export type ClientFormData = z.infer<typeof clientBasicSchema>;
+export type SiteLocationFormData = z.input<typeof siteLocationSchema>;
+export type SiteFormData = z.input<typeof siteSchema>;
+export type ContactFormData = z.input<typeof contactSchema>;
+export type ClientFormData = z.input<typeof clientBasicSchema>;
