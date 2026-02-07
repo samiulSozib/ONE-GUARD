@@ -11,6 +11,9 @@ export interface Site {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  site_id?:number;
+  title?:string;
+  description?:string;
   
   // Relationships
   client?: {

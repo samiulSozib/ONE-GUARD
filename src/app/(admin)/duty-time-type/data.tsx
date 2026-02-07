@@ -1,4 +1,4 @@
-import { DutyTimeType } from "@/app/types/duty-time-type";
+import { DutyTimeType } from "@/app/types/dutyTimeType";
 
 export const dutyTimeTypes: DutyTimeType[] = [
   {

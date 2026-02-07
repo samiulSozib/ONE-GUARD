@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronRight, DownloadIcon, Ellipsis, EllipsisIcon, EllipsisVertical, FilterIcon, ListFilter, MoreHorizontal, Search, StarIcon } from "lucide-react";
+import { ChevronRight, DownloadIcon, Edit, Ellipsis, EllipsisIcon, EllipsisVertical, FilterIcon, ListFilter, MoreHorizontal, Search, StarIcon } from "lucide-react";
 import {
     Card,
     CardHeader,
@@ -44,6 +44,7 @@ import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { fetchGuards, deleteGuard } from "@/store/slices/guardSlice";
 import SweetAlertService from "@/lib/sweetAlert";
+import { GuardUpdateForm } from "./guard-update-form";
 
 const typeColors: Record<string, string> = {
     "Corporate": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -126,6 +127,7 @@ export function GuardDataTable() {
         e.stopPropagation();
         const encodedGuard = encodeURIComponent(JSON.stringify(guard));
         router.push(`/guards/${guard.id}?guard=${encodedGuard}`);
+
     };
 
     const handleEditClick = (e: React.MouseEvent, guard: Guard) => {
@@ -646,6 +648,20 @@ export function GuardDataTable() {
                                                             <DropdownMenuItem onClick={(e) => handleEditClick(e, guard)}>
                                                                 Edit guard
                                                             </DropdownMenuItem>
+                                                            <GuardUpdateForm
+                                                                trigger={
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                    >
+                                                                        Edit guard
+                                                                    </Button>
+                                                                }
+                                                                guardId={guard.id}
+                                                                onSuccess={() => {
+                                                                    console.log('Guard updated successfully')
+                                                                }}
+                                                            />
                                                             <DropdownMenuItem
                                                                 onClick={(e) => handleDeleteClick(e, guard)}
                                                                 className="text-red-600 focus:text-red-600"

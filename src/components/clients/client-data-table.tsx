@@ -48,6 +48,9 @@ import { Client } from "@/app/types/client";
 import SweetAlertService from "@/lib/sweetAlert";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { fetchSites } from "@/store/slices/siteSlice";
+import { fetchSiteLocations } from "@/store/slices/siteLocationSlice";
+import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice";
+import { fetchDuties } from "@/store/slices/dutySlice";
 
 // Default avatar for clients without images
 const defaultAvatar = "/default-avatar.png";
@@ -76,11 +79,7 @@ export function ClientDataTable() {
     }, [dispatch, searchTerm]);
 
     useEffect(() => {
-        dispatch(fetchSites({
-            page: 1,
-            per_page: 15,
-            search: searchTerm,
-        }));
+        dispatch(fetchDuties({page:1,per_page:10}))
     }, [dispatch, searchTerm]);
 
     useEffect(()=>{
