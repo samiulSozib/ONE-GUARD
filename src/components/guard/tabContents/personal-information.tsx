@@ -75,7 +75,7 @@ const PersonalInformation = ({ guard }: PersonalInformationProps) => {
     },
     { 
       label: "Language:", 
-      value: guard.profile?.languages ? guard.profile.languages.join(", ") : "N/A",
+      value: guard.profile_data?.languages ? guard.profile_data.languages.join(", ") : "N/A",
       icon: null
     },
   ]
@@ -90,12 +90,12 @@ const PersonalInformation = ({ guard }: PersonalInformationProps) => {
     
     { 
       label: "Height:", 
-      value: guard.profile?.height || "N/A",
+      value: guard.profile_data?.height || "N/A",
       icon: null
     },
     { 
       label: "Weight:", 
-      value: guard.profile?.weight || "N/A",
+      value: guard.profile_data?.weight || "N/A",
       icon: null
     },
     { 
@@ -126,7 +126,7 @@ const PersonalInformation = ({ guard }: PersonalInformationProps) => {
     },
     { 
       label: "Notes:", 
-      value: guard.profile?.notes || "No notes available",
+      value: guard.profile_data?.notes || "No notes available",
       icon: null
     },
   ]
