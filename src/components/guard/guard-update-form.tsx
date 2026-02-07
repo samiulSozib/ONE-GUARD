@@ -449,7 +449,7 @@ export function GuardUpdateForm({
             }
 
             // Dispatch update guard action
-            const result = await dispatch(updateGuard(formData));
+            const result = await dispatch(updateGuard({id:guardId,data: formData}));
 
             if (updateGuard.fulfilled.match(result)) {
                 SweetAlertService.success(
