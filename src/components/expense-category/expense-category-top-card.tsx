@@ -2,21 +2,21 @@ import React from 'react'
 import { Card } from '../ui/card'
 import { Button } from '../ui/button'
 import { PlusIcon } from 'lucide-react'
-import { GuardTypeCreateForm } from './guard-type-create-form'
+import { ExpenseCategoryCreateForm } from './expense-category-create-form'
 
-const GuardTypeTypeTopCard = () => {
+const ExpenseCategoryTopCard = () => {
     return (
         <Card className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-2 lg:p-4'>
             {/* Button Group Section */}
             <div className='flex flex-row gap-3'>
-                <span className='text-lg font-bold dark:text-white'>Guard Type</span>
+                <span className='text-lg font-bold dark:text-white'>Expense Category</span>
 
          
             </div>
             {/* Action Buttons Section */}
             <div className='flex flex-row gap-2 w-full md:w-auto'>
 
-                <GuardTypeCreateForm
+                <ExpenseCategoryCreateForm
                     trigger={
                         <Button
                             className='flex-1 xs:flex-initial justify-center text-xs sm:text-sm bg-[#5F0015] hover:bg-blue-700 text-white'
@@ -32,4 +32,4 @@ const GuardTypeTypeTopCard = () => {
     )
 }
 
-export default GuardTypeTypeTopCard
+export default ExpenseCategoryTopCard

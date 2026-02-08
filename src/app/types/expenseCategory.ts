@@ -1,5 +1,5 @@
 
-export interface GuardType {
+export interface ExpenseCategory {
   id: number;
   name: string | null;
   description: string | null;
@@ -8,7 +8,7 @@ export interface GuardType {
   created_at?: string;
 }
 
-export interface GuardTypeParams {
+export interface ExpenseCategoryParams {
   page?: number;
   per_page?: number;
   search?: string;
@@ -18,9 +18,9 @@ export interface GuardTypeParams {
   sort_order?: 'asc' | 'desc';
 }
 
-export interface GuardTypeState {
-  guardTypes: GuardType[];
-  currentGuardType: GuardType | null;
+export interface ExpenseCategoryState {
+  expenseCategories: ExpenseCategory[];
+  currentExpenseCategory: ExpenseCategory | null;
   pagination: {
     current_page: number;
     last_page: number;
@@ -31,6 +31,6 @@ export interface GuardTypeState {
   error: string | null;
 }
 
-export interface ToggleGuardTypeStatusRequest {
+export interface ToggleExpenseCategoryStatusRequest {
   is_active: boolean;
 }

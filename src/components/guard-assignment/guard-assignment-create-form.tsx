@@ -93,7 +93,7 @@ const dutySchema = z.object({
 
 type DutyFormData = z.infer<typeof dutySchema>
 
-export function DutyCreateForm({
+export function GuardAssignmentCreateForm({
     trigger,
     isOpen,
     onOpenChange,
@@ -899,7 +899,7 @@ export function DutyCreateForm({
                     {/* Footer Actions */}
                     <DialogActionFooter
                         cancelText="Cancel"
-                        submitText="Create Duty Attendance"
+                        submitText="Create Duty"
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                         onSubmit={handleSubmit(onSubmit)}

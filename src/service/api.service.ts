@@ -48,8 +48,9 @@ export const handleApiResponse = async <T>(
 ): Promise<T> => {
   try {
     const response = await promise;
-    
+    console.log(!response.data.success)
     if (!response.data.success) {
+      
       throw new Error(response.data.message || 'Request failed');
     }
     

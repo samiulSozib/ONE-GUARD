@@ -12,8 +12,8 @@ import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
 import { Plus, Shield } from "lucide-react"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { createGuardType } from "@/store/slices/guardTypeSlice"
-import { GuardType } from "@/app/types/guard-type"
+import { createExpenseCategory } from "@/store/slices/expenseCategorySlice"
+import { ExpenseCategory } from "@/app/types/expenseCategory"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -21,15 +21,15 @@ import SweetAlertService from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { Switch } from "@/components/ui/switch"
 
-interface GuardTypeCreateFormProps {
+interface ExpenseCategoryCreateFormProps {
     trigger: ReactNode
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
     onSuccess?: () => void
 }
 
-// Zod schema for GuardType
-const guardTypeSchema = z.object({
+// Zod schema for ExpenseCategory
+const expenseCategorySchema = z.object({
     name: z.string()
         .min(1, { message: "Name is required" })
         .max(100, { message: "Name must be less than 100 characters" }),
@@ -40,14 +40,14 @@ const guardTypeSchema = z.object({
     is_active: z.boolean()
 })
 
-type GuardTypeFormData = z.infer<typeof guardTypeSchema>
+type ExpenseCategoryFormData = z.infer<typeof expenseCategorySchema>
 
-export function GuardTypeCreateForm({
+export function ExpenseCategoryCreateForm({
     trigger,
     isOpen,
     onOpenChange,
     onSuccess
-}: GuardTypeCreateFormProps) {
+}: ExpenseCategoryCreateFormProps) {
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
 
@@ -58,8 +58,8 @@ export function GuardTypeCreateForm({
         setValue,
         watch,
         reset,
-    } = useForm<GuardTypeFormData>({
-        resolver: zodResolver(guardTypeSchema),
+    } = useForm<ExpenseCategoryFormData>({
+        resolver: zodResolver(expenseCategorySchema),
         defaultValues: {
             name: "",
             description: "",
@@ -70,20 +70,20 @@ export function GuardTypeCreateForm({
 
     const formValues = watch()
 
-    const onSubmit = async (data: GuardTypeFormData) => {
+    const onSubmit = async (data: ExpenseCategoryFormData) => {
         setIsLoading(true)
         try {
-            const submitData: Omit<GuardType, 'id' | 'created_at' | 'updated_at'> = {
+            const submitData: Omit<ExpenseCategory, 'id' | 'created_at' | 'updated_at'> = {
                 name: data.name.trim(),
                 description: data.description?.trim() || null,
                 is_active: data.is_active
             }
 
-            const result = await dispatch(createGuardType(submitData))
+            const result = await dispatch(createExpenseCategory(submitData))
 
-            if (createGuardType.fulfilled.match(result)) {
+            if (createExpenseCategory.fulfilled.match(result)) {
                 SweetAlertService.success(
-                    'Guard Type Created Successfully',
+                    'Expense Category Type Created Successfully',
                     `${data.name} has been created successfully.`
                 ).then(() => {
                     reset()
@@ -94,7 +94,7 @@ export function GuardTypeCreateForm({
                 throw result.payload
             }
         } catch (error: unknown) {
-            let errorMessage = "Failed to create guard type. Please try again."
+            let errorMessage = "Failed to create expense category type. Please try again."
 
             if (typeof error === 'string') {
                 errorMessage = error
@@ -186,7 +186,7 @@ export function GuardTypeCreateForm({
             <DialogContent className="sm:max-w-[500px] w-[90vw] max-w-[90vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
                 <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6">
                      <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Add New Guard Type</span>
+                    <span className="whitespace-nowrap">Add New Expense Category Type</span>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -197,14 +197,14 @@ export function GuardTypeCreateForm({
                                 Name *
                             </Label>
                             <FloatingLabelInput
-                                label="Guard Type Name"
+                                label="Expense Category Type Name"
                                 {...register("name")}
                                 error={errors.name?.message}
                                 disabled={isLoading}
-                                placeholder="e.g., Bodyguard, Security Guard, etc."
+                                placeholder="e.g., Bodyexpense category, Security Expense Category, etc."
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                                Enter a descriptive name for the guard type
+                                Enter a descriptive name for the expense category type
                             </p>
                         </div>
 
@@ -239,8 +239,8 @@ export function GuardTypeCreateForm({
                                 </Label>
                                 <p className="text-xs text-gray-500">
                                     {formValues.is_active 
-                                        ? 'This guard type will be available for assignment' 
-                                        : 'This guard type will be hidden from assignment'
+                                        ? 'This expense category type will be available for assignment' 
+                                        : 'This expense category type will be hidden from assignment'
                                     }
                                 </p>
                             </div>
@@ -262,7 +262,7 @@ export function GuardTypeCreateForm({
                         <div className="text-sm space-y-1">
                             <div className="flex">
                                 <span className="text-gray-600 dark:text-gray-400 w-24">Name:</span>
-                                <span className="font-medium">Bodyguard</span>
+                                <span className="font-medium">Bodyexpense category</span>
                             </div>
                             <div className="flex">
                                 <span className="text-gray-600 dark:text-gray-400 w-24">Description:</span>
@@ -274,7 +274,7 @@ export function GuardTypeCreateForm({
                     {/* Footer Actions */}
                     <DialogActionFooter
                         cancelText="Cancel"
-                        submitText="Create Guard Type"
+                        submitText="Create Expense Category"
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                         onSubmit={handleSubmit(onSubmit)}

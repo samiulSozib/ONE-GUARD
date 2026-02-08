@@ -21,38 +21,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import { deleteGuardType, fetchGuardTypes, toggleGuardTypeStatus } from "@/store/slices/guardTypeSlice";
+import { deleteExpenseCategory, fetchExpenseCategorys, toggleExpenseCategoryStatus } from "@/store/slices/expenseCategorySlice";
 import SweetAlertService from "@/lib/sweetAlert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GuardType } from "@/app/types/guard-type";
-import { GuardTypeEditForm } from "./guard-type-edit-form";
+import { ExpenseCategory } from "@/app/types/expenseCategory";
+import { ExpenseCategoryEditForm } from "./expense-category-edit-form";
 
-interface GuardTypeDataTableProps {
+interface ExpenseCategoryDataTableProps {
   onAddClick?: () => void;
-  onViewClick?: (guardType: GuardType) => void;
+  onViewClick?: (expenseCategory: ExpenseCategory) => void;
 }
 
-export function GuardTypeDataTable({ 
+export function ExpenseCategoryDataTable({ 
   onAddClick, 
   onViewClick 
-}: GuardTypeDataTableProps) {
+}: ExpenseCategoryDataTableProps) {
   const dispatch = useAppDispatch();
   const { 
-    guardTypes, 
+    expenseCategories, 
     pagination, 
     isLoading, 
     error 
-  } = useAppSelector((state) => state.guardTypes);
+  } = useAppSelector((state) => state.expenseCategory);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [guardTypeToDelete, setGuardTypeToDelete] = useState<GuardType | null>(null);
+  const [expenseCategoryToDelete, setExpenseCategoryToDelete] = useState<ExpenseCategory | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<boolean | null>(null);
   
   // State for edit dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedGuardType, setSelectedGuardType] = useState<GuardType | null>(null);
+  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState<ExpenseCategory | null>(null);
 
   // Fetch guard types on component mount and when filters change
   useEffect(() => {
@@ -62,23 +62,23 @@ export function GuardTypeDataTable({
       search: searchTerm,
       is_active: activeFilter !== null ? activeFilter : undefined,
     };
-    dispatch(fetchGuardTypes(params));
+    dispatch(fetchExpenseCategorys(params));
   }, [dispatch, searchTerm, activeFilter]);
 
-  const handleDeleteClick = (e: React.MouseEvent, guardType: GuardType) => {
+  const handleDeleteClick = (e: React.MouseEvent, expenseCategory: ExpenseCategory) => {
     e.stopPropagation();
-    setGuardTypeToDelete(guardType);
+    setExpenseCategoryToDelete(expenseCategory);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (guardTypeToDelete) {
+    if (expenseCategoryToDelete) {
       try {
-        await dispatch(deleteGuardType(guardTypeToDelete.id)).unwrap();
+        await dispatch(deleteExpenseCategory(expenseCategoryToDelete.id)).unwrap();
 
         SweetAlertService.success(
           'Guard Type Deleted',
-          `${guardTypeToDelete.name || 'Guard Type'} has been deleted successfully.`,
+          `${expenseCategoryToDelete.name || 'Guard Type'} has been deleted successfully.`,
           {
             timer: 1500,
             showConfirmButton: false,
@@ -86,10 +86,10 @@ export function GuardTypeDataTable({
         );
 
         setDeleteDialogOpen(false);
-        setGuardTypeToDelete(null);
+        setExpenseCategoryToDelete(null);
 
         // Refresh the list
-        dispatch(fetchGuardTypes({
+        dispatch(fetchExpenseCategorys({
           page: 1,
           per_page: 10,
           search: searchTerm,
@@ -105,7 +105,7 @@ export function GuardTypeDataTable({
 
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     try {
-      await dispatch(toggleGuardTypeStatus({ 
+      await dispatch(toggleExpenseCategoryStatus({ 
         id, 
         is_active: !currentStatus 
       })).unwrap();
@@ -132,7 +132,7 @@ export function GuardTypeDataTable({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(fetchGuardTypes({
+    dispatch(fetchExpenseCategorys({
       page: 1,
       per_page: 10,
       search: searchTerm,
@@ -154,8 +154,8 @@ export function GuardTypeDataTable({
   };
 
   // Handle edit button click
-  const handleEditClick = (guardType: GuardType) => {
-    setSelectedGuardType(guardType);
+  const handleEditClick = (expenseCategory: ExpenseCategory) => {
+    setSelectedExpenseCategory(expenseCategory);
     setEditDialogOpen(true);
   };
 
@@ -171,7 +171,7 @@ export function GuardTypeDataTable({
   };
 
   // Loading skeleton
-  if (isLoading && guardTypes.length === 0) {
+  if (isLoading && expenseCategories.length === 0) {
     return (
       <Card className="shadow-sm rounded-2xl">
         <div className="p-6">
@@ -233,7 +233,7 @@ export function GuardTypeDataTable({
         <CardContent className="p-6">
           {/* Table/Grid View */}
           <div className="overflow-x-auto">
-            {guardTypes.length === 0 ? (
+            {expenseCategories.length === 0 ? (
               <div className="text-center py-12">
                 <div className="mx-auto w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                   <Search className="h-12 w-12 text-gray-400" />
@@ -261,7 +261,7 @@ export function GuardTypeDataTable({
               <>
                 {/* Grid Layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {guardTypes.map((type: GuardType) => (
+                  {expenseCategories.map((type: ExpenseCategory) => (
                     <div
                       key={type.id}
                       className="border rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 bg-white"
@@ -343,17 +343,17 @@ export function GuardTypeDataTable({
                 </div>
 
                 {/* Pagination */}
-                {!isLoading && guardTypes.length > 0 && (
+                {!isLoading && expenseCategories.length > 0 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t">
                     <div className="text-sm text-gray-700">
-                      Showing {guardTypes.length} of {pagination.total} guard types
+                      Showing {expenseCategories.length} of {pagination.total} guard types
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         disabled={pagination.current_page === 1}
-                        onClick={() => dispatch(fetchGuardTypes({
+                        onClick={() => dispatch(fetchExpenseCategorys({
                           page: pagination.current_page - 1,
                           per_page: pagination.per_page,
                           search: searchTerm,
@@ -369,7 +369,7 @@ export function GuardTypeDataTable({
                         variant="outline"
                         size="sm"
                         disabled={pagination.current_page === pagination.last_page}
-                        onClick={() => dispatch(fetchGuardTypes({
+                        onClick={() => dispatch(fetchExpenseCategorys({
                           page: pagination.current_page + 1,
                           per_page: pagination.per_page,
                           search: searchTerm,
@@ -393,19 +393,19 @@ export function GuardTypeDataTable({
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
         title="Delete Guard Type"
-        description={`Are you sure you want to delete "${guardTypeToDelete?.name}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${expenseCategoryToDelete?.name}"? This action cannot be undone.`}
       />
 
       {/* Edit Form Dialog */}
-      {selectedGuardType && (
-        <GuardTypeEditForm
+      {selectedExpenseCategory && (
+        <ExpenseCategoryEditForm
           trigger={<div />}
-          guardType={selectedGuardType}
+          expenseCategory={selectedExpenseCategory}
           isOpen={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
             // Refresh the list after successful edit
-            dispatch(fetchGuardTypes({
+            dispatch(fetchExpenseCategorys({
               page: 1,
               per_page: 10,
               search: searchTerm,

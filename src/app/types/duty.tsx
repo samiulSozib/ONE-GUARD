@@ -1,3 +1,5 @@
+import { Site } from "./site";
+
 export interface Duty {
   id: number;
   title: string;
@@ -48,6 +50,7 @@ export interface Duty {
     created_at?: string;
     updated_at?: string;
     deleted_at?: string | null;
+    site?:Site
   };
 }
 

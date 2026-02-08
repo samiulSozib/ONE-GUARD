@@ -7,6 +7,11 @@ import siteReducer from './slices/siteSlice'
 import siteLocationReducer from './slices/siteLocationSlice'
 import dutyTimeTypesReducer from './slices/dutyTimeTypesSlice'
 import dutyReducer from './slices/dutySlice'
+import guardAssignmentReducer from './slices/guardAssignmentSlice'
+import dutyStatusReportReducer from './slices/dutyStatusReportSlice'
+import dutyAttendanceReducer from './slices/dutyAttendenceSlice'
+import guardTypesReducer from './slices/guardTypeSlice'
+import expenseCategoryReducer from './slices/expenseCategorySlice'
 
 export const store = configureStore({
   reducer: {
@@ -17,7 +22,12 @@ export const store = configureStore({
     site:siteReducer,
     siteLocation:siteLocationReducer,
     dutyTimeTypes:dutyTimeTypesReducer,
-    duty:dutyReducer
+    duty:dutyReducer,
+    guardAssignment:guardAssignmentReducer,
+    dutyStatusReport:dutyStatusReportReducer,
+    dutyAttendance:dutyAttendanceReducer,
+    guardTypes:guardTypesReducer,
+    expenseCategory:expenseCategoryReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

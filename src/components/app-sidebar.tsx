@@ -75,6 +75,12 @@ const data = {
       icon: Bot,
       
     },
+    {
+      title: "Expense Category",
+      url: "/expense-category",
+      icon: Bot,
+      
+    },
      {
       title: "Expense",
       url: "/expense",
@@ -114,6 +120,30 @@ const data = {
     {
       title: "Duty Time Type",
       url: "/duty-time-type",
+      icon: Bot,
+      
+    },
+    {
+      title: "Guard Assignment",
+      url: "/guard-assignment",
+      icon: Bot,
+      
+    },
+    {
+      title: "Duty Attendence",
+      url: "/duty-attendance",
+      icon: Bot,
+      
+    },
+    {
+      title: "Duty Status Report",
+      url: "/duty-status-report",
+      icon: Bot,
+      
+    },
+    {
+      title: "Guard Type",
+      url: "/guard-type",
       icon: Bot,
       
     },
