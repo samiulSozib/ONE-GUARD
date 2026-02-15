@@ -72,7 +72,7 @@ import { Expense, ExpenseParams } from "@/app/types/expense";
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
-import { ViewExpense } from "./view-expense";
+// import { ViewExpense } from "./view-expense";
 import { ExpenseEditForm } from "./expense-edit-form";
 // import { ExpenseEditForm } from "./expense-edit-form";
 
@@ -683,14 +683,14 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
       />
 
       {/* View Details Dialog */}
-      {selectedExpense && (
+      {/* {selectedExpense && (
         <ViewExpense
           isOpen={viewDialogOpen}
           onOpenChange={setViewDialogOpen}
           expense={selectedExpense}
           trigger={<div />}
         />
-      )}
+      )} */}
 
       {/* Edit Form Dialog */}
       {selectedExpense && (
