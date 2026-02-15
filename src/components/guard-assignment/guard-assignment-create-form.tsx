@@ -10,16 +10,12 @@ import { Button } from "@/components/ui/button"
 import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
-import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Clock } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { createDuty } from "@/store/slices/dutySlice"
-import { fetchSites } from "@/store/slices/siteSlice"
-import { fetchSiteLocations } from "@/store/slices/siteLocationSlice"
-import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice"
-import { Duty } from "@/app/types/duty"
+import { fetchGuards } from "@/store/slices/guardSlice"
+import { fetchDuties } from "@/store/slices/dutySlice"
 import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -28,287 +24,213 @@ import SweetAlertService from "@/lib/sweetAlert"
 import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { useAppSelector } from "@/hooks/useAppSelector"
-import { Site } from "@/app/types/site"
-import { SiteLocation } from "@/app/types/siteLocation.types"
-import { DutyTimeType } from "@/app/types/dutyTimeType"
-import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../ui/combobox"
+import { Guard } from "@/app/types/guard"
+import { Duty, DutyParams } from "@/app/types/duty"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
-import { MapPin, Building, Clock as ClockIcon } from "lucide-react"
+import { User, Briefcase } from "lucide-react"
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { createAssignment } from "@/store/slices/guardAssignmentSlice"
 
-
-
-interface DutyCreateFormProps {
+interface GuardAssignmentCreateFormProps {
     trigger: ReactNode
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
     onSuccess?: () => void
 }
 
-// Zod schema matching exactly your DutyTimeTypeCreateForm pattern
-const dutySchema = z.object({
-    title: z.string()
-        .min(1, { message: "Title is required" })
-        .max(200, { message: "Title must be less than 200 characters" }),
+// Zod schema for guard assignment validation
+const guardAssignmentSchema = z.object({
+    guard_id: z.number()
+        .min(1, { message: "Guard is required" }),
 
-    site_id: z.number()
-        .min(1, { message: "Site is required" }),
+    duty_id: z.number()
+        .min(1, { message: "Duty is required" }),
 
-    site_location_id: z.number()
-        .min(1, { message: "Location is required" }),
+    start_date: z.string()
+        .min(1, { message: "Start date is required" }),
 
-    duty_time_type_id: z.number()
-        .min(1, { message: "Duty time type is required" }),
+    end_date: z.string()
+        .min(1, { message: "End date is required" }),
 
-    start_datetime: z.string()
-        .min(1, { message: "Start date and time is required" }),
-
-    end_datetime: z.string()
-        .min(1, { message: "End date and time is required" }),
-
-    guards_required: z.number()
-        .min(1, { message: "At least 1 guard is required" })
-        .max(20, { message: "Maximum 20 guards allowed" }),
-
-    duty_type: z.enum(["day", "night"]),
-
-    required_hours: z.number()
-        .min(1, { message: "Minimum 1 hour required" })
-        .max(24, { message: "Maximum 24 hours allowed" }),
-
-    mandatory_check_in_time: z.string()
-        .min(1, { message: "Mandatory check-in time is required" }),
-
-    notes: z.string().optional(),
-
-    status: z.enum(["pending", "approved", "completed"])
-
+    status: z.enum(["assigned", "active", "completed", "cancelled"])
 }).refine((data) => {
-    const start = new Date(data.start_datetime)
-    const end = new Date(data.end_datetime)
-    return end > start
+    const start = new Date(data.start_date)
+    const end = new Date(data.end_date)
+    return end >= start
 }, {
-    message: "End date/time must be after start date/time",
-    path: ["end_datetime"]
+    message: "End date must be after or equal to start date",
+    path: ["end_date"]
 })
 
-type DutyFormData = z.infer<typeof dutySchema>
+type GuardAssignmentFormData = z.infer<typeof guardAssignmentSchema>
+
+// Status options
+const statusOptions = [
+    { value: "assigned", label: "Assigned" },
+    { value: "active", label: "Active" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+]
 
 export function GuardAssignmentCreateForm({
     trigger,
     isOpen,
     onOpenChange,
     onSuccess
-}: DutyCreateFormProps) {
+}: GuardAssignmentCreateFormProps) {
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
 
     // Redux states for dropdown data
-    const { sites, pagination: sitesPagination, isLoading: sitesLoading } = useAppSelector((state) => state.site)
-    const { siteLocations, pagination: locationsPagination, isLoading: locationsLoading } = useAppSelector((state) => state.siteLocation)
-    const { dutyTimeTypes, pagination: timeTypesPagination, isLoading: timeTypesLoading } = useAppSelector((state) => state.dutyTimeTypes)
+    const { guards, isLoading: guardsLoading } = useAppSelector((state) => state.guard)
+    const { duties, isLoading: dutiesLoading } = useAppSelector((state) => state.duty)
 
     // Search states for comboboxes
-    const [siteSearch, setSiteSearch] = useState("")
-    const [locationSearch, setLocationSearch] = useState("")
-    const [timeTypeSearch, setTimeTypeSearch] = useState("")
+    const [guardSearch, setGuardSearch] = useState("")
+    const [dutySearch, setDutySearch] = useState("")
 
-    // Date and time states
-    const [startDate, setStartDate] = useState<Date | undefined>(undefined)
-    const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-    const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined)
-    const [startTime, setStartTime] = useState("09:00")
-    const [endTime, setEndTime] = useState("17:00")
-    const [checkInTime, setCheckInTime] = useState("08:45")
+    // Date states
+    const [startDate, setStartDate] = useState<Date | null>(null)
+    const [endDate, setEndDate] = useState<Date | null>(null)
 
     const {
-        register,
         handleSubmit,
         formState: { errors },
         setValue,
         watch,
         reset,
-    } = useForm<DutyFormData>({
-        resolver: zodResolver(dutySchema),
+    } = useForm<GuardAssignmentFormData>({
+        resolver: zodResolver(guardAssignmentSchema),
         defaultValues: {
-            title: "",
-            site_id: undefined,
-            site_location_id: undefined,
-            duty_time_type_id: undefined,
-            start_datetime: "",
-            end_datetime: "",
-            guards_required: 1,
-            duty_type: "day",
-            required_hours: 8,
-            mandatory_check_in_time: "",
-            notes: "",
-            status: "pending"
+            guard_id: 0,
+            duty_id: 0,
+            start_date: "",
+            end_date: "",
+            status: "assigned"
         },
         mode: "onBlur"
     })
 
     const formValues = watch()
 
-    // Initial fetch on mount
+    // Fetch initial data when dialog opens
     useEffect(() => {
-        //dispatch(fetchSites({ page: 1, per_page: 10, is_active: true }))
-        dispatch(fetchSiteLocations({ page: 1, per_page: 10, is_active: true }))
-        dispatch(fetchDutyTimeTypes({ page: 1, per_page: 10, is_active: true }))
-    }, [dispatch])
+        if (isOpen) {
+            dispatch(fetchGuards({ page: 1, per_page: 100 }))
+            dispatch(fetchDuties({ page: 1, per_page: 100 }))
+        }
+    }, [isOpen, dispatch])
 
+    // Fetch duties when guard is selected
+    useEffect(() => {
+        if (formValues.guard_id && formValues.guard_id > 0) {
+            const params: DutyParams = {
+                page: 1,
+                per_page: 100,
+                guard_id: formValues.guard_id // Using guard_id as params
+            }
+            dispatch(fetchDuties(params))
+        }
+    }, [formValues.guard_id, dispatch])
 
-
-
-    // Fetch sites when search changes
+    // Search effects for dropdowns
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (siteSearch.trim() || siteSearch === "") {
-                dispatch(fetchSites({
+            if (guardSearch.trim() || guardSearch === "") {
+                dispatch(fetchGuards({
                     page: 1,
                     per_page: 10,
-                    is_active: true,
-                    search: siteSearch.trim()
+                    search: guardSearch.trim()
                 }))
             }
         }, 300)
-
         return () => clearTimeout(timer)
-    }, [siteSearch, dispatch])
+    }, [guardSearch, dispatch])
 
-    // Fetch site locations when search changes
     useEffect(() => {
-        if (locationSearch && formValues.site_id) {
-            const timer = setTimeout(() => {
-                dispatch(fetchSiteLocations({
+        const timer = setTimeout(() => {
+            if (dutySearch.trim() || dutySearch === "") {
+                const params: DutyParams = {
                     page: 1,
                     per_page: 10,
-                    is_active: true,
-                    search: locationSearch,
-                    site_id: formValues.site_id
-                }))
-            }, 500)
+                    status: 'approved',
+                    search: dutySearch.trim()
+                }
 
-            return () => clearTimeout(timer)
-        }
-    }, [locationSearch, formValues.site_id, dispatch])
+                // If guard is selected, filter duties by guard
+                if (formValues.guard_id && formValues.guard_id > 0) {
+                    params.guard_id = formValues.guard_id
+                }
 
-    // Fetch duty time types when search changes
-    useEffect(() => {
-        if (timeTypeSearch) {
-            const timer = setTimeout(() => {
-                dispatch(fetchDutyTimeTypes({
-                    page: 1,
-                    per_page: 10,
-                    is_active: true,
-                    search: timeTypeSearch
-                }))
-            }, 500)
+                dispatch(fetchDuties(params))
+            }
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [dutySearch, formValues.guard_id, dispatch])
 
-            return () => clearTimeout(timer)
-        }
-    }, [timeTypeSearch, dispatch])
-
-    // Update datetime fields when date or time changes
+    // Update start_date field when date changes
     useEffect(() => {
         if (startDate) {
-            const datetime = new Date(startDate)
-            const [hours, minutes] = startTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('start_datetime', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+            setValue('start_date', format(startDate, 'yyyy-MM-dd'), { shouldValidate: true })
         }
-    }, [startDate, startTime, setValue])
+    }, [startDate, setValue])
 
+    // Update end_date field when date changes
     useEffect(() => {
         if (endDate) {
-            const datetime = new Date(endDate)
-            const [hours, minutes] = endTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('end_datetime', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+            setValue('end_date', format(endDate, 'yyyy-MM-dd'), { shouldValidate: true })
         }
-    }, [endDate, endTime, setValue])
+    }, [endDate, setValue])
 
-    useEffect(() => {
-        if (checkInDate) {
-            const datetime = new Date(checkInDate)
-            const [hours, minutes] = checkInTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('mandatory_check_in_time', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
-        }
-    }, [checkInDate, checkInTime, setValue])
-
-    // Get selected items for display
-    const selectedSite = sites.find((site: Site) => site.id === formValues.site_id)
-    const selectedLocation = siteLocations.find((loc: SiteLocation) => loc.id === formValues.site_location_id)
-    const selectedTimeType = dutyTimeTypes.find((type: DutyTimeType) => type.id === formValues.duty_time_type_id)
-
-    // Generate time options (same as your example)
-    const timeOptions = Array.from({ length: 48 }, (_, i) => {
-        const hour = Math.floor(i / 2)
-        const minute = (i % 2) * 30
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-    })
-
-    const formatTimeDisplay = (time: string) => {
-        if (!time) return "Select time"
-        const [hours, minutes] = time.split(':')
-        const hour = parseInt(hours)
-        const period = hour >= 12 ? 'PM' : 'AM'
-        const displayHour = hour % 12 || 12
-        return `${displayHour}:${minutes} ${period}`
+    // Format functions for display
+    const formatGuardDisplay = (guard: Partial<Guard>) => {
+        if (!guard) return ""
+        return `${guard.full_name || 'Unknown'} (${guard.guard_code || 'No Code'})`
     }
 
-    const formatDateDisplay = (date: Date | undefined) => {
+    const formatDutyDisplay = (duty: Partial<Duty>) => {
+        if (!duty) return ""
+        return `${duty.title || 'Untitled Duty'} (${duty.duty_type || 'N/A'})`
+    }
+
+    const formatDateDisplay = (date: Date | null) => {
         if (!date) return "Select date"
         return format(date, 'MMM dd, yyyy')
     }
 
-    // Handle time selection
-    const handleTimeSelect = (field: 'start_datetime' | 'end_datetime' | 'mandatory_check_in_time', time: string) => {
-        if (field === 'start_datetime') {
-            setStartTime(time)
-        } else if (field === 'end_datetime') {
-            setEndTime(time)
-        } else {
-            setCheckInTime(time)
-        }
-    }
-
-    const onSubmit = async (data: DutyFormData) => {
+    const onSubmit = async (data: GuardAssignmentFormData) => {
         setIsLoading(true)
         try {
-            // Prepare data exactly as your example
-            const submitData: Omit<Duty, 'id' | 'created_at' | 'updated_at' | 'is_active' | 'site' | 'site_location'> = {
-                title: data.title.trim(),
-                site_id: data.site_id,
-                site_location_id: data.site_location_id,
-                duty_time_type_id: data.duty_time_type_id,
-                start_datetime: data.start_datetime,
-                end_datetime: data.end_datetime,
-                guards_required: data.guards_required,
-                duty_type: data.duty_type,
-                required_hours: data.required_hours,
-                mandatory_check_in_time: data.mandatory_check_in_time,
-                notes: data.notes?.trim() || null,
+            // Prepare data for API - exactly matching the required format
+            const submitData = {
+                guard_id: data.guard_id,
+                duty_id: data.duty_id,
+                start_date: data.start_date,
+                end_date: data.end_date,
                 status: data.status
             }
 
-            const result = await dispatch(createDuty(submitData))
+            const result = await dispatch(createAssignment(submitData))
 
-            if (createDuty.fulfilled.match(result)) {
+            if (createAssignment.fulfilled.match(result)) {
                 SweetAlertService.success(
-                    'Duty Created Successfully',
-                    `${data.title} has been created successfully.`
+                    'Guard Assignment Created',
+                    'Guard has been assigned to duty successfully.'
                 ).then(() => {
                     // Reset all states
                     reset()
-                    setStartDate(undefined)
-                    setEndDate(undefined)
-                    setCheckInDate(undefined)
-                    setStartTime("09:00")
-                    setEndTime("17:00")
-                    setCheckInTime("08:45")
-                    setSiteSearch("")
-                    setLocationSearch("")
-                    setTimeTypeSearch("")
+                    setStartDate(null)
+                    setEndDate(null)
+                    setGuardSearch("")
+                    setDutySearch("")
                     onSuccess?.()
                     onOpenChange?.(false)
                 })
@@ -316,7 +238,7 @@ export function GuardAssignmentCreateForm({
                 throw result.payload
             }
         } catch (error: unknown) {
-            let errorMessage = "Failed to create duty. Please try again."
+            let errorMessage = "Failed to create guard assignment. Please try again."
 
             if (typeof error === 'string') {
                 errorMessage = error
@@ -335,22 +257,15 @@ export function GuardAssignmentCreateForm({
     }
 
     const handleCancel = () => {
-        const hasData = formValues.title.trim() ||
-            formValues.site_id ||
-            formValues.site_location_id ||
-            formValues.duty_time_type_id ||
-            startDate ||
-            endDate ||
-            checkInDate ||
-            formValues.guards_required !== 1 ||
-            formValues.required_hours !== 8 ||
-            formValues.notes?.trim()
+        const hasData = formValues.guard_id > 0 ||
+            formValues.duty_id > 0 ||
+            startDate !== null ||
+            endDate !== null
 
         if (!hasData) {
             reset()
-            setStartDate(undefined)
-            setEndDate(undefined)
-            setCheckInDate(undefined)
+            setStartDate(null)
+            setEndDate(null)
             onOpenChange?.(false)
             return
         }
@@ -363,9 +278,8 @@ export function GuardAssignmentCreateForm({
         ).then((result) => {
             if (result.isConfirmed) {
                 reset()
-                setStartDate(undefined)
-                setEndDate(undefined)
-                setCheckInDate(undefined)
+                setStartDate(null)
+                setEndDate(null)
                 onOpenChange?.(false)
             }
         })
@@ -375,22 +289,15 @@ export function GuardAssignmentCreateForm({
         if (open) {
             onOpenChange?.(true)
         } else {
-            const hasData = formValues.title.trim() ||
-                formValues.site_id ||
-                formValues.site_location_id ||
-                formValues.duty_time_type_id ||
-                startDate ||
-                endDate ||
-                checkInDate ||
-                formValues.guards_required !== 1 ||
-                formValues.required_hours !== 8 ||
-                formValues.notes?.trim()
+            const hasData = formValues.guard_id > 0 ||
+                formValues.duty_id > 0 ||
+                startDate !== null ||
+                endDate !== null
 
             if (!hasData) {
                 reset()
-                setStartDate(undefined)
-                setEndDate(undefined)
-                setCheckInDate(undefined)
+                setStartDate(null)
+                setEndDate(null)
                 onOpenChange?.(false)
             } else {
                 SweetAlertService.confirm(
@@ -401,9 +308,8 @@ export function GuardAssignmentCreateForm({
                 ).then((result) => {
                     if (result.isConfirmed) {
                         reset()
-                        setStartDate(undefined)
-                        setEndDate(undefined)
-                        setCheckInDate(undefined)
+                        setStartDate(null)
+                        setEndDate(null)
                         onOpenChange?.(false)
                     } else {
                         onOpenChange?.(true)
@@ -419,489 +325,232 @@ export function GuardAssignmentCreateForm({
                 {trigger}
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[800px] w-[80vw] max-w-[80vw] mx-auto max-h-[80vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
+            <DialogContent className="sm:max-w-[600px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
                 {/* Header */}
-                <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6">
+                <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6 sticky top-0 bg-white dark:bg-gray-900 z-10 pb-2">
                     <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Add Duty</span>
+                    <span className="whitespace-nowrap">Assign Guard to Duty</span>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="mb-6">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                            Duty Information
+                            Assignment Information
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                            {/* Title - Full width on mobile, 2 columns on medium, 3 on large */}
-                            <div className="md:col-span-2 lg:col-span-3">
-                                <FloatingLabelInput
-                                    label="Title"
-                                    {...register("title")}
-                                    error={errors.title?.message}
-                                    disabled={isLoading}
-                                />
-                            </div>
-
-                            {/* Site */}
+                        <div className="grid grid-cols-1 gap-4 md:gap-6">
+                            {/* Guard Selection */}
                             <div className="space-y-2">
-                                <Label htmlFor="site" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Site *
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Guard <span className="text-red-500">*</span>
                                 </Label>
                                 <SearchableDropdownWithIcon
-                                    value={formValues.site_id || ""}
+                                    value={formValues.guard_id || 0}
                                     onValueChange={(value) => {
-                                        const siteId = Number(value)
-                                        setValue("site_id", siteId, { shouldValidate: true })
-                                        setValue("site_location_id", 0)
+                                        setValue("guard_id", Number(value), { shouldValidate: true })
+                                        // Reset duty when guard changes
+                                        setValue("duty_id", 0)
+                                        setDutySearch("")
                                     }}
-                                    options={sites.map((site: Site) => ({
-                                        value: site.id,
-                                        label: site.title || `Site ${site.id}`,
-                                        ...site
+                                    options={guards.map((guard: Guard) => ({
+                                        value: guard.id,
+                                        label: formatGuardDisplay(guard),
+                                        ...guard
                                     }))}
                                     onSearch={(search) => {
-                                        setSiteSearch(search)
-                                        dispatch(fetchSites({
+                                        setGuardSearch(search)
+                                        dispatch(fetchGuards({
                                             page: 1,
                                             per_page: 10,
-                                            is_active: true,
                                             search: search
                                         }))
                                     }}
-                                    placeholder="Select site"
-                                    disabled={isLoading || sitesLoading}
-                                    isLoading={sitesLoading}
-                                    emptyMessage={siteSearch ? "No sites found" : "No sites available"}
-                                    searchPlaceholder="Search sites..."
-                                    icon={Building}
+                                    placeholder="Select guard"
+                                    disabled={isLoading || guardsLoading}
+                                    isLoading={guardsLoading}
+                                    emptyMessage={guardSearch ? "No guards found" : "No guards available"}
+                                    searchPlaceholder="Search guards by name or code..."
+                                    icon={User}
                                     iconPosition="left"
                                     displayValue={(value, options) => {
-                                        if (!value) return "Select site"
+                                        if (!value || value === 0) return "Select guard"
                                         const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select site"
+                                        return option?.label || "Select guard"
                                     }}
                                 />
-                                {errors.site_id && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.site_id.message}</p>
+                                {errors.guard_id && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.guard_id.message}</p>
                                 )}
                             </div>
 
-                            {/* Site Location */}
+                            {/* Duty Selection */}
                             <div className="space-y-2">
-                                <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Location *
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Duty <span className="text-red-500">*</span>
                                 </Label>
                                 <SearchableDropdownWithIcon
-                                    value={formValues.site_location_id || ""}
+                                    value={formValues.duty_id || 0}
                                     onValueChange={(value) => {
-                                        setValue("site_location_id", Number(value), { shouldValidate: true })
+                                        setValue("duty_id", Number(value), { shouldValidate: true })
                                     }}
-                                    options={siteLocations.map((location: SiteLocation) => ({
-                                        value: location.id,
-                                        label: location.title,
-                                        ...location
+                                    options={duties.map((duty: Duty) => ({
+                                        value: duty.id,
+                                        label: formatDutyDisplay(duty),
+                                        ...duty
                                     }))}
                                     onSearch={(search) => {
-                                        if (formValues.site_id) {
-                                            setLocationSearch(search)
-                                            dispatch(fetchSiteLocations({
-                                                page: 1,
-                                                per_page: 10,
-                                                is_active: true,
-                                                search: search,
-                                                site_id: formValues.site_id
-                                            }))
+                                        setDutySearch(search)
+                                        const params: DutyParams = {
+                                            page: 1,
+                                            per_page: 10,
+                                            status: 'approved',
+                                            search: search
                                         }
+                                        if (formValues.guard_id && formValues.guard_id > 0) {
+                                            params.guard_id = formValues.guard_id
+                                        }
+                                        dispatch(fetchDuties(params))
                                     }}
-                                    placeholder={formValues.site_id ? "Select location" : "Select site first"}
-                                    disabled={isLoading || locationsLoading || !formValues.site_id}
-                                    isLoading={locationsLoading}
+                                    placeholder={formValues.guard_id && formValues.guard_id > 0 ? "Select duty" : "Select guard first"}
+                                    disabled={isLoading || dutiesLoading || !formValues.guard_id || formValues.guard_id === 0}
+                                    isLoading={dutiesLoading}
                                     emptyMessage={
-                                        !formValues.site_id
-                                            ? "Select a site first"
-                                            : locationSearch
-                                                ? "No locations found"
-                                                : "No locations available"
+                                        !formValues.guard_id || formValues.guard_id === 0
+                                            ? "Select a guard first"
+                                            : dutySearch
+                                                ? "No duties found for this guard"
+                                                : "No duties available for this guard"
                                     }
-                                    searchPlaceholder="Search locations..."
-                                    icon={MapPin}
+                                    searchPlaceholder="Search duties..."
+                                    icon={Briefcase}
                                     iconPosition="left"
                                     displayValue={(value, options) => {
-                                        if (!value) return formValues.site_id ? "Select location" : "Select site first"
+                                        if (!value || value === 0) {
+                                            return formValues.guard_id && formValues.guard_id > 0
+                                                ? "Select duty"
+                                                : "Select guard first"
+                                        }
                                         const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select location"
+                                        return option?.label || "Select duty"
                                     }}
                                 />
-                                {errors.site_location_id && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.site_location_id.message}</p>
+                                {errors.duty_id && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.duty_id.message}</p>
                                 )}
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formValues.guard_id && formValues.guard_id > 0
+                                        ? "Showing duties assigned to selected guard"
+                                        : "Select a guard to see available duties"}
+                                </p>
                             </div>
 
-                            {/* Duty Time Type */}
+                            {/* Start Date */}
                             <div className="space-y-2">
-                                <Label htmlFor="timeType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Duty Time Type *
+                                <Label htmlFor="start_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Start Date <span className="text-red-500">*</span>
                                 </Label>
-                                <SearchableDropdownWithIcon
-                                    value={formValues.duty_time_type_id || ""}
-                                    onValueChange={(value) => {
-                                        setValue("duty_time_type_id", Number(value), { shouldValidate: true })
-                                    }}
-                                    options={dutyTimeTypes.map((type: DutyTimeType) => ({
-                                        value: type.id,
-                                        label: `${type.title} (${type.start_time} - ${type.end_time})`,
-                                        ...type
-                                    }))}
-                                    onSearch={(search) => {
-                                        setTimeTypeSearch(search)
-                                        dispatch(fetchDutyTimeTypes({
-                                            page: 1,
-                                            per_page: 10,
-                                            is_active: true,
-                                            search: search
-                                        }))
-                                    }}
-                                    placeholder="Select time type"
-                                    disabled={isLoading || timeTypesLoading}
-                                    isLoading={timeTypesLoading}
-                                    emptyMessage={timeTypeSearch ? "No time types found" : "No time types available"}
-                                    searchPlaceholder="Search time types..."
-                                    icon={ClockIcon}
-                                    iconPosition="left"
-                                    displayValue={(value, options) => {
-                                        if (!value) return "Select time type"
-                                        const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select time type"
-                                    }}
-                                />
-                                {errors.duty_time_type_id && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.duty_time_type_id.message}</p>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal h-11",
+                                                !startDate && "text-muted-foreground"
+                                            )}
+                                            disabled={isLoading}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {formatDateDisplay(startDate)}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={startDate || undefined}
+                                            onSelect={(date: Date | undefined) => setStartDate(date || null)}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {errors.start_date && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.start_date.message}</p>
                                 )}
                             </div>
 
-                            {/* Guards Required & Required Hours in one row on large screens */}
+                            {/* End Date */}
                             <div className="space-y-2">
-                                <FloatingLabelInput
-                                    label="Guards Required"
-                                    type="number"
-                                    min="1"
-                                    max="20"
-                                    {...register("guards_required", { valueAsNumber: true })}
-                                    error={errors.guards_required?.message}
-                                    disabled={isLoading}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <FloatingLabelInput
-                                    label="Required Hours"
-                                    type="number"
-                                    min="1"
-                                    max="24"
-                                    step="0.5"
-                                    {...register("required_hours", { valueAsNumber: true })}
-                                    error={errors.required_hours?.message}
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Duty Type Section */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                            Duty Details
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                            {/* Duty Type */}
-                            <div className="space-y-2">
-                                <Label htmlFor="duty_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Duty Type *
+                                <Label htmlFor="end_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    End Date <span className="text-red-500">*</span>
                                 </Label>
-                                <div className="flex gap-2 bg-gray-50 dark:bg-gray-800 p-1 rounded-lg">
-                                    <Button
-                                        type="button"
-                                        variant={formValues.duty_type === "day" ? "default" : "ghost"}
-                                        className="flex-1 transition-all duration-200"
-                                        onClick={() => setValue("duty_type", "day", { shouldValidate: true })}
-                                        disabled={isLoading}
-                                    >
-                                        Day
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant={formValues.duty_type === "night" ? "default" : "ghost"}
-                                        className="flex-1 transition-all duration-200"
-                                        onClick={() => setValue("duty_type", "night", { shouldValidate: true })}
-                                        disabled={isLoading}
-                                    >
-                                        Night
-                                    </Button>
-                                </div>
-                                {errors.duty_type && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.duty_type.message}</p>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal h-11",
+                                                !endDate && "text-muted-foreground"
+                                            )}
+                                            disabled={isLoading}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {formatDateDisplay(endDate)}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={endDate || undefined}
+                                            onSelect={(date: Date | undefined) => setEndDate(date || null)}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {errors.end_date && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.end_date.message}</p>
+                                )}
+                            </div>
+
+                            {/* Status Dropdown */}
+                            <div className="space-y-2">
+                                <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Status <span className="text-red-500">*</span>
+                                </Label>
+                                <Select
+                                    value={formValues.status}
+                                    onValueChange={(value: "assigned" | "active" | "completed" | "cancelled") =>
+                                        setValue("status", value, { shouldValidate: true })
+                                    }
+                                >
+                                    <SelectTrigger className="w-full h-11">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectLabel>Status</SelectLabel>
+                                            {statusOptions.map((status) => (
+                                                <SelectItem key={status.value} value={status.value}>
+                                                    {status.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                {errors.status && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.status.message}</p>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Date & Time Section */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                            Date & Time
-                        </h3>
-
-                        {/* Start Date & Time */}
-                        <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                Start Date & Time
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="start_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Date *
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
-                                                    !startDate && "text-muted-foreground"
-                                                )}
-                                                disabled={isLoading}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                                {formatDateDisplay(startDate)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={startDate}
-                                                onSelect={setStartDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="start_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Time *
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                disabled={isLoading}
-                                            >
-                                                <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                {formatTimeDisplay(startTime)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <div className="max-h-[200px] overflow-y-auto p-3">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    {timeOptions.map((time) => (
-                                                        <Button
-                                                            key={`start-${time}`}
-                                                            type="button"
-                                                            variant={startTime === time ? "default" : "ghost"}
-                                                            className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                            onClick={() => handleTimeSelect('start_datetime', time)}
-                                                            disabled={isLoading}
-                                                        >
-                                                            {formatTimeDisplay(time)}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* End Date & Time */}
-                        <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                End Date & Time
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="end_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Date *
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
-                                                    !endDate && "text-muted-foreground"
-                                                )}
-                                                disabled={isLoading}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                                {formatDateDisplay(endDate)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={endDate}
-                                                onSelect={setEndDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="end_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Time *
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                disabled={isLoading}
-                                            >
-                                                <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                {formatTimeDisplay(endTime)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <div className="max-h-[200px] overflow-y-auto p-3">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    {timeOptions.map((time) => (
-                                                        <Button
-                                                            key={`end-${time}`}
-                                                            type="button"
-                                                            variant={endTime === time ? "default" : "ghost"}
-                                                            className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                            onClick={() => handleTimeSelect('end_datetime', time)}
-                                                            disabled={isLoading}
-                                                        >
-                                                            {formatTimeDisplay(time)}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Check-in Date & Time */}
-                        <div className="mb-6">
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                Mandatory Check-in
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="checkin_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Date *
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
-                                                    !checkInDate && "text-muted-foreground"
-                                                )}
-                                                disabled={isLoading}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                                {formatDateDisplay(checkInDate)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={checkInDate}
-                                                onSelect={setCheckInDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="checkin_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Time *
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                disabled={isLoading}
-                                            >
-                                                <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                {formatTimeDisplay(checkInTime)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <div className="max-h-[200px] overflow-y-auto p-3">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    {timeOptions.map((time) => (
-                                                        <Button
-                                                            key={`checkin-${time}`}
-                                                            type="button"
-                                                            variant={checkInTime === time ? "default" : "ghost"}
-                                                            className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                            onClick={() => handleTimeSelect('mandatory_check_in_time', time)}
-                                                            disabled={isLoading}
-                                                        >
-                                                            {formatTimeDisplay(time)}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Notes Section */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                            Additional Information
-                        </h3>
-                        <div className="space-y-2">
-                            <Label htmlFor="notes" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Notes (Optional)
-                            </Label>
-                            <FloatingLabelTextarea
-                                label="Add any additional notes or instructions..."
-                                rows={3}
-                                {...register("notes")}
-                                disabled={isLoading}
-                                className="resize-none"
-                            />
-                        </div>
-                    </div>
+                    
 
                     {/* Footer Actions */}
                     <DialogActionFooter
                         cancelText="Cancel"
-                        submitText="Create Duty"
+                        submitText="Create Assignment"
                         isSubmitting={isLoading}
-                        submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                        submitColor="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                         onSubmit={handleSubmit(onSubmit)}
                     />
                 </form>

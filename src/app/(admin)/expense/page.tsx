@@ -1,7 +1,7 @@
 "use client";
 
 import ExpenseTopCard from "@/components/expense/expanse-top-card";
-import { ExpensetDataTable } from "@/components/expense/expense-data-table";
+import { ExpenseDataTable } from "@/components/expense/expense-data-table";
 
 
 
@@ -14,7 +14,7 @@ export default function page() {
             <ExpenseTopCard/>
         </div>
         <div className="py-2 px-4 md:px-6">
-            <ExpensetDataTable/>
+            <ExpenseDataTable/>
         </div>
       </div>
 

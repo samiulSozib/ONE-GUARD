@@ -25,6 +25,8 @@ export interface GuardAssignmentParams {
   duty_id?: number;
   
   status?: string;
+  include_guard?: boolean;
+  include_duty?: boolean;
 
 
   sort_by?: string;

@@ -60,6 +60,7 @@ export interface DutyParams {
   per_page?: number;
   search?: string;
 
+  guard_id?:number;
   site_id?: number;
   site_location_id?: number;
   duty_time_type_id?: number;

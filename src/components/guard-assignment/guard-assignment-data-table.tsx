@@ -64,6 +64,7 @@ import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignm
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
+import { GuardAssignmentEditForm } from "./guard-assignment-edit-form";
 
 // Status colors mapping
 const assignmentStatusColors: Record<string, string> = {
@@ -678,7 +679,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
       />
 
       {/* Edit Form Dialog */}
-      {/* {selectedAssignment && (
+      {selectedAssignment && (
         <GuardAssignmentEditForm
           trigger={<div />}
           assignment={selectedAssignment}
@@ -692,10 +693,11 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               search: searchTerm,
               include_guard: true,
               include_duty: true,
+              
             }));
           }}
         />
-      )} */}
+      )}
     </>
   );
 }

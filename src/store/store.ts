@@ -12,6 +12,9 @@ import dutyStatusReportReducer from './slices/dutyStatusReportSlice'
 import dutyAttendanceReducer from './slices/dutyAttendenceSlice'
 import guardTypesReducer from './slices/guardTypeSlice'
 import expenseCategoryReducer from './slices/expenseCategorySlice'
+import complaintReducer from './slices/complaintSlice'
+import expenseReducer from './slices/expenseSlice'
+import leaveReducer from './slices/leaveSlice'
 
 export const store = configureStore({
   reducer: {
@@ -27,7 +30,10 @@ export const store = configureStore({
     dutyStatusReport:dutyStatusReportReducer,
     dutyAttendance:dutyAttendanceReducer,
     guardTypes:guardTypesReducer,
-    expenseCategory:expenseCategoryReducer
+    expenseCategory:expenseCategoryReducer,
+    complaint:complaintReducer,
+    expense:expenseReducer,
+    leave:leaveReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

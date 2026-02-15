@@ -4,7 +4,7 @@ import { ButtonGroup } from '../ui/button-group'
 import { Button } from '../ui/button'
 import { IconBrandGoogleMaps } from '@tabler/icons-react'
 import { PlusIcon, MapPin, Users, User } from 'lucide-react'
-import { LeaveCreateForm } from './leave-create-form'
+import { LeaveCreateForm } from './leave-create-form-new'
 
 const LeaveTopCard = () => {
     return (
