@@ -9,12 +9,13 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import Image from "next/image"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { login } from "@/store/slices/authSlice"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { Loader2 } from "lucide-react"
 import SweetAlertService from "@/lib/sweetAlert"
 import { useAppDispatch } from "@/hooks/useAppDispatch";
@@ -25,6 +26,13 @@ interface LoginFormProps extends React.ComponentProps<"div"> {
   onSuccess?: () => void;
 }
 
+// Storage keys
+const STORAGE_KEYS = {
+  SAVED_EMAIL: 'saved_email',
+  SAVED_PASSWORD: 'saved_password',
+  REMEMBER_ME: 'remember_me'
+} as const;
+
 export function LoginForm({
   className,
   onSuccess,
@@ -33,6 +41,14 @@ export function LoginForm({
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { isLoading } = useAppSelector((state) => state.auth)
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEYS.REMEMBER_ME) === 'true'
+    }
+    return false
+  })
+  
+  const hasLoadedCredentials = useRef(false)
 
   const {
     register,
@@ -41,6 +57,7 @@ export function LoginForm({
     setFocus,
     reset,
     clearErrors,
+    setValue,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -50,33 +67,117 @@ export function LoginForm({
     mode: "onChange"
   })
 
-  // Clear form errors on mount
+  // Load saved credentials on mount
+  const loadSavedCredentials = useCallback(() => {
+    if (!hasLoadedCredentials.current && rememberMe) {
+      const savedEmail = localStorage.getItem(STORAGE_KEYS.SAVED_EMAIL)
+      const savedPassword = localStorage.getItem(STORAGE_KEYS.SAVED_PASSWORD)
+      
+      if (savedEmail && savedPassword) {
+        setValue('email', savedEmail)
+        setValue('password', savedPassword)
+      }
+      
+      hasLoadedCredentials.current = true
+    }
+  }, [rememberMe, setValue])
+
   useEffect(() => {
     clearErrors()
+    loadSavedCredentials()
     setFocus('email')
-  }, [clearErrors, setFocus])
+  }, [clearErrors, loadSavedCredentials, setFocus])
+
+  // Save credentials function
+  const saveCredentials = useCallback((email: string, password: string, remember: boolean) => {
+    if (remember) {
+      localStorage.setItem(STORAGE_KEYS.SAVED_EMAIL, email)
+      localStorage.setItem(STORAGE_KEYS.SAVED_PASSWORD, password)
+      localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true')
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.SAVED_EMAIL)
+      localStorage.removeItem(STORAGE_KEYS.SAVED_PASSWORD)
+      localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME)
+    }
+  }, [])
+
+  // Clear saved credentials function
+  const clearSavedCredentials = useCallback(async () => {
+    localStorage.removeItem(STORAGE_KEYS.SAVED_EMAIL)
+    localStorage.removeItem(STORAGE_KEYS.SAVED_PASSWORD)
+    localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME)
+    setRememberMe(false)
+    setValue('email', '')
+    setValue('password', '')
+    
+    await SweetAlertService.success(
+      'Credentials Cleared',
+      'Saved login credentials have been removed.',
+      {
+        timer: 1500,
+        showConfirmButton: false,
+      }
+    )
+  }, [setValue])
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      console.log('Submitting form with data:', data);
+      
       const result = await dispatch(login(data))
 
       if (login.fulfilled.match(result)) {
+        console.log('Login successful');
+        saveCredentials(data.email, data.password, rememberMe)
         reset()
 
         if (onSuccess) {
           onSuccess()
         } else {
-          // Wait for SweetAlert to finish before redirecting
+          // Show success message before redirect
+          await SweetAlertService.success(
+            'Login Successful!',
+            'Welcome back to the Security Management System.',
+            {
+              timer: 1500,
+              showConfirmButton: false,
+            }
+          );
+          
           setTimeout(() => {
             router.push('/')
-          }, 1600); // Wait 1.6 seconds for SweetAlert to complete
+          }, 1600);
         }
+      } else if (login.rejected.match(result)) {
+        // Handle login failure
+        console.error('Login failed:', result.payload);
+        SweetAlertService.error(
+          'Login Failed',
+          result.payload as string || 'Invalid email or password. Please try again.',
+          {
+            confirmButtonColor: '#6b0016',
+          }
+        );
       }
     } catch (error) {
       console.error('Login error:', error)
-      // Error is handled by Redux slice
+      SweetAlertService.error(
+        'Login Error',
+        'An unexpected error occurred. Please try again.',
+        {
+          confirmButtonColor: '#6b0016',
+        }
+      );
     }
   }
+
+  // Check if there are saved credentials
+  const hasSavedCredentials = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem(STORAGE_KEYS.SAVED_EMAIL)
+    }
+    return false
+  }, [])
 
   return (
     <div
@@ -159,68 +260,54 @@ export function LoginForm({
                   )}
                 </Field>
 
+                {/* Remember Me and Clear Credentials Section */}
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember-me"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                      className="border-white data-[state=checked]:bg-[#b9a58b] data-[state=checked]:text-white"
+                    />
+                    <label
+                      htmlFor="remember-me"
+                      className="text-sm text-white cursor-pointer select-none"
+                    >
+                      Remember me
+                    </label>
+                  </div>
+                  
+                  {/* Clear Saved Credentials Button */}
+                  {hasSavedCredentials() && (
+                    <button
+                      type="button"
+                      onClick={clearSavedCredentials}
+                      className="text-xs text-white/70 hover:text-white underline transition-colors"
+                    >
+                      Clear saved credentials
+                    </button>
+                  )}
+                </div>
+
                 {/* Forgot Password Link */}
-                {/* <div className="text-right text-xs">
+                <div className="text-right text-xs mt-2">
                   <button
                     type="button"
-                    className="underline hover:text-[#b9a58b] transition-colors"
-                    onClick={async () => {
-                      const { value: email } = await SweetAlertService.info({
-                        title: 'Reset Password',
-                        input: 'email',
-                        inputLabel: 'Enter your email address',
-                        inputPlaceholder: 'Enter your email',
-                        inputAttributes: {
-                          autocapitalize: 'off'
-                        },
-                        showCancelButton: true,
-                        confirmButtonText: 'Send Reset Link',
-                        confirmButtonColor: '#6b0016',
-                        cancelButtonText: 'Cancel',
-                        cancelButtonColor: '#6b7280',
-                        inputValidator: (value) => {
-                          if (!value) {
-                            return 'Please enter your email address!'
-                          }
-                          if (!/^\S+@\S+\.\S+$/.test(value)) {
-                            return 'Please enter a valid email address!'
-                          }
-                          return null
-                        }
-                      })
-
-                      if (email) {
-                        // Call your API to send reset password email
-                        try {
-                          // api.post('/forgot-password', { email })
-                          await SweetAlertService.success(
-                            'Reset Link Sent!',
-                            'Check your email for password reset instructions.',
-                            {
-                              confirmButtonColor: '#6b0016',
-                            }
-                          )
-                        } catch (error) {
-                          SweetAlertService.error(
-                            'Failed to Send',
-                            'Please try again or contact support.',
-                            {
-                              confirmButtonColor: '#6b0016',
-                            }
-                          )
-                        }
-                      }
+                    className="text-white/70 hover:text-white underline transition-colors"
+                    onClick={() => {
+                      // Handle forgot password
+                      router.push('/auth/forgot-password');
                     }}
                   >
-                    Forgot your password?
+                    Forgot password?
                   </button>
-                </div> */}
+                </div>
 
                 {/* Submit Button */}
                 <Button
                   type="submit"
                   disabled={isLoading || !isValid}
-                  className="mt-4 w-full bg-[#b9a58b] text-black hover:bg-[#a89478] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-6 w-full bg-[#b9a58b] text-black hover:bg-[#a89478] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
@@ -228,62 +315,18 @@ export function LoginForm({
                       Logging in...
                     </>
                   ) : (
-                    'Enter'
+                    'Sign In'
                   )}
                 </Button>
-
-                {/* Support Text */}
-                {/* <p className="mt-6 text-center text-xs text-neutral-200">
-                  Having trouble logging in?{" "}
-                  <button
-                    type="button"
-                    className="underline hover:text-[#b9a58b] transition-colors"
-                    onClick={async () => {
-                      const { value: formValues } = await SweetAlertService.fire({
-                        title: 'Contact Support',
-                        html: `
-                          <input id="swal-input1" class="swal2-input" placeholder="Your Name">
-                          <input id="swal-input2" class="swal2-input" placeholder="Your Email">
-                          <textarea id="swal-input3" class="swal2-textarea" placeholder="Describe your issue"></textarea>
-                        `,
-                        focusConfirm: false,
-                        preConfirm: () => {
-                          const name = (document.getElementById('swal-input1') as HTMLInputElement).value
-                          const email = (document.getElementById('swal-input2') as HTMLInputElement).value
-                          const issue = (document.getElementById('swal-input3') as HTMLTextAreaElement).value
-                          
-                          if (!name || !email || !issue) {
-                            SweetAlertService.showValidationMessage('Please fill all fields')
-                            return false
-                          }
-                          
-                          return { name, email, issue }
-                        },
-                        showCancelButton: true,
-                        confirmButtonText: 'Send Message',
-                        confirmButtonColor: '#6b0016',
-                        cancelButtonText: 'Cancel',
-                        cancelButtonColor: '#6b7280',
-                      })
-
-                      if (formValues) {
-                        // Handle support request submission
-                        await SweetAlertService.success(
-                          'Message Sent!',
-                          'Our support team will contact you shortly.',
-                          {
-                            timer: 2000,
-                            showConfirmButton: false,
-                          }
-                        )
-                      }
-                    }}
-                  >
-                    Contact Support
-                  </button>
-                </p> */}
               </FieldGroup>
             </form>
+
+            {/* Saved credentials indicator */}
+            {hasSavedCredentials() && !rememberMe && (
+              <p className="mt-4 text-xs text-white/50 text-center">
+                Saved credentials available. Check &quot;Remember me&quot; to auto-fill.
+              </p>
+            )}
           </div>
 
         </CardContent>

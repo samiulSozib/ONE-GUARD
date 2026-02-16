@@ -18,9 +18,21 @@ import {
     LogOut,
     GalleryVerticalEnd,
     AudioWaveform,
-    Command
+    Command,
+    Frame,
+    PieChart,
+    Wallet,
+    FolderKanban,
+    MessageSquareWarning,
+    Phone,
+    StickyNote,
+    BadgeCheck,
+    ClipboardList,
+    UserPlus,
+    UserCheck,
+    AlertTriangle as AlertTriangleIcon,
+    ChevronRight,
 } from "lucide-react"
-import { ChevronRight } from "lucide-react"
 
 import {
     Sidebar,
@@ -32,82 +44,113 @@ import {
     SidebarMenu,
     SidebarMenuItem,
     SidebarMenuButton,
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarGroupContent,
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { TeamSwitcher } from "./team-switcher"
 import { NavUser } from "./nav-user"
 
-const largeData = {
+// This is sample data matching AppSidebar structure
+const data = {
     user: {
         name: "John Doe",
         email: "john@securityfirm.com",
         avatar: "/avatars/user.jpg",
-        role: "Administrator",
     },
-    
     teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
+        {
+            name: "Acme Inc",
+            logo: GalleryVerticalEnd,
+            plan: "Enterprise",
+        },
+        {
+            name: "Acme Corp.",
+            logo: AudioWaveform,
+            plan: "Startup",
+        },
+        {
+            name: "Evil Corp.",
+            logo: Command,
+            plan: "Free",
+        },
+    ],
     navMain: [
         {
             title: "Dashboard",
             url: "/",
             icon: LayoutDashboard,
+            isActive: true,
         },
         {
             title: "Guards / Employees",
             url: "/guards",
-            icon: Users,
+            icon: Shield,
         },
         {
             title: "Clients",
             url: "/clients",
-            icon: Briefcase,
+            icon: Users,
         },
         {
-            title: "Sites / Posts",
-            url: "/sites",
-            icon: MapPin,
-        },
-        {
-            title: "Shifts",
-            url: "/shifts",
-            icon: Clock,
-        },
-        {
-            title: "Incidents",
-            url: "/incidents",
-            icon: AlertTriangle,
-        },
-        {
-            title: "Attendance & Payroll",
-            url: "/attendance",
+            title: "Leave",
+            url: "/leave",
             icon: CalendarCheck,
         },
         {
-            title: "Invoices & Billing",
-            url: "/invoices",
-            icon: FileArchive,
+            title: "Expense Category",
+            url: "/expense-category",
+            icon: FolderKanban,
         },
         {
-            title: "Reports & Analytics",
-            url: "/reports",
+            title: "Expense",
+            url: "/expense",
+            icon: Wallet,
+        },
+        {
+            title: "Complaint",
+            url: "/complaint",
+            icon: MessageSquareWarning,
+        },
+        {
+            title: "Contacts",
+            url: "/contacts",
+            icon: Phone,
+        },
+        {
+            title: "Notes",
+            url: "/notes",
+            icon: StickyNote,
+        },
+        {
+            title: "Guard Type",
+            url: "/guard-type",
+            icon: BadgeCheck,
+        },
+        {
+            title: "Duty List",
+            url: "/duty",
+            icon: ClipboardList,
+        },
+        {
+            title: "Duty Time Type",
+            url: "/duty-time-type",
+            icon: Clock,
+        },
+        {
+            title: "Guard Assignment",
+            url: "/guard-assignment",
+            icon: UserPlus,
+        },
+        {
+            title: "Duty Attendance",
+            url: "/duty-attendance",
+            icon: UserCheck,
+        },
+        {
+            title: "Duty Status Report",
+            url: "/duty-status-report",
             icon: BarChart3,
         },
         {
@@ -115,78 +158,128 @@ const largeData = {
             url: "/settings",
             icon: Settings,
         },
+        {
+            title: "Incident",
+            url: "/incident",
+            icon: AlertTriangleIcon,
+        },
+    ],
+    projects: [
+        {
+            name: "Design Engineering",
+            url: "#",
+            icon: Frame,
+        },
+        {
+            name: "Sales & Marketing",
+            url: "#",
+            icon: PieChart,
+        },
+        {
+            name: "Travel",
+            url: "#",
+            icon: MapPin,
+        },
     ],
 }
 
 export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pathname = usePathname()
-    const activeItem = pathname
 
     return (
-        <Sidebar
-            collapsible="icon"
-            {...props}
-            className="bg-gradient-to-b from-sidebar to-sidebar/95"
-        >
-            <SidebarHeader>
-                    <TeamSwitcher teams={largeData.teams} />
-                  </SidebarHeader>
+        <Sidebar collapsible="icon" {...props}>
+            <SidebarHeader className="pb-4">
+                <div className="px-3 py-2">
+                    <TeamSwitcher teams={data.teams} />
+                </div>
+                {/* Optional subtle divider */}
+                <div className="px-3">
+                    <div className="h-px bg-sidebar-border/40"></div>
+                </div>
+            </SidebarHeader>
 
-            <SidebarContent className="px-3">
-                <SidebarMenu>
-                    {largeData.navMain.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                            <Link href={item.url} className="block">
-                                <SidebarMenuButton
-                                    size="lg"
-                                    isActive={activeItem === item.url}
-                                    className={cn(
-                                        "group relative w-full",
-                                        activeItem === item.url && "bg-primary/5"
-                                    )}
-                                >
-                                    <div className="relative flex items-center gap-4 w-full px-3 py-2">
-                                        {/* Active indicator */}
-                                        {activeItem === item.url && (
-                                            <ChevronRight className="absolute -left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5F0015]" />
-                                        )}
-
-                                        {/* Icon container */}
-                                        <div
+            <SidebarContent className="gap-6">
+                {/* Main Navigation */}
+                <SidebarGroup>
+                    <SidebarGroupLabel className="px-4 text-xs font-medium tracking-wider text-sidebar-foreground/60 uppercase">
+                        Menu
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu className="gap-1 px-2">
+                            {data.navMain.map((item) => {
+                                const isActive = pathname === item.url || 
+                                               (item.url !== '/' && pathname?.startsWith(item.url));
+                                
+                                return (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={isActive}
+                                            tooltip={item.title}
+                                            size="lg"
                                             className={cn(
-                                                "p-2 rounded-md transition-all duration-200",
-                                                activeItem === item.url
-                                                    ? "bg-sidebar-accent text-[#5F0015] shadow-sm"
-                                                    : "bg-sidebar-accent/40 text-muted-foreground group-hover:bg-sidebar-accent group-hover:text-[#30030c]"
+                                                "group relative w-full py-2.5 transition-all duration-200",
+                                                isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm",
+                                                !isActive && "hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                                             )}
                                         >
-                                            <item.icon className="h-5 w-5" />
-                                        </div>
-
-                                        {/* Text */}
-                                        <div className="flex flex-col flex-1 min-w-0">
-                                            <span
-                                                className={cn(
-                                                    "text-[18px] truncate transition-colors",
-                                                    activeItem === item.url
-                                                        ? "font-semibold text-[#5F0015]"
-                                                        : "font-medium text-muted-foreground group-hover:text-primary"
+                                            <Link href={item.url} className="flex items-center gap-3">
+                                                <item.icon className={cn(
+                                                    "h-4 w-4 shrink-0 transition-transform",
+                                                    isActive && "scale-105"
+                                                )} />
+                                                <span className="text-sm tracking-wide">{item.title}</span>
+                                                
+                                                {/* Subtle active indicator */}
+                                                {isActive && (
+                                                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-sidebar-foreground/50" />
                                                 )}
-                                            >
-                                                {item.title}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarSeparator className="mx-3 bg-sidebar-border/30" />
+
+                {/* Projects Section */}
+                <SidebarGroup>
+                    <SidebarGroupLabel className="px-4 text-xs font-medium tracking-wider text-sidebar-foreground/60 uppercase">
+                        Projects
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu className="gap-1 px-2">
+                            {data.projects.map((project) => (
+                                <SidebarMenuItem key={project.name}>
+                                    <SidebarMenuButton 
+                                        asChild 
+                                        tooltip={project.name}
+                                        size="lg"
+                                        className="py-2 hover:bg-sidebar-accent/50 transition-colors"
+                                    >
+                                        <Link href={project.url} className="flex items-center gap-3">
+                                            <project.icon className="h-4 w-4 shrink-0 text-sidebar-foreground/70" />
+                                            <span className="text-sm tracking-wide">{project.name}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* Optional spacer */}
+                <div className="flex-1"></div>
             </SidebarContent>
 
-            <SidebarFooter>
-                    <NavUser user={largeData.user} />
-                  </SidebarFooter>
+            <SidebarFooter className="border-t border-sidebar-border/30 pt-2">
+                <div className="px-3 py-2">
+                    <NavUser user={data.user} />
+                </div>
+            </SidebarFooter>
 
             <SidebarRail />
         </Sidebar>

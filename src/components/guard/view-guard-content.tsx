@@ -26,30 +26,30 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
       icon: "👤", 
       shortLabel: "Personal" 
     },
-    { 
-      value: "availability", 
-      label: "Availability", 
-      icon: "🗓️", 
-      shortLabel: "Availability" 
-    },
-    { 
-      value: "training", 
-      label: "Guard Training", 
-      icon: "🎯", 
-      shortLabel: "Training" 
-    },
-    { 
-      value: "arms", 
-      label: "Guard Arms", 
-      icon: "🛡️", 
-      shortLabel: "Arms" 
-    },
-    { 
-      value: "contract", 
-      label: "Contract", 
-      icon: "📄", 
-      shortLabel: "Contract" 
-    },
+    // { 
+    //   value: "availability", 
+    //   label: "Availability", 
+    //   icon: "🗓️", 
+    //   shortLabel: "Availability" 
+    // },
+    // { 
+    //   value: "training", 
+    //   label: "Guard Training", 
+    //   icon: "🎯", 
+    //   shortLabel: "Training" 
+    // },
+    // { 
+    //   value: "arms", 
+    //   label: "Guard Arms", 
+    //   icon: "🛡️", 
+    //   shortLabel: "Arms" 
+    // },
+    // { 
+    //   value: "contract", 
+    //   label: "Contract", 
+    //   icon: "📄", 
+    //   shortLabel: "Contract" 
+    // },
   ];
 
   return (
@@ -133,7 +133,7 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
               <PersonalInformation guard={guard}/>
             </TabsContent>
 
-            <TabsContent value="availability" className="m-2">
+            {/* <TabsContent value="availability" className="m-2">
               <Availability/>
             </TabsContent>
 
@@ -147,7 +147,7 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
 
             <TabsContent value="contract" className="m-2">
               <Contact/>
-            </TabsContent>
+            </TabsContent> */}
           </CardContent>
         </Card>
       </Tabs>

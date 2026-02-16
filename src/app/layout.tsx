@@ -1,6 +1,5 @@
 "use client";
 
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { usePathname } from "next/navigation";
@@ -28,7 +27,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const noLayoutRoutes = [
+// Public routes that don't require authentication
+const publicRoutes = [
   "/auth/login",
   "/auth/register",
   "/auth/forgot-password",
@@ -41,14 +41,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isAuthPage = noLayoutRoutes.includes(pathname);
+  const isPublicRoute = publicRoutes.includes(pathname);
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Wrap EVERYTHING in Redux Provider */}
         <Provider store={store}>
           <ThemeProvider
             attribute="class"
@@ -57,34 +56,37 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <SweetAlertProvider/>
-            {isAuthPage ? (
+            {isPublicRoute ? (
+              // Public routes (login, register, etc.) - no sidebar, no protection
               <AlertProvider>
                 <main className="flex flex-1 flex-col h-full">
                   {children}
                 </main>
               </AlertProvider>
             ) : (
-              <SidebarToggleProvider>
-                <SidebarProvider
-                  style={
-                    {
-                      "--sidebar-width": "calc(var(--spacing) * 72)",
-                      "--header-height": "calc(var(--spacing) * 12)",
-                    } as React.CSSProperties
-                  }
-                >
-                  <ConditionalSidebar />
-                  <SidebarInset>
-                    <SiteHeader />
-                    <AlertProvider>
-                      
-                      <main className="flex flex-1 flex-col h-full">
-                        {children}
-                      </main>
-                    </AlertProvider>
-                  </SidebarInset>
-                </SidebarProvider>
-              </SidebarToggleProvider>
+              // Protected routes - require authentication, show sidebar
+              <GuardedRoute>
+                <SidebarToggleProvider>
+                  <SidebarProvider
+                    style={
+                      {
+                        "--sidebar-width": "calc(var(--spacing) * 72)",
+                        "--header-height": "calc(var(--spacing) * 12)",
+                      } as React.CSSProperties
+                    }
+                  >
+                    <ConditionalSidebar />
+                    <SidebarInset>
+                      <SiteHeader />
+                      <AlertProvider>
+                        <main className="flex flex-1 flex-col h-full">
+                          {children}
+                        </main>
+                      </AlertProvider>
+                    </SidebarInset>
+                  </SidebarProvider>
+                </SidebarToggleProvider>
+              </GuardedRoute>
             )}
           </ThemeProvider>
         </Provider>
@@ -93,7 +95,6 @@ export default function RootLayout({
   );
 }
 
-// Component to conditionally render the active sidebar
 function ConditionalSidebar() {
   const { activeSidebar } = useSidebarToggle();
 
@@ -102,6 +103,6 @@ function ConditionalSidebar() {
     <AppSidebarSecondary variant="inset" />;
 }
 
-// Move the useSidebarToggle import inside the function
 import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider";
 import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";
+import GuardedRoute from "@/components/authGuardedRoute";
