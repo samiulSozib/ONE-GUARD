@@ -48,20 +48,11 @@ const data = {
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "OGS",
       logo: GalleryVerticalEnd,
       plan: "Enterprise",
     },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
+    
   ],
  navMain: [
   {
@@ -105,11 +96,11 @@ const data = {
     url: "/contacts",
     icon: Phone,
   },
-  {
-    title: "Notes",
-    url: "/notes",
-    icon: StickyNote,
-  },
+  // {
+  //   title: "Notes",
+  //   url: "/notes",
+  //   icon: StickyNote,
+  // },
   {
     title: "Guard Type",
     url: "/guard-type",
@@ -140,11 +131,11 @@ const data = {
     url: "/duty-status-report",
     icon: BarChart3,
   },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   url: "/settings",
+  //   icon: Settings,
+  // },
   {
     title: "Incident",
     url: "/incident",
@@ -152,23 +143,23 @@ const data = {
   },
 ],
 
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
+  // projects: [
+  //   {
+  //     name: "Design Engineering",
+  //     url: "#",
+  //     icon: Frame,
+  //   },
+  //   {
+  //     name: "Sales & Marketing",
+  //     url: "#",
+  //     icon: PieChart,
+  //   },
+  //   {
+  //     name: "Travel",
+  //     url: "#",
+  //     icon: Map,
+  //   },
+  // ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

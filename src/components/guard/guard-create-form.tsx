@@ -5,16 +5,18 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ReactNode, useState, useEffect, useRef } from 'react'
+import { ReactNode, useState, useEffect, useRef, useCallback } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelSelect } from "../ui/floating-select"
 import { Textarea } from "../ui/textarea"
-import { Plus, UploadCloud, X, User, Briefcase, FileText, Copy } from "lucide-react"
+import { Plus, UploadCloud, X, User, Briefcase, FileText, Copy, Loader2 } from "lucide-react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
+import { useAppSelector } from "@/hooks/useAppSelector"
 import { createGuard, fetchGuards } from "@/store/slices/guardSlice"
+import { fetchGuardTypes } from "@/store/slices/guardTypeSlice"
 import SweetAlertService from "@/lib/sweetAlert"
 import { guardBasicSchema, GuardFormData } from "@/lib/validation/guard.schema"
 import {
@@ -31,8 +33,7 @@ interface GuardCreateFormProps {
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
     onSuccess?: () => void
-    guardTypes?: Array<{ id: number; name: string }>
-    lastGuardCode?: string // Optional: last guard code from API
+    lastGuardCode?: string
 }
 
 export function GuardCreateForm({
@@ -40,7 +41,6 @@ export function GuardCreateForm({
     isOpen,
     onOpenChange,
     onSuccess,
-    guardTypes = [],
     lastGuardCode
 }: GuardCreateFormProps) {
     const dispatch = useAppDispatch()
@@ -57,13 +57,24 @@ export function GuardCreateForm({
     const [isGeneratingCode, setIsGeneratingCode] = useState(false)
     const guardCodeRef = useRef<HTMLInputElement>(null)
 
+    // Get guard types from Redux store
+    const { guardTypes, isLoading: isLoadingGuardTypes } = useAppSelector((state) => state.guardTypes)
+
+    // Fetch guard types when dialog opens
+    useEffect(() => {
+        if (isOpen) {
+            dispatch(fetchGuardTypes({ 
+                per_page: 100, // Fetch a large number to get all guard types
+            }))
+        }
+    }, [isOpen, dispatch])
+
     const {
         control,
         register,
         handleSubmit,
         formState: { errors },
         reset,
-        watch,
         setValue,
         trigger: triggerValidation,
         clearErrors,
@@ -124,37 +135,54 @@ export function GuardCreateForm({
         mode: "onChange",
     })
 
-    // Function to generate guard code in format: GD-YYYY-XXX
-    const generateGuardCode = async (): Promise<string> => {
+    // Handle dialog close
+    const handleDialogClose = useCallback((open: boolean) => {
+        if (!open && !isSubmitting) {
+            resetForm()
+        }
+        onOpenChange?.(open)
+    }, [onOpenChange, isSubmitting])
+
+    // Reset form function
+    const resetForm = useCallback(() => {
+        reset()
+        setProfileImage(null)
+        setDocuments([])
+        setSelectedDocumentTypes([])
+        setLanguages([])
+        setVisaCountries([])
+        setCurrentLanguage("")
+        setCurrentVisaCountry("")
+        setStep(1)
+        clearErrors()
+    }, [reset, clearErrors])
+
+
+    
+
+    // Generate guard code
+    const generateGuardCode = useCallback(async (): Promise<string> => {
         try {
             setIsGeneratingCode(true)
-
-            // Get current year
             const currentYear = new Date().getFullYear()
-
-            // If we have lastGuardCode from props, use it to generate next number
             let nextNumber = 1
 
             if (lastGuardCode) {
-                // Parse last code format: GD-YYYY-XXX
                 const match = lastGuardCode.match(/GD-(\d{4})-(\d+)/)
-                if (match && match[2]) {
+                if (match?.[2]) {
                     nextNumber = parseInt(match[2]) + 1
                 }
             } else {
-                // Try to fetch guards to get the last code
                 try {
                     const result = await dispatch(fetchGuards({ page: 1, per_page: 1 }))
                     if (fetchGuards.fulfilled.match(result)) {
                         const guards = result.payload.items
                         if (guards.length > 0) {
-                            // Sort guards by ID to get the last one
                             const sortedGuards = [...guards].sort((a, b) => b.id - a.id)
                             const lastGuard = sortedGuards[0]
-
                             if (lastGuard.guard_code) {
                                 const match = lastGuard.guard_code.match(/GD-(\d{4})-(\d+)/)
-                                if (match && match[2]) {
+                                if (match?.[2]) {
                                     nextNumber = parseInt(match[2]) + 1
                                 }
                             }
@@ -165,23 +193,19 @@ export function GuardCreateForm({
                 }
             }
 
-            // Format number with leading zeros (001, 002, etc.)
             const formattedNumber = nextNumber.toString().padStart(3, '0')
-
-            // Return formatted code
             return `GD-${currentYear}-${formattedNumber}`
         } catch (error) {
             console.error("Error generating guard code:", error)
-            // Fallback: generate a random code
             const currentYear = new Date().getFullYear()
-            const randomNum = Math.floor(Math.random() * 900) + 100 // 100-999
+            const randomNum = Math.floor(Math.random() * 900) + 100
             return `GD-${currentYear}-${randomNum}`
         } finally {
             setIsGeneratingCode(false)
         }
-    }
+    }, [dispatch, lastGuardCode])
 
-    // Initialize form with generated guard code when dialog opens
+    // Initialize form
     useEffect(() => {
         const initializeForm = async () => {
             if (isOpen) {
@@ -192,41 +216,33 @@ export function GuardCreateForm({
         }
 
         initializeForm()
-    }, [isOpen, setValue, lastGuardCode])
+    }, [isOpen, setValue, generateGuardCode])
 
-    // Copy guard code to clipboard
-    const copyGuardCode = () => {
+    const copyGuardCode = useCallback(() => {
         if (guardCodeRef.current) {
             guardCodeRef.current.select()
             navigator.clipboard.writeText(autoGeneratedCode)
             SweetAlertService.success(
                 "Copied!",
                 "Guard code copied to clipboard.",
-                {
-                    timer: 1500,
-                    showConfirmButton: false,
-                }
+                { timer: 1500, showConfirmButton: false }
             )
         }
-    }
+    }, [autoGeneratedCode])
 
-    // Regenerate guard code
-    const regenerateGuardCode = async () => {
+    const regenerateGuardCode = useCallback(async () => {
         const newCode = await generateGuardCode()
         setAutoGeneratedCode(newCode)
         setValue("guard_code", newCode)
-
         SweetAlertService.info(
             "Code Regenerated",
             "New guard code has been generated.",
-            {
-                timer: 1500,
-                showConfirmButton: false,
-            }
+            { timer: 1500, showConfirmButton: false }
         )
-    }
+    }, [generateGuardCode, setValue])
 
-    const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // File upload handlers
+    const handleProfileImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
             if (!file.type.startsWith('image/')) {
@@ -239,9 +255,9 @@ export function GuardCreateForm({
             }
             setProfileImage(file)
         }
-    }
+    }, [])
 
-    const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDocumentUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])
         const validFiles = files.filter(file => {
             const validTypes = [
@@ -259,52 +275,55 @@ export function GuardCreateForm({
         }
 
         setDocuments(prev => [...prev, ...validFiles])
-    }
+    }, [])
 
-    const removeDocument = (index: number) => {
+    const removeDocument = useCallback((index: number) => {
         setDocuments(prev => prev.filter((_, i) => i !== index))
-    }
+    }, [])
 
-    const handleDocumentTypeChange = (docType: string) => {
+    // Handle document type selection
+    const handleDocumentTypeChange = useCallback((docType: string) => {
         const newSelectedTypes = selectedDocumentTypes.includes(docType)
             ? selectedDocumentTypes.filter(type => type !== docType)
             : [...selectedDocumentTypes, docType]
 
         setSelectedDocumentTypes(newSelectedTypes)
         setValue("document_types", newSelectedTypes, { shouldValidate: true })
-    }
+    }, [selectedDocumentTypes, setValue])
 
-    const addLanguage = () => {
+    // Language handlers
+    const addLanguage = useCallback(() => {
         if (currentLanguage.trim() && !languages.includes(currentLanguage.trim())) {
             const updatedLanguages = [...languages, currentLanguage.trim()]
             setLanguages(updatedLanguages)
             setValue("profile_data.languages", updatedLanguages, { shouldValidate: true })
             setCurrentLanguage("")
         }
-    }
+    }, [currentLanguage, languages, setValue])
 
-    const removeLanguage = (language: string) => {
+    const removeLanguage = useCallback((language: string) => {
         const updatedLanguages = languages.filter(l => l !== language)
         setLanguages(updatedLanguages)
         setValue("profile_data.languages", updatedLanguages, { shouldValidate: true })
-    }
+    }, [languages, setValue])
 
-    const addVisaCountry = () => {
+    // Visa country handlers
+    const addVisaCountry = useCallback(() => {
         if (currentVisaCountry.trim() && !visaCountries.includes(currentVisaCountry.trim())) {
             const updatedVisaCountries = [...visaCountries, currentVisaCountry.trim()]
             setVisaCountries(updatedVisaCountries)
             setValue("profile_data.visa_countries", updatedVisaCountries, { shouldValidate: true })
             setCurrentVisaCountry("")
         }
-    }
+    }, [currentVisaCountry, visaCountries, setValue])
 
-    const removeVisaCountry = (country: string) => {
+    const removeVisaCountry = useCallback((country: string) => {
         const updatedVisaCountries = visaCountries.filter(c => c !== country)
         setVisaCountries(updatedVisaCountries)
         setValue("profile_data.visa_countries", updatedVisaCountries, { shouldValidate: true })
-    }
+    }, [visaCountries, setValue])
 
-    const handleKeyDown = (e: React.KeyboardEvent, type: 'language' | 'visaCountry') => {
+    const handleKeyDown = useCallback((e: React.KeyboardEvent, type: 'language' | 'visaCountry') => {
         if (e.key === 'Enter') {
             e.preventDefault()
             if (type === 'language') {
@@ -313,251 +332,281 @@ export function GuardCreateForm({
                 addVisaCountry()
             }
         }
+    }, [addLanguage, addVisaCountry])
+
+    // Helper function to prepare profile data with proper typing
+    const prepareProfileData = (data: GuardFormData['profile_data']): Partial<GuardProfileData> => {
+        if (!data) return {}
+
+        const profileData: Partial<GuardProfileData> = {}
+
+        // Add only non-empty values with proper type checking
+        if (data.place_of_birth && data.place_of_birth.trim() !== '') {
+            profileData.place_of_birth = data.place_of_birth
+        }
+        if (data.country_of_origin && data.country_of_origin.trim() !== '') {
+            profileData.country_of_origin = data.country_of_origin
+        }
+        if (data.current_country && data.current_country.trim() !== '') {
+            profileData.current_country = data.current_country
+        }
+        if (data.current_city && data.current_city.trim() !== '') {
+            profileData.current_city = data.current_city
+        }
+        if (data.current_address && data.current_address.trim() !== '') {
+            profileData.current_address = data.current_address
+        }
+        if (data.citizenship && data.citizenship.trim() !== '') {
+            profileData.citizenship = data.citizenship
+        }
+        
+        if (data.visa_countries && data.visa_countries.length > 0) {
+            profileData.visa_countries = data.visa_countries
+        }
+        if (data.visa_expiry_date && data.visa_expiry_date.trim() !== '') {
+            profileData.visa_expiry_date = data.visa_expiry_date
+        }
+        
+        if (data.father_name && data.father_name.trim() !== '') {
+            profileData.father_name = data.father_name
+        }
+        if (data.mother_name && data.mother_name.trim() !== '') {
+            profileData.mother_name = data.mother_name
+        }
+        if (data.national_id_number && data.national_id_number.trim() !== '') {
+            profileData.national_id_number = data.national_id_number
+        }
+        
+        if (data.marital_status) {
+            profileData.marital_status = data.marital_status
+        }
+        if (data.height && data.height.trim() !== '') {
+            profileData.height = data.height
+        }
+        if (data.weight && data.weight.trim() !== '') {
+            profileData.weight = data.weight
+        }
+        if (data.blood_group && data.blood_group.trim() !== '') {
+            profileData.blood_group = data.blood_group
+        }
+        
+        if (data.experience_years && data.experience_years > 0) {
+            profileData.experience_years = data.experience_years
+        }
+        if (data.skills && data.skills.trim() !== '') {
+            profileData.skills = data.skills
+        }
+        
+        if (data.languages && data.languages.length > 0) {
+            profileData.languages = data.languages
+        }
+        
+        if (data.highest_education_level && data.highest_education_level.trim() !== '') {
+            profileData.highest_education_level = data.highest_education_level
+        }
+        if (data.education_field && data.education_field.trim() !== '') {
+            profileData.education_field = data.education_field
+        }
+        if (data.institution_name && data.institution_name.trim() !== '') {
+            profileData.institution_name = data.institution_name
+        }
+        if (data.graduation_year) {
+            profileData.graduation_year = data.graduation_year
+        }
+        
+        // Boolean fields (always include if they exist)
+        if (data.has_work_permit !== undefined) {
+            profileData.has_work_permit = data.has_work_permit ? 1 : 0
+        }
+        if (data.has_security_training !== undefined) {
+            profileData.has_security_training = data.has_security_training ? 1 : 0
+        }
+        
+        if (data.emergency_contact_name && data.emergency_contact_name.trim() !== '') {
+            profileData.emergency_contact_name = data.emergency_contact_name
+        }
+        if (data.emergency_contact_phone && data.emergency_contact_phone.trim() !== '') {
+            profileData.emergency_contact_phone = data.emergency_contact_phone
+        }
+        if (data.emergency_contact_relation && data.emergency_contact_relation.trim() !== '') {
+            profileData.emergency_contact_relation = data.emergency_contact_relation
+        }
+        
+        if (data.notes && data.notes.trim() !== '') {
+            profileData.notes = data.notes
+        }
+
+        return profileData
     }
 
+    // Submit handler with proper typing
     const onSubmit = async (data: GuardFormData) => {
-        setIsSubmitting(true);
+        setIsSubmitting(true)
 
         try {
-            // Create FormData
-            const formData = new FormData();
-
-            // Use auto-generated code if guard_code is empty
-            const finalGuardCode = autoGeneratedCode || data.guard_code;
-
-            if (!finalGuardCode) {
-                throw new Error("Guard code is required");
+            const formData = new FormData()
+            
+            // Always include required fields
+            const requiredFields: Record<string, string> = {
+                guard_code: autoGeneratedCode || data.guard_code || '',
+                full_name: data.full_name || '',
+                phone: data.phone || '',
+                employee_company_card_number: data.employee_company_card_number || '',
+                gender: data.gender || 'male',
+                country: data.country || '',
+                city: data.city || '',
+                joining_date: data.joining_date || '',
+                is_active: data.is_active ? '1' : '0'
             }
 
-            // Append all required fields first
-            formData.append('guard_code', finalGuardCode);
-            formData.append('full_name', data.full_name);
-            formData.append('phone', data.phone);
-            formData.append('employee_company_card_number', data.employee_company_card_number);
-            formData.append('gender', data.gender);
-            formData.append('country', data.country);
-            formData.append('city', data.city);
-            formData.append('joining_date', data.joining_date);
+            // Append required fields
+            Object.entries(requiredFields).forEach(([key, value]) => {
+                if (value) formData.append(key, value)
+            })
 
             // Append optional fields only if they have values
-            if (data.email) formData.append('email', data.email);
-            if (data.password) formData.append('password', data.password);
-            if (data.driver_license) formData.append('driver_license', data.driver_license);
-            if (data.date_of_birth) formData.append('date_of_birth', data.date_of_birth);
-            if (data.address) formData.append('address', data.address);
-            if (data.zip_code) formData.append('zip_code', data.zip_code);
-            if (data.license_expiry_date) formData.append('license_expiry_date', data.license_expiry_date);
-            if (data.issuing_source) formData.append('issuing_source', data.issuing_source);
-            if (data.guard_type_id) formData.append('guard_type_id', data.guard_type_id.toString());
-            if (data.contract_id) formData.append('contract_id', data.contract_id.toString());
-
-            // Append status
-            formData.append('is_active', data.is_active ? '1' : '0');
-
-            // Prepare profile data object with only non-empty values
-            const profileData: GuardProfileData = {};
-
-            // Add profile fields only if they have values
-            if (data.profile_data) {
-                // Personal Information
-                if (data.profile_data.place_of_birth) profileData.place_of_birth = data.profile_data.place_of_birth;
-                if (data.profile_data.country_of_origin) profileData.country_of_origin = data.profile_data.country_of_origin;
-                if (data.profile_data.current_country) profileData.current_country = data.profile_data.current_country;
-                if (data.profile_data.current_city) profileData.current_city = data.profile_data.current_city;
-                if (data.profile_data.current_address) profileData.current_address = data.profile_data.current_address;
-                if (data.profile_data.citizenship) profileData.citizenship = data.profile_data.citizenship;
-                
-                // Visa Information
-                if (data.profile_data.visa_countries && data.profile_data.visa_countries.length > 0) {
-                    profileData.visa_countries = data.profile_data.visa_countries;
-                }
-                if (data.profile_data.visa_expiry_date) profileData.visa_expiry_date = data.profile_data.visa_expiry_date;
-                
-                // Family Information
-                if (data.profile_data.father_name) profileData.father_name = data.profile_data.father_name;
-                if (data.profile_data.mother_name) profileData.mother_name = data.profile_data.mother_name;
-                if (data.profile_data.national_id_number) profileData.national_id_number = data.profile_data.national_id_number;
-                
-                // Personal Details
-                if (data.profile_data.marital_status) profileData.marital_status = data.profile_data.marital_status;
-                if (data.profile_data.height) profileData.height = data.profile_data.height;
-                if (data.profile_data.weight) profileData.weight = data.profile_data.weight;
-                if (data.profile_data.blood_group) profileData.blood_group = data.profile_data.blood_group;
-                
-                // Professional Information
-                if (data.profile_data.experience_years) profileData.experience_years = data.profile_data.experience_years;
-                if (data.profile_data.skills) profileData.skills = data.profile_data.skills;
-                
-                // Languages
-                if (data.profile_data.languages && data.profile_data.languages.length > 0) {
-                    profileData.languages = data.profile_data.languages;
-                }
-                
-                // Education
-                if (data.profile_data.highest_education_level) profileData.highest_education_level = data.profile_data.highest_education_level;
-                if (data.profile_data.education_field) profileData.education_field = data.profile_data.education_field;
-                if (data.profile_data.institution_name) profileData.institution_name = data.profile_data.institution_name;
-                if (data.profile_data.graduation_year) profileData.graduation_year = data.profile_data.graduation_year;
-                
-                // Training & Permits
-                profileData.has_work_permit = data.profile_data.has_work_permit ? 1 : 0;
-                profileData.has_security_training = data.profile_data.has_security_training ? 1 : 0;
-                
-                // Emergency Contact
-                if (data.profile_data.emergency_contact_name) profileData.emergency_contact_name = data.profile_data.emergency_contact_name;
-                if (data.profile_data.emergency_contact_phone) profileData.emergency_contact_phone = data.profile_data.emergency_contact_phone;
-                if (data.profile_data.emergency_contact_relation) profileData.emergency_contact_relation = data.profile_data.emergency_contact_relation;
-                
-                // Notes
-                if (data.profile_data.notes) profileData.notes = data.profile_data.notes;
+            const optionalFields: Record<string, string | number | undefined> = {
+                email: data.email,
+                password: data.password,
+                driver_license: data.driver_license,
+                date_of_birth: data.date_of_birth,
+                address: data.address,
+                zip_code: data.zip_code,
+                license_expiry_date: data.license_expiry_date,
+                issuing_source: data.issuing_source
             }
 
-            // Only append profile_data if it has any values
+            Object.entries(optionalFields).forEach(([key, value]) => {
+                if (value && value.toString().trim() !== '') {
+                    formData.append(key, value.toString())
+                }
+            })
+
+            // Append numeric fields
+            if (data.guard_type_id) {
+                formData.append('guard_type_id', data.guard_type_id.toString())
+            }
+            if (data.contract_id) {
+                formData.append('contract_id', data.contract_id.toString())
+            }
+
+            // Prepare and append profile data
+            const profileData = prepareProfileData(data.profile_data)
             if (Object.keys(profileData).length > 0) {
-                formData.append('profile_data', JSON.stringify(profileData));
+                formData.append('profile_data', JSON.stringify(profileData))
             }
 
             // Append document types
-            if (data.document_types && data.document_types.length > 0) {
-                formData.append('document_types', JSON.stringify(data.document_types));
+            if (selectedDocumentTypes.length > 0) {
+                formData.append('document_types', JSON.stringify(selectedDocumentTypes))
             }
 
             // Append files
             if (profileImage) {
-                formData.append('profile_image', profileImage);
+                formData.append('profile_image', profileImage)
             }
 
             if (documents.length > 0) {
-                documents.forEach((doc, index) => {
-                    formData.append(`documents[${index}]`, doc);
-                });
+                documents.forEach((doc) => {
+                    formData.append('documents[]', doc)
+                })
             }
 
             // Dispatch create guard action
-            const result = await dispatch(createGuard(formData));
+            const result = await dispatch(createGuard(formData))
 
             if (createGuard.fulfilled.match(result)) {
-                SweetAlertService.success(
+                await SweetAlertService.success(
                     'Guard Created Successfully',
-                    `${data.full_name} has been created with code: ${finalGuardCode}`,
-                    {
-                        timer: 2000,
-                        showConfirmButton: false,
-                    }
-                );
+                    `${data.full_name} has been created with code: ${autoGeneratedCode}`,
+                    { timer: 2000, showConfirmButton: false }
+                )
 
-                // Reset form
-                reset();
-                setProfileImage(null);
-                setDocuments([]);
-                setSelectedDocumentTypes([]);
-                setLanguages([]);
-                setVisaCountries([]);
-                setCurrentLanguage("");
-                setCurrentVisaCountry("");
-                setStep(1);
-                clearErrors();
+                resetForm()
+                const newCode = await generateGuardCode()
+                setAutoGeneratedCode(newCode)
+                setValue("guard_code", newCode)
 
-                // Generate new code for next guard
-                const newCode = await generateGuardCode();
-                setAutoGeneratedCode(newCode);
-                setValue("guard_code", newCode);
-
-                // Refresh guards list
-                dispatch(fetchGuards({
+                await dispatch(fetchGuards({
                     page: 1,
                     per_page: 10,
                     sort_by: 'created_at',
                     sort_order: 'desc'
-                }));
+                }))
 
-                // Call success callback
-                if (onSuccess) onSuccess();
-                if (onOpenChange) onOpenChange(false);
+                onSuccess?.()
+                handleDialogClose(false)
             } else {
-                throw new Error(result.payload as string || 'Failed to create guard');
+                const errorMessage = (result.payload as string) || 'Failed to create guard'
+                throw new Error(errorMessage)
             }
         } catch (error) {
-            SweetAlertService.error(
+            await SweetAlertService.error(
                 'Creation Failed',
                 error instanceof Error ? error.message : 'There was an error creating the guard. Please try again.'
-            );
-            console.error('Error creating guard:', error);
+            )
+            console.error('Error creating guard:', error)
         } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false)
         }
-    };
+    }
 
-    const validateStep = async (currentStep: number): Promise<boolean> => {
+    // Step validation
+    const validateStep = useCallback(async (currentStep: number): Promise<boolean> => {
         let fieldsToValidate: (keyof GuardFormData)[] = []
 
         if (currentStep === 1) {
             fieldsToValidate = [
                 'full_name', 'phone', 'gender',
                 'employee_company_card_number', 'country', 'city'
-            ] as (keyof GuardFormData)[]
+            ]
         } else if (currentStep === 2) {
-            fieldsToValidate = ['joining_date'] as (keyof GuardFormData)[]
+            fieldsToValidate = ['joining_date']
         }
 
         const result = await triggerValidation(fieldsToValidate, { shouldFocus: true })
         return result
-    }
+    }, [triggerValidation])
 
-    const nextStep = async () => {
+    const nextStep = useCallback(async () => {
         const isValid = await validateStep(step)
         if (isValid) {
             setStep(step + 1)
         } else {
-            // Store the promise but don't await it immediately
-            const alertPromise = SweetAlertService.warning(
+            await SweetAlertService.warning(
                 'Incomplete Information',
                 'Please fill in all required fields correctly before proceeding.',
                 {
                     timer: 3000,
                     showConfirmButton: true,
-                    confirmButtonText: 'OK',
-                    didClose: () => {
-                        // Focus on the first error field after the alert closes
-                        const firstErrorKey = Object.keys(errors)[0]
-                        if (firstErrorKey) {
-                            const element = document.querySelector(`[name="${firstErrorKey}"]`)
-                            if (element) {
-                                (element as HTMLElement).focus()
-                            }
-                        }
-                    }
+                    confirmButtonText: 'OK'
                 }
             )
-
-            // You can optionally await the promise if you need to do something after the alert
-            await alertPromise;
         }
-    }
+    }, [step, validateStep])
 
-    const prevStep = () => {
+    const prevStep = useCallback(() => {
         setStep(step - 1)
-    }
+    }, [step])
 
-    const getCurrentDate = () => {
-        const today = new Date()
-        return today.toISOString().split('T')[0]
-    }
+    const getCurrentDate = useCallback((): string => {
+        return new Date().toISOString().split('T')[0]
+    }, [])
 
-    const getMinDate = () => {
+    const getMinDate = useCallback((): string => {
         const minDate = new Date()
         minDate.setFullYear(minDate.getFullYear() - 100)
         return minDate.toISOString().split('T')[0]
-    }
+    }, [])
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <Dialog open={isOpen} onOpenChange={handleDialogClose}>
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-[1200px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
-                <DialogTitle></DialogTitle>
+                <DialogTitle className="sr-only">Add New Guard</DialogTitle>
 
                 {/* Header */}
                 <div className="flex items-center gap-2 text-lg font-semibold mb-6">
@@ -565,38 +614,31 @@ export function GuardCreateForm({
                     <span className="whitespace-nowrap">Add New Guard</span>
                 </div>
 
-                {/* Validation Errors Debug */}
-                {Object.keys(errors).length > 0 && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                        <p className="text-sm font-medium text-red-800">Validation Errors:</p>
-                        <ul className="mt-1 text-sm text-red-600">
-                            {Object.entries(errors).map(([key, error]) => (
-                                <li key={key}>
-                                    {key}: {error?.message || 'Invalid'}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-
                 {/* Progress Steps */}
                 <div className="flex items-center justify-center mb-6">
                     <div className="flex items-center space-x-2">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                            step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                        }`}>
                             <User size={20} />
                         </div>
-                        <div className={`w-16 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                        <div className={`w-16 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                            step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                        }`}>
                             <Briefcase size={20} />
                         </div>
-                        <div className={`w-16 h-1 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                        <div className={`w-16 h-1 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                            step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                        }`}>
                             <FileText size={20} />
                         </div>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)}>
+                    {/* Step 1: Basic Information */}
                     {step === 1 && (
                         <div className="space-y-6">
                             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -627,7 +669,7 @@ export function GuardCreateForm({
                                             />
                                             {isGeneratingCode && (
                                                 <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
-                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
                                                 </div>
                                             )}
                                         </div>
@@ -661,178 +703,149 @@ export function GuardCreateForm({
                                     type="hidden"
                                     {...register("guard_code")}
                                     value={autoGeneratedCode}
-                                    onChange={() => { }}
                                 />
                             </div>
 
                             {/* First Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                {/* Full Name */}
-                                <div>
-                                    <Controller
-                                        name="full_name"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Full Name *"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                error={errors.full_name?.message}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="full_name"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Full Name *"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            error={errors.full_name?.message}
+                                        />
+                                    )}
+                                />
 
-                                {/* Phone Number */}
-                                <div>
-                                    <Controller
-                                        name="phone"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Phone Number *"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                type="tel"
-                                                error={errors.phone?.message}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="phone"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Phone Number *"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            type="tel"
+                                            error={errors.phone?.message}
+                                        />
+                                    )}
+                                />
 
-                                {/* Email */}
-                                <div>
-                                    <Controller
-                                        name="email"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Email"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                type="email"
-                                                error={errors.email?.message}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="email"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Email"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            type="email"
+                                            error={errors.email?.message}
+                                        />
+                                    )}
+                                />
 
-                                {/* Gender */}
-                                <div>
-                                    <Controller
-                                        name="gender"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelSelect
-                                                label="Gender *"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                error={errors.gender?.message}
-                                            >
-                                                <option value="">Select...</option>
-                                                <option value="male">Male</option>
-                                                <option value="female">Female</option>
-                                                <option value="other">Other</option>
-                                            </FloatingLabelSelect>
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="gender"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelSelect
+                                            label="Gender *"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            error={errors.gender?.message}
+                                        >
+                                            <option value="">Select...</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                            <option value="other">Other</option>
+                                        </FloatingLabelSelect>
+                                    )}
+                                />
                             </div>
 
                             {/* Second Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                {/* Employee Card Number */}
-                                <div>
-                                    <Controller
-                                        name="employee_company_card_number"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Employee Card Number *"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                error={errors.employee_company_card_number?.message}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="employee_company_card_number"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Employee Card Number *"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            error={errors.employee_company_card_number?.message}
+                                        />
+                                    )}
+                                />
 
-                                {/* Driver License */}
-                                <div>
-                                    <Controller
-                                        name="driver_license"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Driver License"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="driver_license"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Driver License"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                        />
+                                    )}
+                                />
 
-                                {/* Date of Birth */}
-                                <div>
-                                    <Controller
-                                        name="date_of_birth"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Date of Birth"
-                                                type="date"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                max={getCurrentDate()}
-                                                min={getMinDate()}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="date_of_birth"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Date of Birth"
+                                            type="date"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            max={getCurrentDate()}
+                                            min={getMinDate()}
+                                        />
+                                    )}
+                                />
 
-                                {/* Country */}
-                                <div>
-                                    <Controller
-                                        name="country"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelSelect
-                                                label="Country *"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                error={errors.country?.message}
-                                            >
-                                                <option value="">Select...</option>
-                                                {COUNTRIES.map(country => (
-                                                    <option key={country.code} value={country.name}>
-                                                        {country.name}
-                                                    </option>
-                                                ))}
-                                            </FloatingLabelSelect>
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="country"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelSelect
+                                            label="Country *"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            error={errors.country?.message}
+                                        >
+                                            <option value="">Select...</option>
+                                            {COUNTRIES.map(country => (
+                                                <option key={country.code} value={country.name}>
+                                                    {country.name}
+                                                </option>
+                                            ))}
+                                        </FloatingLabelSelect>
+                                    )}
+                                />
                             </div>
 
                             {/* Third Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                {/* City */}
-                                <div>
-                                    <Controller
-                                        name="city"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="City *"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                error={errors.city?.message}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="city"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="City *"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            error={errors.city?.message}
+                                        />
+                                    )}
+                                />
 
-                                {/* Address */}
                                 <div className="md:col-span-2">
                                     <Controller
                                         name="address"
@@ -847,20 +860,17 @@ export function GuardCreateForm({
                                     />
                                 </div>
 
-                                {/* Zip Code */}
-                                <div>
-                                    <Controller
-                                        name="zip_code"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Zip Code"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="zip_code"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Zip Code"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                        />
+                                    )}
+                                />
                             </div>
 
                             {/* Contract ID */}
@@ -882,6 +892,7 @@ export function GuardCreateForm({
                         </div>
                     )}
 
+                    {/* Step 2: Guard Information */}
                     {step === 2 && (
                         <div className="space-y-6">
                             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -891,84 +902,78 @@ export function GuardCreateForm({
 
                             {/* First Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                {/* Joining Date */}
-                                <div>
-                                    <Controller
-                                        name="joining_date"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Joining Date *"
-                                                type="date"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                max={getCurrentDate()}
-                                                error={errors.joining_date?.message}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="joining_date"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="Joining Date *"
+                                            type="date"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            max={getCurrentDate()}
+                                            error={errors.joining_date?.message}
+                                        />
+                                    )}
+                                />
 
-                                {/* License Expiry Date */}
-                                <div>
-                                    <Controller
-                                        name="license_expiry_date"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="License Expiry Date"
-                                                type="date"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                min={getCurrentDate()}
-                                            />
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="license_expiry_date"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelInput
+                                            label="License Expiry Date"
+                                            type="date"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            min={getCurrentDate()}
+                                        />
+                                    )}
+                                />
 
-                                {/* Issuing Source */}
-                                <div>
-                                    <Controller
-                                        name="issuing_source"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelSelect
-                                                label="Issuing Source"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                            >
-                                                <option value="">Select...</option>
-                                                <option value="state">State</option>
-                                                <option value="federal">Federal</option>
-                                                <option value="private">Private</option>
-                                                <option value="dubai_police">Dubai Police</option>
-                                            </FloatingLabelSelect>
-                                        )}
-                                    />
-                                </div>
+                                <Controller
+                                    name="issuing_source"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelSelect
+                                            label="Issuing Source"
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                        >
+                                            <option value="">Select...</option>
+                                            <option value="state">State</option>
+                                            <option value="federal">Federal</option>
+                                            <option value="private">Private</option>
+                                            <option value="dubai_police">Dubai Police</option>
+                                        </FloatingLabelSelect>
+                                    )}
+                                />
 
-                                {/* Guard Type */}
-                                <div>
-                                    <Controller
-                                        name="guard_type_id"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelSelect
-                                                label="Guard Type"
-                                                value={field.value?.toString() || ''}
-                                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                                                error={errors.guard_type_id?.message}
-                                            >
-                                                <option value="">Select...</option>
-                                                {guardTypes.map(type => (
+                                <Controller
+                                    name="guard_type_id"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FloatingLabelSelect
+                                            label="Guard Type"
+                                            value={field.value?.toString() || ''}
+                                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                            error={errors.guard_type_id?.message}
+                                        >
+                                            <option value="">Select Guard Type</option>
+                                            {isLoadingGuardTypes ? (
+                                                <option value="" disabled>Loading guard types...</option>
+                                            ) : guardTypes.length > 0 ? (
+                                                guardTypes.map((type) => (
                                                     <option key={type.id} value={type.id}>
                                                         {type.name}
                                                     </option>
-                                                ))}
-                                            </FloatingLabelSelect>
-                                        )}
-                                    />
-                                </div>
+                                                ))
+                                            ) : (
+                                                <option value="" disabled>No guard types available</option>
+                                            )}
+                                        </FloatingLabelSelect>
+                                    )}
+                                />
                             </div>
 
                             {/* Password */}
@@ -995,237 +1000,198 @@ export function GuardCreateForm({
 
                                 {/* Personal Information */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                    {/* Place of Birth */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.place_of_birth"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Place of Birth"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.place_of_birth"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Place of Birth"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Country of Origin */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.country_of_origin"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelSelect
-                                                    label="Country of Origin"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                >
-                                                    <option value="">Select...</option>
-                                                    {COUNTRIES.map(country => (
-                                                        <option key={country.code} value={country.name}>
-                                                            {country.name}
-                                                        </option>
-                                                    ))}
-                                                </FloatingLabelSelect>
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.country_of_origin"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelSelect
+                                                label="Country of Origin"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            >
+                                                <option value="">Select...</option>
+                                                {COUNTRIES.map(country => (
+                                                    <option key={country.code} value={country.name}>
+                                                        {country.name}
+                                                    </option>
+                                                ))}
+                                            </FloatingLabelSelect>
+                                        )}
+                                    />
 
-                                    {/* Citizenship */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.citizenship"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Citizenship"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.citizenship"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Citizenship"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
 
-                                    {/* National ID Number */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.national_id_number"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="National ID Number"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.national_id_number"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="National ID Number"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 {/* Current Location */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                    {/* Current Country */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.current_country"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelSelect
-                                                    label="Current Country"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                >
-                                                    <option value="">Select...</option>
-                                                    {COUNTRIES.map(country => (
-                                                        <option key={country.code} value={country.name}>
-                                                            {country.name}
-                                                        </option>
-                                                    ))}
-                                                </FloatingLabelSelect>
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.current_country"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelSelect
+                                                label="Current Country"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            >
+                                                <option value="">Select...</option>
+                                                {COUNTRIES.map(country => (
+                                                    <option key={country.code} value={country.name}>
+                                                        {country.name}
+                                                    </option>
+                                                ))}
+                                            </FloatingLabelSelect>
+                                        )}
+                                    />
 
-                                    {/* Current City */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.current_city"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Current City"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.current_city"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Current City"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Current Address */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.current_address"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Current Address"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.current_address"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Current Address"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 {/* Family Information */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                    {/* Father's Name */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.father_name"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Father's Name"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.father_name"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Father's Name"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Mother's Name */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.mother_name"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Mother's Name"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.mother_name"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Mother's Name"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 {/* Physical Attributes */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                    {/* Height */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.height"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Height (cm or ft/in)"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                    placeholder="e.g., 5'10"
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.height"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Height (cm or ft/in)"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                                placeholder="e.g., 5'10"
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Weight */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.weight"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Weight (kg or lbs)"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                    placeholder="e.g., 75 kg"
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.weight"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Weight (kg or lbs)"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                                placeholder="e.g., 75 kg"
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Blood Group */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.blood_group"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelSelect
-                                                    label="Blood Group"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                >
-                                                    <option value="">Select...</option>
-                                                    {BLOOD_GROUPS.map(group => (
-                                                        <option key={group} value={group}>{group}</option>
-                                                    ))}
-                                                </FloatingLabelSelect>
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.blood_group"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelSelect
+                                                label="Blood Group"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            >
+                                                <option value="">Select...</option>
+                                                {BLOOD_GROUPS.map(group => (
+                                                    <option key={group} value={group}>{group}</option>
+                                                ))}
+                                            </FloatingLabelSelect>
+                                        )}
+                                    />
 
-                                    {/* Marital Status */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.marital_status"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelSelect
-                                                    label="Marital Status"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                >
-                                                    <option value="">Select...</option>
-                                                    {MARITAL_STATUS.map(status => (
-                                                        <option key={status} value={status}>
-                                                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                                                        </option>
-                                                    ))}
-                                                </FloatingLabelSelect>
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.marital_status"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelSelect
+                                                label="Marital Status"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            >
+                                                <option value="">Select...</option>
+                                                {MARITAL_STATUS.map(status => (
+                                                    <option key={status} value={status}>
+                                                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                                                    </option>
+                                                ))}
+                                            </FloatingLabelSelect>
+                                        )}
+                                    />
                                 </div>
 
                                 {/* Languages */}
@@ -1305,7 +1271,6 @@ export function GuardCreateForm({
                                         </div>
                                     )}
 
-                                    {/* Visa Expiry Date */}
                                     <div className="mt-4">
                                         <Controller
                                             name="profile_data.visa_expiry_date"
@@ -1325,115 +1290,97 @@ export function GuardCreateForm({
 
                                 {/* Education Information */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                    {/* Highest Education Level */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.highest_education_level"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelSelect
-                                                    label="Highest Education"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                >
-                                                    <option value="">Select...</option>
-                                                    <option value="high_school">High School</option>
-                                                    <option value="diploma">Diploma</option>
-                                                    <option value="associate">Associate Degree</option>
-                                                    <option value="bachelor">Bachelor Degree</option>
-                                                    <option value="master">Master Degree</option>
-                                                    <option value="phd">PhD</option>
-                                                </FloatingLabelSelect>
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.highest_education_level"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelSelect
+                                                label="Highest Education"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                            >
+                                                <option value="">Select...</option>
+                                                <option value="high_school">High School</option>
+                                                <option value="diploma">Diploma</option>
+                                                <option value="associate">Associate Degree</option>
+                                                <option value="bachelor">Bachelor Degree</option>
+                                                <option value="master">Master Degree</option>
+                                                <option value="phd">PhD</option>
+                                            </FloatingLabelSelect>
+                                        )}
+                                    />
 
-                                    {/* Education Field */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.education_field"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Education Field"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                    placeholder="e.g., Criminal Justice"
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.education_field"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Education Field"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                                placeholder="e.g., Criminal Justice"
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Institution Name */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.institution_name"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Institution Name"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                    placeholder="e.g., University Name"
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.institution_name"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Institution Name"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                                placeholder="e.g., University Name"
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Graduation Year */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.graduation_year"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Graduation Year"
-                                                    type="number"
-                                                    value={field.value?.toString() || ''}
-                                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                                                    min="1900"
-                                                    max={new Date().getFullYear()}
-                                                    placeholder="YYYY"
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.graduation_year"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Graduation Year"
+                                                type="number"
+                                                value={field.value?.toString() || ''}
+                                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                                min="1900"
+                                                max={new Date().getFullYear()}
+                                                placeholder="YYYY"
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 {/* Experience and Skills */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                    {/* Experience Years */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.experience_years"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Experience (years)"
-                                                    type="number"
-                                                    min="0"
-                                                    value={field.value?.toString() || ''}
-                                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.experience_years"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Experience (years)"
+                                                type="number"
+                                                min="0"
+                                                value={field.value?.toString() || ''}
+                                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
+                                            />
+                                        )}
+                                    />
 
-                                    {/* Skills */}
-                                    <div>
-                                        <Controller
-                                            name="profile_data.skills"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <FloatingLabelInput
-                                                    label="Skills"
-                                                    value={field.value || ''}
-                                                    onChange={field.onChange}
-                                                    placeholder="e.g., First Aid, Surveillance, Combat"
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <Controller
+                                        name="profile_data.skills"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FloatingLabelInput
+                                                label="Skills"
+                                                value={field.value || ''}
+                                                onChange={field.onChange}
+                                                placeholder="e.g., First Aid, Surveillance, Combat"
+                                            />
+                                        )}
+                                    />
                                 </div>
 
                                 {/* Checkboxes */}
@@ -1460,6 +1407,7 @@ export function GuardCreateForm({
                         </div>
                     )}
 
+                    {/* Step 3: Documents & Final Details */}
                     {step === 3 && (
                         <div className="space-y-6">
                             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -1673,7 +1621,7 @@ export function GuardCreateForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => onOpenChange && onOpenChange(false)}
+                                onClick={() => handleDialogClose(false)}
                             >
                                 Cancel
                             </Button>
@@ -1691,7 +1639,7 @@ export function GuardCreateForm({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => onOpenChange && onOpenChange(false)}
+                                    onClick={() => handleDialogClose(false)}
                                 >
                                     Cancel
                                 </Button>
@@ -1702,7 +1650,7 @@ export function GuardCreateForm({
                                 >
                                     {isSubmitting ? (
                                         <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                                             Creating...
                                         </>
                                     ) : (

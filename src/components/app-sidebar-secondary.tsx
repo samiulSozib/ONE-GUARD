@@ -118,11 +118,7 @@ const data = {
             url: "/contacts",
             icon: Phone,
         },
-        {
-            title: "Notes",
-            url: "/notes",
-            icon: StickyNote,
-        },
+        
         {
             title: "Guard Type",
             url: "/guard-type",
@@ -153,34 +149,14 @@ const data = {
             url: "/duty-status-report",
             icon: BarChart3,
         },
-        {
-            title: "Settings",
-            url: "/settings",
-            icon: Settings,
-        },
+        
         {
             title: "Incident",
             url: "/incident",
             icon: AlertTriangleIcon,
         },
     ],
-    projects: [
-        {
-            name: "Design Engineering",
-            url: "#",
-            icon: Frame,
-        },
-        {
-            name: "Sales & Marketing",
-            url: "#",
-            icon: PieChart,
-        },
-        {
-            name: "Travel",
-            url: "#",
-            icon: MapPin,
-        },
-    ],
+    
 }
 
 export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -245,31 +221,7 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
 
                 <SidebarSeparator className="mx-3 bg-sidebar-border/30" />
 
-                {/* Projects Section */}
-                <SidebarGroup>
-                    <SidebarGroupLabel className="px-4 text-xs font-medium tracking-wider text-sidebar-foreground/60 uppercase">
-                        Projects
-                    </SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu className="gap-1 px-2">
-                            {data.projects.map((project) => (
-                                <SidebarMenuItem key={project.name}>
-                                    <SidebarMenuButton 
-                                        asChild 
-                                        tooltip={project.name}
-                                        size="lg"
-                                        className="py-2 hover:bg-sidebar-accent/50 transition-colors"
-                                    >
-                                        <Link href={project.url} className="flex items-center gap-3">
-                                            <project.icon className="h-4 w-4 shrink-0 text-sidebar-foreground/70" />
-                                            <span className="text-sm tracking-wide">{project.name}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                
 
                 {/* Optional spacer */}
                 <div className="flex-1"></div>
