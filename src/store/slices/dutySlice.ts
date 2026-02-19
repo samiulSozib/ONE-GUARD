@@ -112,6 +112,7 @@ export const toggleDutyStatus = createAsyncThunk(
     try {
       return await dutyService.toggleStatus(id, is_active);
     } catch (error: unknown) {
+      console.log(error)
       const message =
         error instanceof Error
           ? error.message
@@ -196,13 +197,13 @@ const dutySlice = createSlice({
       .addCase(updateDuty.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.duties.findIndex(
-          (duty) => duty.id === action.payload.id
+          (duty) => duty.id === action.payload.item.id
         );
         if (index !== -1) {
-          state.duties[index] = action.payload;
+          state.duties[index] = action.payload.item;
         }
-        if (state.currentDuty?.id === action.payload.id) {
-          state.currentDuty = action.payload;
+        if (state.currentDuty?.id === action.payload.item.id) {
+          state.currentDuty = action.payload.item;
         }
       })
 
@@ -225,13 +226,13 @@ const dutySlice = createSlice({
       .addCase(toggleDutyStatus.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.duties.findIndex(
-          (duty) => duty.id === action.payload.id
+          (duty) => duty.id === action.payload.item.id
         );
         if (index !== -1) {
-          state.duties[index] = action.payload;
+          state.duties[index] = action.payload.item;
         }
-        if (state.currentDuty?.id === action.payload.id) {
-          state.currentDuty = action.payload;
+        if (state.currentDuty?.id === action.payload.item.id) {
+          state.currentDuty = action.payload.item;
         }
       });
   },

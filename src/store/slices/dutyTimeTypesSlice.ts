@@ -151,8 +151,8 @@ const dutyTimeTypeSlice = createSlice({
       .addCase(createDutyTimeType.fulfilled, (state, action) => {
         state.isLoading = false;
         // Add new site location to the beginning of the array
-        state.dutyTimeTypes = [action.payload, ...state.dutyTimeTypes];
-        state.currentDutyTimeType = action.payload;
+        state.dutyTimeTypes = [action.payload.item, ...state.dutyTimeTypes];
+        state.currentDutyTimeType = action.payload.item;
         // Increment total count
         state.pagination.total += 1;
       })
@@ -168,12 +168,12 @@ const dutyTimeTypeSlice = createSlice({
       })
       .addCase(updateDutyTimeType.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.dutyTimeTypes.findIndex(location => location.id === action.payload.id);
+        const index = state.dutyTimeTypes.findIndex(location => location.id === action.payload.item.id);
         if (index !== -1) {
-          state.dutyTimeTypes[index] = action.payload;
+          state.dutyTimeTypes[index] = action.payload.item;
         }
-        if (state.currentDutyTimeType?.id === action.payload.id) {
-          state.currentDutyTimeType = action.payload;
+        if (state.currentDutyTimeType?.id === action.payload.item.id) {
+          state.currentDutyTimeType = action.payload.item;
         }
       })
       .addCase(updateDutyTimeType.rejected, (state, action) => {
@@ -207,12 +207,12 @@ const dutyTimeTypeSlice = createSlice({
       })
       .addCase(toggleDutyTimeTypeStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.dutyTimeTypes.findIndex(location => location.id === action.payload.id);
+        const index = state.dutyTimeTypes.findIndex(location => location.id === action.payload.item.id);
         if (index !== -1) {
-          state.dutyTimeTypes[index] = action.payload;
+          state.dutyTimeTypes[index] = action.payload.item;
         }
-        if (state.currentDutyTimeType?.id === action.payload.id) {
-          state.currentDutyTimeType = action.payload;
+        if (state.currentDutyTimeType?.id === action.payload.item.id) {
+          state.currentDutyTimeType = action.payload.item;
         }
       })
       .addCase(toggleDutyTimeTypeStatus.rejected, (state, action) => {

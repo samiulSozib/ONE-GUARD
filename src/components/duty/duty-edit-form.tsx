@@ -175,62 +175,65 @@ export function DutyEditForm({
     }, [formValues.site_id, dispatch])
 
     const loadDuty = async () => {
-        if (!duty?.id) return
+    if (!duty?.id) return
 
-        setIsFetching(true)
-        try {
-            const result = await dispatch(fetchDuty({
-                id: duty.id,
-                params: {}
-            }))
+    setIsFetching(true)
+    try {
+        const result = await dispatch(fetchDuty({
+            id: duty.id,
+            params: {}
+        }))
 
-            if (fetchDuty.fulfilled.match(result)) {
-                const data = result.payload.item
+        if (fetchDuty.fulfilled.match(result)) {
+            const data = result.payload.item
 
-                // Parse dates and times
-                const startDatetime = parseISO(data.start_datetime)
-                const endDatetime = parseISO(data.end_datetime)
-                const checkInDatetime = data.mandatory_check_in_time ? parseISO(data.mandatory_check_in_time) : null
+            // Parse dates and times
+            const startDatetime = parseISO(data.start_datetime)
+            const endDatetime = parseISO(data.end_datetime)
+            
+            // Note: mandatory_check_in_time might not be in your response yet
+            // If it's not present, you can set a default or omit it
+            const checkInDatetime = data.mandatory_check_in_time ? parseISO(data.mandatory_check_in_time) : null
 
-                // Set date states
-                setStartDate(startDatetime)
-                setEndDate(endDatetime)
-                setCheckInDate(checkInDatetime || undefined)
+            // Set date states
+            setStartDate(startDatetime)
+            setEndDate(endDatetime)
+            setCheckInDate(checkInDatetime || undefined)
 
-                // Set time states
-                setStartTime(format(startDatetime, 'HH:mm'))
-                setEndTime(format(endDatetime, 'HH:mm'))
-                setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
+            // Set time states
+            setStartTime(format(startDatetime, 'HH:mm'))
+            setEndTime(format(endDatetime, 'HH:mm'))
+            setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
 
-                // Set site search for dropdown display
-                const selectedSite = sites.find(s => s.id === data.site_id)
-                if (selectedSite) {
-                    setSiteSearch(selectedSite.title || "")
-                }
-
-                // Populate form with existing data
-                reset({
-                    title: data.title || "",
-                    site_id: data.site_id || undefined,
-                    site_location_id: data.site_location_id || undefined,
-                    duty_time_type_id: data.duty_time_type_id || undefined,
-                    start_datetime: data.start_datetime || "",
-                    end_datetime: data.end_datetime || "",
-                    guards_required: data.guards_required || 1,
-                    duty_type: (data.duty_type as "day" | "night") || "day",
-                    required_hours: data.required_hours || 8,
-                    mandatory_check_in_time: data.mandatory_check_in_time || "",
-                    notes: data.notes || "",
-                    status: (data.status as "pending" | "approved" | "completed") || "pending"
-                })
+            // Set site search for dropdown display
+            const selectedSite = sites.find(s => s.id === data.site?.id)
+            if (selectedSite) {
+                setSiteSearch(selectedSite.site_name || "")
             }
-        } catch (error) {
-            console.error("Failed to load duty:", error)
-            SweetAlertService.error('Error', 'Failed to load duty details')
-        } finally {
-            setIsFetching(false)
+
+            // Populate form with existing data
+            reset({
+                title: data.title || "",
+                site_id: data.site?.id || undefined,
+                site_location_id: data.site_location?.id || undefined,
+                duty_time_type_id: data.duty_time_type_id || undefined,
+                start_datetime: data.start_datetime || "",
+                end_datetime: data.end_datetime || "",
+                guards_required: data.guards_required || 1,
+                duty_type: (data.duty_type as "day" | "night") || "day",
+                required_hours: data.required_hours || 8,
+                mandatory_check_in_time: data.mandatory_check_in_time || "",
+                notes: data.notes || "",
+                status: (data.status as "pending" | "approved" | "completed") || "pending"
+            })
         }
+    } catch (error) {
+        console.error("Failed to load duty:", error)
+        SweetAlertService.error('Error', 'Failed to load duty details')
+    } finally {
+        setIsFetching(false)
     }
+}
 
     // Update datetime fields when date or time changes
     useEffect(() => {
@@ -347,74 +350,82 @@ export function DutyEditForm({
         }
     }
 
+    // const handleDialogOpenChange = (open: boolean) => {
+    //     if (open) {
+    //         onOpenChange?.(true)
+    //     } else {
+    //         // Check if form has been modified
+    //         const originalData = {
+    //             title: duty?.title || "",
+    //             site_id: duty?.site?.id || undefined,
+    //             site_location_id: duty?.site_location?.id || undefined,
+    //             duty_time_type_id: duty?.duty_time_type_id || undefined,
+    //             start_datetime: duty?.start_datetime || "",
+    //             end_datetime: duty?.end_datetime || "",
+    //             guards_required: duty?.guards_required || 1,
+    //             duty_type: duty?.duty_type || "day",
+    //             required_hours: duty?.required_hours || 8,
+    //             mandatory_check_in_time: duty?.mandatory_check_in_time || "",
+    //             notes: duty?.notes || "",
+    //             status: duty?.status || "pending"
+    //         }
+
+    //         const currentData = {
+    //             title: formValues.title.trim(),
+    //             site_id: formValues.site_id,
+    //             site_location_id: formValues.site_location_id,
+    //             duty_time_type_id: formValues.duty_time_type_id,
+    //             start_datetime: formValues.start_datetime,
+    //             end_datetime: formValues.end_datetime,
+    //             guards_required: formValues.guards_required,
+    //             duty_type: formValues.duty_type,
+    //             required_hours: formValues.required_hours,
+    //             mandatory_check_in_time: formValues.mandatory_check_in_time,
+    //             notes: formValues.notes || "",
+    //             status: formValues.status
+    //         }
+
+    //         const hasChanges =
+    //             currentData.title !== originalData.title ||
+    //             currentData.site_id !== originalData.site_id ||
+    //             currentData.site_location_id !== originalData.site_location_id ||
+    //             currentData.duty_time_type_id !== originalData.duty_time_type_id ||
+    //             currentData.start_datetime !== originalData.start_datetime ||
+    //             currentData.end_datetime !== originalData.end_datetime ||
+    //             currentData.guards_required !== originalData.guards_required ||
+    //             currentData.duty_type !== originalData.duty_type ||
+    //             currentData.required_hours !== originalData.required_hours ||
+    //             currentData.mandatory_check_in_time !== originalData.mandatory_check_in_time ||
+    //             currentData.notes !== originalData.notes ||
+    //             currentData.status !== originalData.status
+
+    //         if (!hasChanges) {
+    //             onOpenChange?.(false)
+    //         } 
+    //         else {
+    //             SweetAlertService.confirm(
+    //                 'Discard Changes?',
+    //                 'You have unsaved changes. Are you sure you want to close?',
+    //                 'Yes, discard',
+    //                 'No, keep'
+    //             ).then((result) => {
+    //                 if (result.isConfirmed) {
+    //                     reset()
+    //                     onOpenChange?.(false)
+    //                 } else {
+    //                     onOpenChange?.(true)
+    //                 }
+    //             })
+    //         }
+    //     }
+    // }
+
     const handleDialogOpenChange = (open: boolean) => {
-        if (open) {
-            onOpenChange?.(true)
-        } else {
-            // Check if form has been modified
-            const originalData = {
-                title: duty?.title || "",
-                site_id: duty?.site_id || undefined,
-                site_location_id: duty?.site_location_id || undefined,
-                duty_time_type_id: duty?.duty_time_type_id || undefined,
-                start_datetime: duty?.start_datetime || "",
-                end_datetime: duty?.end_datetime || "",
-                guards_required: duty?.guards_required || 1,
-                duty_type: duty?.duty_type || "day",
-                required_hours: duty?.required_hours || 8,
-                mandatory_check_in_time: duty?.mandatory_check_in_time || "",
-                notes: duty?.notes || "",
-                status: duty?.status || "pending"
-            }
-
-            const currentData = {
-                title: formValues.title.trim(),
-                site_id: formValues.site_id,
-                site_location_id: formValues.site_location_id,
-                duty_time_type_id: formValues.duty_time_type_id,
-                start_datetime: formValues.start_datetime,
-                end_datetime: formValues.end_datetime,
-                guards_required: formValues.guards_required,
-                duty_type: formValues.duty_type,
-                required_hours: formValues.required_hours,
-                mandatory_check_in_time: formValues.mandatory_check_in_time,
-                notes: formValues.notes || "",
-                status: formValues.status
-            }
-
-            const hasChanges =
-                currentData.title !== originalData.title ||
-                currentData.site_id !== originalData.site_id ||
-                currentData.site_location_id !== originalData.site_location_id ||
-                currentData.duty_time_type_id !== originalData.duty_time_type_id ||
-                currentData.start_datetime !== originalData.start_datetime ||
-                currentData.end_datetime !== originalData.end_datetime ||
-                currentData.guards_required !== originalData.guards_required ||
-                currentData.duty_type !== originalData.duty_type ||
-                currentData.required_hours !== originalData.required_hours ||
-                currentData.mandatory_check_in_time !== originalData.mandatory_check_in_time ||
-                currentData.notes !== originalData.notes ||
-                currentData.status !== originalData.status
-
-            if (!hasChanges) {
-                onOpenChange?.(false)
-            } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
-                    if (result.isConfirmed) {
-                        reset()
-                        onOpenChange?.(false)
-                    } else {
-                        onOpenChange?.(true)
-                    }
-                })
-            }
-        }
+    if (!open) {
+        reset()
     }
+    onOpenChange?.(open)
+}
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
@@ -468,7 +479,7 @@ export function DutyEditForm({
                                         }}
                                         options={sites.map((site: Site) => ({
                                             value: site.id,
-                                            label: site.title || `Site ${site.id}`,
+                                            label: site.title||site.site_name ,
                                             ...site
                                         }))}
                                         onSearch={(search) => {

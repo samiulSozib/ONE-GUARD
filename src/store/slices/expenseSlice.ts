@@ -142,6 +142,25 @@ export const toggleExpenseVisibility = createAsyncThunk(
   }
 );
 
+// Change expense status via query param
+export const changeExpenseStatus = createAsyncThunk(
+  "expense/changeStatus",
+  async (
+    { id, status }: { id: number; status: 'pending' | 'approved' | 'rejected' },
+    { rejectWithValue }
+  ) => {
+    try {
+      return await expenseService.changeStatus(id, status);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to change expense status";
+      return rejectWithValue(message);
+    }
+  }
+);
+
 /* ------------------ Slice ------------------ */
 
 const expenseSlice = createSlice({
@@ -217,6 +236,10 @@ const expenseSlice = createSlice({
       })
 
       /* ---------- Update expense ---------- */
+      .addCase(updateExpense.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(updateExpense.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.expenses.findIndex(
@@ -229,8 +252,16 @@ const expenseSlice = createSlice({
           state.currentExpense = action.payload.item;
         }
       })
+      .addCase(updateExpense.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
 
       /* ---------- Delete expense ---------- */
+      .addCase(deleteExpense.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(deleteExpense.fulfilled, (state, action) => {
         state.isLoading = false;
         state.expenses = state.expenses.filter(
@@ -244,8 +275,16 @@ const expenseSlice = createSlice({
           state.pagination.total - 1
         );
       })
+      .addCase(deleteExpense.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
 
       /* ---------- Toggle visibility ---------- */
+      .addCase(toggleExpenseVisibility.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(toggleExpenseVisibility.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.expenses.findIndex(
@@ -257,6 +296,32 @@ const expenseSlice = createSlice({
         if (state.currentExpense?.id === action.payload.id) {
           state.currentExpense = action.payload;
         }
+      })
+      .addCase(toggleExpenseVisibility.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
+      /* ---------- Change expense status via query param ---------- */
+      .addCase(changeExpenseStatus.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changeExpenseStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.expenses.findIndex(
+          (c) => c.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.expenses[index] = action.payload;
+        }
+        if (state.currentExpense?.id === action.payload.id) {
+          state.currentExpense = action.payload;
+        }
+      })
+      .addCase(changeExpenseStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });

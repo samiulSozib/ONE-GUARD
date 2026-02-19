@@ -151,8 +151,8 @@ const guardTypeSlice = createSlice({
       .addCase(createGuardType.fulfilled, (state, action) => {
         state.isLoading = false;
         // Add new site location to the beginning of the array
-        state.guardTypes = [action.payload, ...state.guardTypes];
-        state.currentGuardType = action.payload;
+        state.guardTypes = [action.payload.item, ...state.guardTypes];
+        state.currentGuardType = action.payload.item;
         // Increment total count
         state.pagination.total += 1;
       })
@@ -168,12 +168,12 @@ const guardTypeSlice = createSlice({
       })
       .addCase(updateGuardType.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.guardTypes.findIndex(location => location.id === action.payload.id);
+        const index = state.guardTypes.findIndex(location => location.id === action.payload.item.id);
         if (index !== -1) {
-          state.guardTypes[index] = action.payload;
+          state.guardTypes[index] = action.payload.item;
         }
-        if (state.currentGuardType?.id === action.payload.id) {
-          state.currentGuardType = action.payload;
+        if (state.currentGuardType?.id === action.payload.item.id) {
+          state.currentGuardType = action.payload.item;
         }
       })
       .addCase(updateGuardType.rejected, (state, action) => {

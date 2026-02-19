@@ -37,7 +37,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { createAssignment } from "@/store/slices/guardAssignmentSlice"
+import { createAssignment, fetchAssignments } from "@/store/slices/guardAssignmentSlice"
 
 interface GuardAssignmentCreateFormProps {
     trigger: ReactNode
@@ -166,9 +166,9 @@ export function GuardAssignmentCreateForm({
                 }
 
                 // If guard is selected, filter duties by guard
-                if (formValues.guard_id && formValues.guard_id > 0) {
-                    params.guard_id = formValues.guard_id
-                }
+                // if (formValues.guard_id && formValues.guard_id > 0) {
+                //     params.guard_id = formValues.guard_id
+                // }
 
                 dispatch(fetchDuties(params))
             }
@@ -285,39 +285,46 @@ export function GuardAssignmentCreateForm({
         })
     }
 
-    const handleDialogOpenChange = (open: boolean) => {
-        if (open) {
-            onOpenChange?.(true)
-        } else {
-            const hasData = formValues.guard_id > 0 ||
-                formValues.duty_id > 0 ||
-                startDate !== null ||
-                endDate !== null
+    // const handleDialogOpenChange = (open: boolean) => {
+    //     if (open) {
+    //         onOpenChange?.(true)
+    //     } else {
+    //         const hasData = formValues.guard_id > 0 ||
+    //             formValues.duty_id > 0 ||
+    //             startDate !== null ||
+    //             endDate !== null
 
-            if (!hasData) {
-                reset()
-                setStartDate(null)
-                setEndDate(null)
-                onOpenChange?.(false)
-            } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
-                    if (result.isConfirmed) {
-                        reset()
-                        setStartDate(null)
-                        setEndDate(null)
-                        onOpenChange?.(false)
-                    } else {
-                        onOpenChange?.(true)
-                    }
-                })
-            }
-        }
+    //         if (!hasData) {
+    //             reset()
+    //             setStartDate(null)
+    //             setEndDate(null)
+    //             onOpenChange?.(false)
+    //         } else {
+    //             SweetAlertService.confirm(
+    //                 'Discard Changes?',
+    //                 'You have unsaved changes. Are you sure you want to close?',
+    //                 'Yes, discard',
+    //                 'No, keep'
+    //             ).then((result) => {
+    //                 if (result.isConfirmed) {
+    //                     reset()
+    //                     setStartDate(null)
+    //                     setEndDate(null)
+    //                     onOpenChange?.(false)
+    //                 } else {
+    //                     onOpenChange?.(true)
+    //                 }
+    //             })
+    //         }
+    //     }
+    // }
+
+    const handleDialogOpenChange = (open: boolean) => {
+    if (!open) {
+        reset()
     }
+    onOpenChange?.(open)
+}
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>

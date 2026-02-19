@@ -58,8 +58,8 @@ export const guardAssignmentService = {
   toggleStatus: (id: number, status: string) =>
     handleApiResponse(
       api.patch<ApiResponse<{item:GuardAssignment}>>(
-        `/admin/guard-assignments/${id}/change-status`,
-        { status }
+        `/admin/guard-assignments/${id}/change-status?is_active=${status?1:0}`,
+        
       )
     ),
 };

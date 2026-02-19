@@ -2,7 +2,6 @@ import {
   Client, 
   ClientContact, 
   ClientParams, 
-  SingleClientResponse, 
   PaginatedClientsResponse 
 } from "@/app/types/client";
 import api, { handleApiResponse } from "./api.service";
@@ -18,13 +17,13 @@ export const clientService = {
   // Get single client
   getClient: (id: number, params?: { include?: string[] }) =>
     handleApiResponse(
-      api.get<ApiResponse<SingleClientResponse>>(`/admin/clients/${id}`, { params })
+      api.get<ApiResponse<{item:Client}>>(`/admin/clients/${id}/show`, { params })
     ),
   
   // Create client
   createClient: (data: FormData | Omit<Client, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>) =>
     handleApiResponse(
-      api.post<ApiResponse<SingleClientResponse>>('/admin/clients', data, {
+      api.post<ApiResponse<{item:Client}>>('/admin/clients', data, {
         headers: data instanceof FormData 
           ? { 'Content-Type': 'multipart/form-data' } 
           : undefined
@@ -34,7 +33,7 @@ export const clientService = {
   // Update client
   updateClient: (id: number, data: FormData | Partial<Client>) =>
     handleApiResponse(
-      api.put<ApiResponse<SingleClientResponse>>(`/admin/clients/${id}`, data, {
+      api.put<ApiResponse<{item:Client}>>(`/admin/clients/${id}`, data, {
         headers: data instanceof FormData 
           ? { 'Content-Type': 'multipart/form-data' } 
           : undefined
@@ -44,16 +43,15 @@ export const clientService = {
   // Delete client
   deleteClient: (id: number) =>
     handleApiResponse(
-      api.delete<ApiResponse<void>>(`/admin/clients/${id}`)
+      api.delete<ApiResponse<null>>(`/admin/clients/${id}`)
     ),
   
   // Toggle client status
   toggleStatus: (id: number, is_active: boolean) =>
     handleApiResponse(
-      api.patch<ApiResponse<SingleClientResponse>>(
-        `/admin/clients/${id}/change-status`, 
+      api.patch<ApiResponse<{item:Client}>>(
+        `/admin/clients/${id}/change-status?is_active=${is_active?1:0}`, 
         { is_active }
       )
     ),
-  
 };

@@ -193,3 +193,8 @@
   color: #6b0016 !important;
   font-size: 3rem !important;
 }
+
+
+.swal-top-layer {
+  z-index: 9999 !important;
+}

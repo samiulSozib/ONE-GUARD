@@ -23,13 +23,13 @@ export const dutyTimeTypeService = {
   
   // Create dutyTimeType
   createDutyTimeType: (data: FormData | Omit<DutyTimeType, 'id' | 'created_at' | 'updated_at'>) =>
-    handleApiResponse(api.post<ApiResponse<DutyTimeType>>('/admin/duty-time-types', data, {
+    handleApiResponse(api.post<ApiResponse<{item:DutyTimeType}>>('/admin/duty-time-types', data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
   // Update dutyTimeType
   updateDutyTimeType: (id: number, data: FormData | Partial<DutyTimeType>) =>
-    handleApiResponse(api.put<ApiResponse<DutyTimeType>>(`/admin/duty-time-types/${id}`, data, {
+    handleApiResponse(api.put<ApiResponse<{item:DutyTimeType}>>(`/admin/duty-time-types/${id}`, data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
@@ -39,7 +39,7 @@ export const dutyTimeTypeService = {
   
   // Toggle dutyTimeType status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<DutyTimeType>>(`/admin/duty-time-types/${id}/change-status`, { is_active })),
+    handleApiResponse(api.patch<ApiResponse<{item:DutyTimeType}>>(`/admin/duty-time-types/${id}/change-status?is_active=${is_active?1:0}`)),
   
 
 

@@ -62,12 +62,14 @@ export function GuardCreateForm({
 
     // Fetch guard types when dialog opens
     useEffect(() => {
-        if (isOpen) {
+        //if (isOpen) {
             dispatch(fetchGuardTypes({ 
                 per_page: 100, // Fetch a large number to get all guard types
             }))
-        }
-    }, [isOpen, dispatch])
+        //}
+    }, [ dispatch])
+
+    
 
     const {
         control,
@@ -174,7 +176,7 @@ export function GuardCreateForm({
                 }
             } else {
                 try {
-                    const result = await dispatch(fetchGuards({ page: 1, per_page: 1 }))
+                    const result = await dispatch(fetchGuards({ page: 1, per_page: 10 }))
                     if (fetchGuards.fulfilled.match(result)) {
                         const guards = result.payload.items
                         if (guards.length > 0) {

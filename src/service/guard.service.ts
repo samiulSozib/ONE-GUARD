@@ -19,17 +19,17 @@ export const guardService = {
   
   // Get single guard
   getGuard: (id: number, params?: { include?: string[] }) =>
-    handleApiResponse(api.get<ApiResponse<Guard>>(`/admin/guards/${id}`, { params })),
+    handleApiResponse(api.get<ApiResponse<{item:Guard}>>(`/admin/guards/${id}/show`, { params })),
   
   // Create guard
   createGuard: (data: FormData | Omit<Guard, 'id' | 'created_at' | 'updated_at'>) =>
-    handleApiResponse(api.post<ApiResponse<Guard>>('/admin/guards', data, {
+    handleApiResponse(api.post<ApiResponse<{item:Guard}>>('/admin/guards', data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
   // Update guard
   updateGuard: (id: number, data: FormData | Partial<Guard>) =>
-    handleApiResponse(api.put<ApiResponse<Guard>>(`/admin/guards/${id}`, data, {
+    handleApiResponse(api.put<ApiResponse<{item:Guard}>>(`/admin/guards/${id}`, data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
@@ -39,7 +39,7 @@ export const guardService = {
   
   // Toggle guard status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<Guard>>(`/admin/guards/${id}/change-status`, { is_active })),
+    handleApiResponse(api.patch<ApiResponse<{item:Guard}>>(`/admin/guards/${id}/change-status?is_active=${is_active?1:0}`, { is_active })),
   
   // Guard contacts management
   getGuardContacts: (guardId: number) =>

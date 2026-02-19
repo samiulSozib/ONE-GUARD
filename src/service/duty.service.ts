@@ -39,7 +39,7 @@ export const dutyService = {
   // Update duty
   updateDuty: (id: number, data: FormData | Partial<Duty>) =>
     handleApiResponse(
-      api.put<ApiResponse<Duty>>(`/admin/duties/${id}`, data, {
+      api.put<ApiResponse<{item:Duty}>>(`/admin/duties/${id}`, data, {
         headers:
           data instanceof FormData
             ? { "Content-Type": "multipart/form-data" }
@@ -56,9 +56,9 @@ export const dutyService = {
   // Toggle duty status
   toggleStatus: (id: number, is_active: boolean) =>
     handleApiResponse(
-      api.patch<ApiResponse<Duty>>(
-        `/admin/duties/${id}/change-status`,
-        { is_active }
+      api.patch<ApiResponse<{item:Duty}>>(
+        `/admin/duties/${id}/change-status?is_active=${is_active?1:0}`
+        
       )
     ),
 };

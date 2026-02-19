@@ -59,6 +59,7 @@ export const updateGuard = createAsyncThunk(
     try {
       return await guardService.updateGuard(id, data);
     } catch (error: unknown) {
+      console.log(error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to update guard';
       return rejectWithValue(errorMessage);
     }
@@ -135,7 +136,7 @@ const guardSlice = createSlice({
       })
       .addCase(fetchGuard.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentGuard = action.payload;
+        state.currentGuard = action.payload.item;
       })
       .addCase(fetchGuard.rejected, (state, action) => {
         state.isLoading = false;
@@ -151,8 +152,8 @@ const guardSlice = createSlice({
       .addCase(createGuard.fulfilled, (state, action) => {
         state.isLoading = false;
         // Add new guard to the beginning of the array
-        state.guards = [action.payload, ...state.guards];
-        state.currentGuard = action.payload;
+        state.guards = [action.payload.item, ...state.guards];
+        state.currentGuard = action.payload.item;
         // Increment total count
         state.pagination.total += 1;
       })
@@ -168,12 +169,12 @@ const guardSlice = createSlice({
       })
       .addCase(updateGuard.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.guards.findIndex(guard => guard.id === action.payload.id);
+        const index = state.guards.findIndex(guard => guard.id === action.payload.item.id);
         if (index !== -1) {
-          state.guards[index] = action.payload;
+          state.guards[index] = action.payload.item;
         }
-        if (state.currentGuard?.id === action.payload.id) {
-          state.currentGuard = action.payload;
+        if (state.currentGuard?.id === action.payload.item.id) {
+          state.currentGuard = action.payload.item;
         }
       })
       .addCase(updateGuard.rejected, (state, action) => {
@@ -205,12 +206,12 @@ const guardSlice = createSlice({
       })
       .addCase(toggleGuardStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.guards.findIndex(guard => guard.id === action.payload.id);
+        const index = state.guards.findIndex(guard => guard.id === action.payload.item.id);
         if (index !== -1) {
-          state.guards[index] = action.payload;
+          state.guards[index] = action.payload.item;
         }
-        if (state.currentGuard?.id === action.payload.id) {
-          state.currentGuard = action.payload;
+        if (state.currentGuard?.id === action.payload.item.id) {
+          state.currentGuard = action.payload.item;
         }
       })
       .addCase(toggleGuardStatus.rejected, (state, action) => {

@@ -87,4 +87,15 @@ export const expenseService = {
         payload
       )
     ),
+
+  /* ---------- Change expense status via query param ---------- */
+  changeStatus: (
+    id: number,
+    status: 'pending' | 'approved' | 'rejected'
+  ) =>
+    handleApiResponse(
+      api.patch<ApiResponse<Expense>>(
+        `/admin/expenses/${id}?change_status=${status}`
+      )
+    ),
 };

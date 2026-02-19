@@ -604,16 +604,16 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(duty)}>
+                            {/* <DropdownMenuItem onClick={() => handleViewDetails(duty)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View details
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                             <DropdownMenuItem onClick={() => handleEdit(duty)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit duty
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
+                            {/* <DropdownMenuItem
                               onClick={() => handleToggleStatus(duty)}
                               className="text-amber-600"
                             >
@@ -628,7 +628,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                   Activate
                                 </>
                               )}
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                             <DropdownMenuItem
                               onClick={() => handleDeleteClick(duty)}
                               className="text-red-600 focus:text-red-600"

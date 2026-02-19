@@ -36,6 +36,7 @@ import {
 } from "../ui/select";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
+import { ContactEditForm } from "./contact-edit-form";
 
 export function ContactDataTable() {
     const router = useRouter();
@@ -92,11 +93,14 @@ export function ContactDataTable() {
         setViewDialogOpen(true);
     };
 
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+const [contactToEdit, setContactToEdit] = useState<Contact | null>(null);
+
     const handleEditClick = (e: React.MouseEvent, contact: Contact) => {
-        e.stopPropagation();
-        // You'll need to implement the edit route
-        router.push(`/contacts/edit/${contact.id}`);
-    };
+    e.stopPropagation();
+    setContactToEdit(contact);
+    setEditDialogOpen(true);
+};
 
     const handleDeleteClick = (e: React.MouseEvent, contact: Contact) => {
         e.stopPropagation();
@@ -460,7 +464,7 @@ const getAvatarInitials = (name: string | undefined | null) => {
                                     <div
                                         key={contact.id}
                                         className="border p-4 rounded-xl shadow-sm relative hover:shadow-md transition-shadow cursor-pointer"
-                                        onClick={(e) => viewDetails(e, contact)}
+                                        //onClick={(e) => viewDetails(e, contact)}
                                     >
                                         {/* Status and Primary Badges */}
                                         {/* {getStatusBadge(contact)}
@@ -478,9 +482,9 @@ const getAvatarInitials = (name: string | undefined | null) => {
                                                 </DropdownMenuTrigger>
 
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={(e) => viewDetails(e, contact)}>
+                                                    {/* <DropdownMenuItem onClick={(e) => viewDetails(e, contact)}>
                                                         View details
-                                                    </DropdownMenuItem>
+                                                    </DropdownMenuItem> */}
 
                                                     <DropdownMenuItem onClick={(e) => handleEditClick(e, contact)}>
                                                         Edit contact
@@ -572,6 +576,22 @@ const getAvatarInitials = (name: string | undefined | null) => {
                     description={`Are you sure you want to delete ${contactToDelete?.name}? This action cannot be undone.`}
                 />
             </CardContent>
+            {/* Edit Contact Form */}
+<ContactEditForm
+    isOpen={editDialogOpen}
+    onOpenChange={setEditDialogOpen}
+    contactId={contactToEdit?.id || 0}
+    trigger={<div />}
+    refreshData={() => {
+        // Refresh the contact list after edit
+        dispatch(fetchContacts({
+            page: pagination.current_page,
+            per_page: 12,
+        }));
+    }}
+/>
         </Card>
+
+        
     );
 }

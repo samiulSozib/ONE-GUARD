@@ -39,7 +39,7 @@ export const expenseCategoryService = {
   
   // Toggle expenseCategory status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<ExpenseCategory>>(`/admin/expense-categories/${id}/change-status`, { is_active })),
+    handleApiResponse(api.patch<ApiResponse<ExpenseCategory>>(`/admin/expense-categories/${id}/change-status?is_active=${is_active?1:0}`)),
   
 
 

@@ -23,13 +23,13 @@ export const guardTypeService = {
   
   // Create guardType
   createGuardType: (data: FormData | Omit<GuardType, 'id' | 'created_at' | 'updated_at'>) =>
-    handleApiResponse(api.post<ApiResponse<GuardType>>('/admin/guard-types', data, {
+    handleApiResponse(api.post<ApiResponse<{item:GuardType}>>('/admin/guard-types', data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
   // Update guardType
   updateGuardType: (id: number, data: FormData | Partial<GuardType>) =>
-    handleApiResponse(api.put<ApiResponse<GuardType>>(`/admin/guard-types/${id}`, data, {
+    handleApiResponse(api.put<ApiResponse<{item:GuardType}>>(`/admin/guard-types/${id}`, data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
@@ -39,7 +39,7 @@ export const guardTypeService = {
   
   // Toggle guardType status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<GuardType>>(`/admin/guard-types/${id}/change-status`, { is_active })),
+    handleApiResponse(api.patch<ApiResponse<GuardType>>(`/admin/guard-types/${id}/change-status?is_active=${is_active?1:0}`)),
   
 
 

@@ -3,27 +3,18 @@
 import { useState, useEffect } from 'react'
 import {
     Dialog,
-    DialogClose,
     DialogContent,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { ReactNode } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelSelect } from "../ui/floating-select"
-import { CalendarIcon, Loader2, Plus, PlusIcon, Search, UploadCloud } from "lucide-react"
-import { DialogActionFooter } from "../shared/dialog-action-footer"
-import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
-import { Calendar } from "../ui/calender"
-import SiteAddForm from "../shared/site-add-form"
+import { Loader2, Search } from "lucide-react"
 import { Checkbox } from "../ui/checkbox"
 import { createContact } from '@/store/slices/contactSlice'
 import SweetAlertService from '@/lib/sweetAlert'
@@ -40,9 +31,12 @@ import {
     PopoverContent as ComboboxPopoverContent,
     PopoverTrigger as ComboboxPopoverTrigger,
 } from "@/components/ui/popover"
-import { cn } from '@/lib/utils'
 import { Guard } from '@/app/types/guard'
+import { Client } from '@/app/types/client'
+import { Site } from '@/app/types/site'
 import { fetchGuards } from '@/store/slices/guardSlice'
+import { fetchClients } from '@/store/slices/clientSlice'
+import { fetchSites } from '@/store/slices/siteSlice'
 import { useAppSelector } from '@/hooks/useAppSelector'
 import { useAppDispatch } from '@/hooks/useAppDispatch'
 import { Contact } from '@/app/types/contact'
@@ -64,6 +58,9 @@ interface ContactFormData {
     email: string
     is_active: boolean
 }
+
+// Define types for each contactable entity
+type ContactableEntity = Guard | Client | Site;
 
 export function ContactCreateForm({ 
     trigger, 
@@ -88,25 +85,47 @@ export function ContactCreateForm({
     // Loading state
     const [isLoading, setIsLoading] = useState(false)
     
-    // Guard combobox state
-    const [guardSearch, setGuardSearch] = useState('')
-    const [isGuardOpen, setIsGuardOpen] = useState(false)
-    const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null)
+    // Search and selection state
+    const [searchTerm, setSearchTerm] = useState('')
+    const [isEntityOpen, setIsEntityOpen] = useState(false)
+    const [selectedEntity, setSelectedEntity] = useState<ContactableEntity | null>(null)
     
-    // Get guards for combobox
+    // Get data from Redux store based on contactable type
     const { guards, isLoading: guardsLoading } = useAppSelector((state) => state.guard)
+    const { clients, isLoading: clientsLoading } = useAppSelector((state) => state.client)
+    const { sites, isLoading: sitesLoading } = useAppSelector((state) => state.site)
 
+    // Update form data when props change
     useEffect(() => {
-        // Fetch guards when combobox opens
-        if (isGuardOpen && contactableType === 'guard') {
+        setFormData(prev => ({
+            ...prev,
+            contactable_type: contactableType,
+            contactable_id: contactableId || 0
+        }))
+    }, [contactableType, contactableId])
+
+    // Fetch entities when combobox opens based on type
+    useEffect(() => {
+        if (isEntityOpen) {
             const params = {
                 per_page: 50,
-                search: guardSearch,
+                search: searchTerm,
                 is_active: true
             }
-            dispatch(fetchGuards(params))
+            
+            switch (formData.contactable_type) {
+                case 'guard':
+                    dispatch(fetchGuards(params))
+                    break
+                case 'client':
+                    dispatch(fetchClients(params))
+                    break
+                case 'site':
+                    dispatch(fetchSites(params))
+                    break
+            }
         }
-    }, [dispatch, isGuardOpen, guardSearch, contactableType])
+    }, [dispatch, isEntityOpen, searchTerm, formData.contactable_type])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
@@ -116,11 +135,16 @@ export function ContactCreateForm({
         }))
     }
 
-    const handleSelectChange = (name: string, value: string) => {
+    // FIXED: Handle select change with event object
+    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: value,
+            contactable_id: 0 // Reset contactable_id when type changes
         }))
+        // Reset selected entity when type changes
+        setSelectedEntity(null)
     }
 
     const handleCheckboxChange = (name: string, checked: boolean) => {
@@ -130,13 +154,78 @@ export function ContactCreateForm({
         }))
     }
 
-    const handleGuardSelect = (guard: Guard) => {
-        setSelectedGuard(guard)
+    const handleEntitySelect = (entity: ContactableEntity) => {
+        setSelectedEntity(entity)
         setFormData(prev => ({
             ...prev,
-            contactable_id: guard.id
+            contactable_id: entity.id
         }))
-        setIsGuardOpen(false)
+        setIsEntityOpen(false)
+    }
+
+    // Get the current list of entities based on type
+    const getCurrentEntities = (): ContactableEntity[] => {
+        switch (formData.contactable_type) {
+            case 'guard':
+                return guards
+            case 'client':
+                return clients
+            case 'site':
+                return sites
+            default:
+                return []
+        }
+    }
+
+    // Get loading state based on type
+    const getIsLoading = (): boolean => {
+        switch (formData.contactable_type) {
+            case 'guard':
+                return guardsLoading
+            case 'client':
+                return clientsLoading
+            case 'site':
+                return sitesLoading
+            default:
+                return false
+        }
+    }
+
+    // Get display name for entity
+    const getEntityDisplayName = (entity: ContactableEntity): string => {
+        switch (formData.contactable_type) {
+            case 'guard':
+                return (entity as Guard).full_name || ''
+            case 'client':
+                return (entity as Client).full_name || (entity as Client).full_name || ''
+            case 'site':
+                return (entity as Site).site_name || (entity as Site).site_name || ''
+            default:
+                return ''
+        }
+    }
+
+    // Get secondary info for entity (code, phone, etc)
+    const getEntitySecondaryInfo = (entity: ContactableEntity): string => {
+        switch (formData.contactable_type) {
+            case 'guard':
+                const guard = entity as Guard
+                return `${guard.guard_code || ''} ${guard.phone ? '• ' + guard.phone : ''}`.trim()
+            case 'client':
+                const client = entity as Client
+                return client.phone || client.email || ''
+            case 'site':
+                const site = entity as Site
+                return site.site_name 
+            default:
+                return ''
+        }
+    }
+
+    // Get entity initial for avatar
+    const getEntityInitial = (entity: ContactableEntity): string => {
+        const name = getEntityDisplayName(entity)
+        return name.charAt(0).toUpperCase()
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -150,10 +239,10 @@ export function ContactCreateForm({
             return
         }
 
-        if (contactableType === 'guard' && !formData.contactable_id) {
+        if (!formData.contactable_id) {
             SweetAlertService.error(
                 'Validation Error',
-                'Please select a guard for this contact.'
+                `Please select a ${formData.contactable_type} for this contact.`
             )
             return
         }
@@ -163,15 +252,13 @@ export function ContactCreateForm({
         try {
             // Create contact data according to your API structure
             const contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'> = {
-            contactable_type: formData.contactable_type,
-            contactable_id: formData.contactable_id,
-            name: formData.name,
-            phone: formData.phone,
-            email: formData.email || undefined,
-            is_active: formData.is_active,
-        }
-
-            
+                contactable_type: formData.contactable_type,
+                contactable_id: formData.contactable_id,
+                name: formData.name,
+                phone: formData.phone,
+                email: formData.email || undefined,
+                is_active: formData.is_active,
+            }
 
             await dispatch(createContact(contactData)).unwrap()
 
@@ -193,7 +280,7 @@ export function ContactCreateForm({
                 email: '',
                 is_active: true,
             })
-            setSelectedGuard(null)
+            setSelectedEntity(null)
 
             // Refresh data if callback provided
             if (refreshData) {
@@ -223,13 +310,24 @@ export function ContactCreateForm({
             email: '',
             is_active: true,
         })
-        setSelectedGuard(null)
+        setSelectedEntity(null)
     }
 
-     const closeDialog = () => {
+    const closeDialog = () => {
         if (onOpenChange) {
             onOpenChange(false)
         }
+    }
+
+    // Get placeholder text for combobox
+    const getComboboxPlaceholder = (): string => {
+        return `Select a ${formData.contactable_type}...`
+    }
+
+    // Get empty message for combobox
+    const getEmptyMessage = (): string => {
+        const type = formData.contactable_type
+        return `No ${type}s found.`
     }
 
     return (
@@ -252,13 +350,13 @@ export function ContactCreateForm({
                     {/* First Row */}
                     <div className="grid grid-cols-2 xs:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 mb-4">
                         
-                        {/* Contact Type - Read Only if provided from parent */}
+                        {/* Contact Type - FIXED: onChange now uses event object */}
                         <div className={contactableType ? 'col-span-2' : 'col-span-1'}>
                             <FloatingLabelSelect 
                                 label="Contact Type"
+                                name="contactable_type"
                                 value={formData.contactable_type}
-                                onChange={(e) => handleSelectChange('contactable_type', e.target.value)}
-                                disabled={!!contactableType}
+                                onChange={handleSelectChange}
                             >
                                 <option value="guard">Guard</option>
                                 <option value="client">Client</option>
@@ -266,95 +364,96 @@ export function ContactCreateForm({
                             </FloatingLabelSelect>
                         </div>
 
-                        {/* Guard Search Combobox - Only show if contactable_type is guard */}
-                        {formData.contactable_type === 'guard' && (
-                            <div className="col-span-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                                    Select Guard *
-                                </label>
-                                <ComboboxPopover open={isGuardOpen} onOpenChange={setIsGuardOpen}>
-                                    <ComboboxPopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={isGuardOpen}
-                                            className="w-full justify-between bg-white dark:bg-gray-800"
-                                        >
-                                            {selectedGuard ? selectedGuard.full_name : "Select a guard..."}
-                                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </ComboboxPopoverTrigger>
-                                    <ComboboxPopoverContent className="w-[300px] p-0" align="start">
-                                        <Command>
-                                            <CommandInput 
-                                                placeholder="Search guards..." 
-                                                value={guardSearch}
-                                                onValueChange={setGuardSearch}
-                                            />
-                                            <CommandList>
-                                                {guardsLoading ? (
-                                                    <CommandEmpty className="py-6 text-center">
-                                                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                                                        <p className="mt-2 text-sm">Loading guards...</p>
-                                                    </CommandEmpty>
-                                                ) : guards.length === 0 ? (
-                                                    <CommandEmpty>No guards found.</CommandEmpty>
-                                                ) : (
-                                                    <CommandGroup>
-                                                        {guards.map((guard) => (
-                                                            <CommandItem
-                                                                key={guard.id}
-                                                                value={guard.id.toString()}
-                                                                onSelect={() => handleGuardSelect(guard)}
-                                                                className="flex items-center gap-2"
-                                                            >
-                                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                                                    <span className="text-xs font-bold">
-                                                                        {guard.full_name?.charAt(0).toUpperCase()}
-                                                                    </span>
+                        {/* Entity Search Combobox - Dynamic based on contactable_type */}
+                        <div className="col-span-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                                Select {formData.contactable_type.charAt(0).toUpperCase() + formData.contactable_type.slice(1)} *
+                            </label>
+                            <ComboboxPopover open={isEntityOpen} onOpenChange={setIsEntityOpen}>
+                                <ComboboxPopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isEntityOpen}
+                                        className="w-full justify-between bg-white dark:bg-gray-800"
+                                    >
+                                        {selectedEntity 
+                                            ? getEntityDisplayName(selectedEntity) 
+                                            : getComboboxPlaceholder()}
+                                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </ComboboxPopoverTrigger>
+                                <ComboboxPopoverContent className="w-[300px] p-0" align="start">
+                                    <Command>
+                                        <CommandInput 
+                                            placeholder={`Search ${formData.contactable_type}s...`} 
+                                            value={searchTerm}
+                                            onValueChange={setSearchTerm}
+                                        />
+                                        <CommandList>
+                                            {getIsLoading() ? (
+                                                <CommandEmpty className="py-6 text-center">
+                                                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                                                    <p className="mt-2 text-sm">Loading...</p>
+                                                </CommandEmpty>
+                                            ) : getCurrentEntities().length === 0 ? (
+                                                <CommandEmpty>{getEmptyMessage()}</CommandEmpty>
+                                            ) : (
+                                                <CommandGroup>
+                                                    {getCurrentEntities().map((entity) => (
+                                                        <CommandItem
+                                                            key={entity.id}
+                                                            value={entity.id.toString()}
+                                                            onSelect={() => handleEntitySelect(entity)}
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                                                <span className="text-xs font-bold">
+                                                                    {getEntityInitial(entity)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium">
+                                                                    {getEntityDisplayName(entity)}
                                                                 </div>
-                                                                <div>
-                                                                    <div className="font-medium">{guard.full_name}</div>
-                                                                    <div className="text-xs text-gray-500">
-                                                                        {guard.guard_code} • {guard.phone}
-                                                                    </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    {getEntitySecondaryInfo(entity)}
                                                                 </div>
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                )}
-                                            </CommandList>
-                                        </Command>
-                                    </ComboboxPopoverContent>
-                                </ComboboxPopover>
-                                
-                                {selectedGuard && (
-                                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-medium">{selectedGuard.full_name}</p>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {selectedGuard.guard_code} • {selectedGuard.phone}
-                                                </p>
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setSelectedGuard(null)
-                                                    setFormData(prev => ({ ...prev, contactable_id: 0 }))
-                                                }}
-                                            >
-                                                Clear
-                                            </Button>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            )}
+                                        </CommandList>
+                                    </Command>
+                                </ComboboxPopoverContent>
+                            </ComboboxPopover>
+                            
+                            {selectedEntity && (
+                                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium">{getEntityDisplayName(selectedEntity)}</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                {getEntitySecondaryInfo(selectedEntity)}
+                                            </p>
                                         </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSelectedEntity(null)
+                                                setFormData(prev => ({ ...prev, contactable_id: 0 }))
+                                            }}
+                                        >
+                                            Clear
+                                        </Button>
                                     </div>
-                                )}
-                            </div>
-                        )}
-
-                        
+                                </div>
+                            )}
+                        </div>
 
                         {/* Contact Name */}
                         <div className="col-span-1">
@@ -401,12 +500,7 @@ export function ContactCreateForm({
                                 />
                                 <Label htmlFor="is_active">Active Contact</Label>
                             </div>
-
-                            
                         </div>
-
-                        
-
                     </div>
 
                     {/* Footer Actions */}

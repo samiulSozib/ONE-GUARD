@@ -19,15 +19,15 @@ export const contactService = {
   
   // Get single contact
   getContact: (id: number) =>
-    handleApiResponse(api.get<ApiResponse<Contact>>(`/admin/contacts/${id}`)),
+    handleApiResponse(api.get<ApiResponse<{item:Contact}>>(`/admin/contacts/${id}/show`)),
   
   // Create contact
   createContact: (data: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) =>
-    handleApiResponse(api.post<ApiResponse<Contact>>('/admin/contacts', data)),
+    handleApiResponse(api.post<ApiResponse<{item:Contact}>>('/admin/contacts', data)),
   
   // Update contact
   updateContact: (id: number, data: Partial<Contact>) =>
-    handleApiResponse(api.put<ApiResponse<Contact>>(`/admin/contacts/${id}`, data)),
+    handleApiResponse(api.put<ApiResponse<{item:Contact}>>(`/admin/contacts/${id}`, data)),
   
   // Delete contact
   deleteContact: (id: number) =>

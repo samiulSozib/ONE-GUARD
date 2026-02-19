@@ -135,7 +135,7 @@ const contactSlice = createSlice({
       })
       .addCase(fetchContact.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentContact = action.payload;
+        state.currentContact = action.payload.item;
       })
       .addCase(fetchContact.rejected, (state, action) => {
         state.isLoading = false;
@@ -149,8 +149,8 @@ const contactSlice = createSlice({
       })
       .addCase(createContact.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.contacts.unshift(action.payload);
-        state.currentContact = action.payload;
+        state.contacts.unshift(action.payload.item);
+        state.currentContact = action.payload.item;
       })
       .addCase(createContact.rejected, (state, action) => {
         state.isLoading = false;
@@ -164,12 +164,12 @@ const contactSlice = createSlice({
       })
       .addCase(updateContact.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.contacts.findIndex(contact => contact.id === action.payload.id);
+        const index = state.contacts.findIndex(contact => contact.id === action.payload.item.id);
         if (index !== -1) {
-          state.contacts[index] = action.payload;
+          state.contacts[index] = action.payload.item;
         }
-        if (state.currentContact?.id === action.payload.id) {
-          state.currentContact = action.payload;
+        if (state.currentContact?.id === action.payload.item.id) {
+          state.currentContact = action.payload.item;
         }
       })
       .addCase(updateContact.rejected, (state, action) => {
