@@ -1,17 +1,13 @@
 import React from "react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { IconBrandGoogleMaps } from "@tabler/icons-react";
 import { ChevronLeft, Edit2Icon, PlusIcon } from "lucide-react";
-import { ViewGuardTopCardProps } from "@/app/types/guard";
-import { ViewClientTopCardProps } from "@/app/types/client";
-import { ViewIncidentTopCardProps } from "@/app/types/incident";
 import { IncidentCreateForm } from "./incident-create-form";
 
 
 
 
-const ViewIncidentTopCard = ({ incident }: ViewIncidentTopCardProps) => {
+const ViewIncidentTopCard = () => {
   return (
     <Card className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-3 sm:p-4">
       {/* Guard Info */}
