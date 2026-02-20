@@ -15,6 +15,7 @@ import expenseCategoryReducer from './slices/expenseCategorySlice'
 import complaintReducer from './slices/complaintSlice'
 import expenseReducer from './slices/expenseSlice'
 import leaveReducer from './slices/leaveSlice'
+import incidentReducer from './slices/incidentSlice'
 
 export const store = configureStore({
   reducer: {
@@ -33,7 +34,8 @@ export const store = configureStore({
     expenseCategory:expenseCategoryReducer,
     complaint:complaintReducer,
     expense:expenseReducer,
-    leave:leaveReducer
+    leave:leaveReducer,
+    incident:incidentReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

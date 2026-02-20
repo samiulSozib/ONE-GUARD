@@ -21,7 +21,7 @@ const IncidentTopCard = () => {
                             variant='default'
                         >
                             <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            <span className="">Add Review</span>
+                            <span className="">Add Incident</span>
                         </Button>
                    } />
 
