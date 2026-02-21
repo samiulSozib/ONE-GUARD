@@ -35,7 +35,7 @@ export const contactService = {
   
   // Toggle contact status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<Contact>>(`/admin/contacts/${id}/change-status`, { is_active })),
+    handleApiResponse(api.get<ApiResponse<Contact>>(`/admin/contacts/${id}/change-status?is_active=${is_active?1:0}`)),
   
   // Get contacts by type
   getContactsByType: (contactable_type: string, contactable_id: number) =>

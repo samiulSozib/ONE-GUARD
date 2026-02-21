@@ -60,9 +60,9 @@ export const dutyAttendanceService = {
   // Toggle attendance status
   toggleStatus: (id: number, status: string) =>
     handleApiResponse(
-      api.patch<ApiResponse<{item: DutyAttendance}>>(
-        `/admin/duty-attendances/${id}/change-status`,
-        { status }
+      api.get<ApiResponse<{item: DutyAttendance}>>(
+        `/admin/duty-attendances/${id}/change-status?is_active=${status?1:0}`,
+        
       )
     ),
 

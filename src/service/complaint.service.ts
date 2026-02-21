@@ -82,9 +82,9 @@ export const complaintService = {
     }
   ) =>
     handleApiResponse(
-      api.patch<ApiResponse<Complaint>>(
+      api.get<ApiResponse<Complaint>>(
         `/admin/complaints/${id}/change-visibility`,
-        payload
+        
       )
     ),
 };

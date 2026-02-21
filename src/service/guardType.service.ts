@@ -39,7 +39,7 @@ export const guardTypeService = {
   
   // Toggle guardType status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<GuardType>>(`/admin/guard-types/${id}/change-status?is_active=${is_active?1:0}`)),
+    handleApiResponse(api.get<ApiResponse<GuardType>>(`/admin/guard-types/${id}/change-status?is_active=${is_active?1:0}`)),
   
 
 

@@ -39,7 +39,7 @@ export const siteLocationService = {
   
   // Toggle siteLocation status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<SiteLocation>>(`/admin/site-locations/${id}/change-status`, { is_active })),
+    handleApiResponse(api.get<ApiResponse<SiteLocation>>(`/admin/site-locations/${id}/change-status?is_active=${is_active?1:0}`)),
   
 
 

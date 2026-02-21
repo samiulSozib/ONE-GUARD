@@ -39,7 +39,7 @@ export const dutyTimeTypeService = {
   
   // Toggle dutyTimeType status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<{item:DutyTimeType}>>(`/admin/duty-time-types/${id}/change-status?is_active=${is_active?1:0}`)),
+    handleApiResponse(api.get<ApiResponse<{item:DutyTimeType}>>(`/admin/duty-time-types/${id}/change-status?is_active=${is_active?1:0}`)),
   
 
 

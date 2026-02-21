@@ -208,6 +208,7 @@ export function GuardDataTable() {
 
 
             } catch (error) {
+                console.log(error)
                 await SweetAlertService.error(
                     'Update Failed',
                     'There was an error updating the guard status. Please try again.',

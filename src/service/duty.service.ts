@@ -56,7 +56,7 @@ export const dutyService = {
   // Toggle duty status
   toggleStatus: (id: number, is_active: boolean) =>
     handleApiResponse(
-      api.patch<ApiResponse<{item:Duty}>>(
+      api.get<ApiResponse<{item:Duty}>>(
         `/admin/duties/${id}/change-status?is_active=${is_active?1:0}`
         
       )

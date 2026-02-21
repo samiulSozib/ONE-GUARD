@@ -82,9 +82,8 @@ export const expenseService = {
     }
   ) =>
     handleApiResponse(
-      api.patch<ApiResponse<Expense>>(
-        `/admin/expenses/${id}/change-visibility`,
-        payload
+      api.get<ApiResponse<Expense>>(
+        `/admin/expenses/${id}/change-visibility`
       )
     ),
 
@@ -94,7 +93,7 @@ export const expenseService = {
     status: 'pending' | 'approved' | 'rejected'
   ) =>
     handleApiResponse(
-      api.patch<ApiResponse<Expense>>(
+      api.get<ApiResponse<Expense>>(
         `/admin/expenses/${id}?change_status=${status}`
       )
     ),

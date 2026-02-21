@@ -68,9 +68,9 @@ export const incidentService = {
   /* ---------- Update incident status ---------- */
   updateIncidentStatus: (id: number, status: string) =>
     handleApiResponse(
-      api.patch<ApiResponse<Incident>>(
+      api.get<ApiResponse<Incident>>(
         `/admin/incidents/${id}/change-status?status=${status}`,
-        { status }
+       
       )
     ),
 
@@ -79,7 +79,7 @@ export const incidentService = {
     handleApiResponse(
       api.patch<ApiResponse<Incident>>(
         `/admin/incidents/${id}/client-visibility`,
-        { visible_to_client }
+       
       )
     ),
 };

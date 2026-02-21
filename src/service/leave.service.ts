@@ -70,9 +70,8 @@ export const leaveService = {
     }
   ) =>
     handleApiResponse(
-      api.patch<ApiResponse<Leave>>(
-        `/admin/leaves/${id}/update-status`,
-        payload
+      api.get<ApiResponse<Leave>>(
+        `/admin/leaves/${id}/update-status?is_active=${payload.status?1:0}`
       )
     ),
 

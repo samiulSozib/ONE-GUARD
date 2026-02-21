@@ -39,7 +39,7 @@ export const siteService = {
   
   // Toggle site status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<Site>>(`/admin/sites/${id}/change-status`, { is_active })),
+    handleApiResponse(api.get<ApiResponse<Site>>(`/admin/sites/${id}/change-status?is_active=${is_active?1:0}`)),
   
   // Site locations management
   getSiteLocations: (siteId: number) =>

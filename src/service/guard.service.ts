@@ -39,7 +39,7 @@ export const guardService = {
   
   // Toggle guard status
   toggleStatus: (id: number, is_active: boolean) =>
-    handleApiResponse(api.patch<ApiResponse<{item:Guard}>>(`/admin/guards/${id}/change-status?is_active=${is_active?1:0}`, { is_active })),
+    handleApiResponse(api.get<ApiResponse<{item:Guard}>>(`/admin/guards/${id}/change-status?is_active=${is_active?1:0}`)),
   
   // Guard contacts management
   getGuardContacts: (guardId: number) =>
