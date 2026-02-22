@@ -54,11 +54,11 @@ export const guardAssignmentService = {
       api.delete<ApiResponse<void>>(`/admin/guard-assignments/${id}`)
     ),
 
-  // Toggle assignment status
-  toggleStatus: (id: number, status: string) =>
+  // Update assignment status
+  updateStatusStatus: (id: number, status: string) =>
     handleApiResponse(
       api.get<ApiResponse<{item:GuardAssignment}>>(
-        `/admin/guard-assignments/${id}/change-status?is_active=${status?1:0}`,
+        `/admin/guard-assignments/${id}/change-status?status=${status}`,
         
       )
     ),

@@ -7,7 +7,7 @@ export interface GuardAssignment {
   duty_id:number;
   start_date:string;
   end_date:string;
-  status?:string;
+  status?: 'assigned' | 'active' | 'completed' | 'cancelled';
 
   guard?:Partial<Guard>;
   duty?:Partial<Duty>;
@@ -31,6 +31,8 @@ export interface GuardAssignmentParams {
 
   sort_by?: string;
   sort_order?: "asc" | "desc";
+  start_date?:string;
+  end_date?:string
 }
 
 

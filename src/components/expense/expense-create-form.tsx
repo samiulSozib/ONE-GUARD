@@ -253,65 +253,24 @@ export function ExpenseCreateForm({
     }
 
     const handleCancel = () => {
-        const hasData = formValues.title.trim() ||
-            formValues.expense_category_id ||
-            formValues.site_id ||
-            formValues.guard_id ||
-            formValues.amount ||
-            formValues.description?.trim()
-
-        if (!hasData) {
-            reset()
-            setExpenseDate(new Date())
-            onOpenChange?.(false)
-            return
-        }
-
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
-            if (result.isConfirmed) {
-                reset()
-                setExpenseDate(new Date())
-                onOpenChange?.(false)
-            }
-        })
+        reset()
+        setExpenseDate(new Date())
+        setCategorySearch("")
+        setSiteSearch("")
+        setGuardSearch("")
+        onOpenChange?.(false)
     }
 
     const handleDialogOpenChange = (open: boolean) => {
         if (open) {
             onOpenChange?.(true)
         } else {
-            const hasData = formValues.title.trim() ||
-                formValues.expense_category_id ||
-                formValues.site_id ||
-                formValues.guard_id ||
-                formValues.amount ||
-                formValues.description?.trim()
-
-            if (!hasData) {
-                reset()
-                setExpenseDate(new Date())
-                onOpenChange?.(false)
-            } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
-                    if (result.isConfirmed) {
-                        reset()
-                        setExpenseDate(new Date())
-                        onOpenChange?.(false)
-                    } else {
-                        onOpenChange?.(true)
-                    }
-                })
-            }
+            reset()
+            setExpenseDate(new Date())
+            setCategorySearch("")
+            setSiteSearch("")
+            setGuardSearch("")
+            onOpenChange?.(false)
         }
     }
 
@@ -572,8 +531,6 @@ export function ExpenseCreateForm({
                             placeholder="Enter expense description, notes, or additional details..."
                         />
                     </div>
-
-                    
 
                     {/* Footer Actions */}
                     <DialogActionFooter

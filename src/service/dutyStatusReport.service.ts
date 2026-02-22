@@ -111,8 +111,8 @@ export const dutyStatusReportService = {
   // Toggle visibility
   toggleVisibility: (id: number, visible_to_client: boolean) =>
     handleApiResponse(
-      api.get<ApiResponse<{item: DutyStatusReport}>>(
-        `/admin/duty-status-report/${id}/toggle-visibility`,
+      api.get<ApiResponse<{message:string}>>(
+        `/admin/duty-status-report/${id}/change-visibility?visible_to_client=${visible_to_client?1:0}`,
        
       )
     ),

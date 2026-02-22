@@ -109,6 +109,11 @@ const data = {
             icon: Wallet,
         },
         {
+            title: "Expense Review",
+            url: "/expense-review",
+            icon: Wallet,
+        },
+        {
             title: "Complaint",
             url: "/complaint",
             icon: MessageSquareWarning,
@@ -118,7 +123,7 @@ const data = {
             url: "/contacts",
             icon: Phone,
         },
-        
+
         {
             title: "Guard Type",
             url: "/guard-type",
@@ -149,14 +154,14 @@ const data = {
             url: "/duty-status-report",
             icon: BarChart3,
         },
-        
+
         {
             title: "Incident",
             url: "/incident",
             icon: AlertTriangleIcon,
         },
     ],
-    
+
 }
 
 export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -183,9 +188,9 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                     <SidebarGroupContent>
                         <SidebarMenu className="gap-1 px-2">
                             {data.navMain.map((item) => {
-                                const isActive = pathname === item.url || 
-                                               (item.url !== '/' && pathname?.startsWith(item.url));
-                                
+                                const isActive = pathname === item.url ||
+                                    (item.url !== '/' && pathname?.startsWith(item.url));
+
                                 return (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton
@@ -205,7 +210,7 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                                                     isActive && "scale-105"
                                                 )} />
                                                 <span className="text-sm tracking-wide">{item.title}</span>
-                                                
+
                                                 {/* Subtle active indicator */}
                                                 {isActive && (
                                                     <ChevronRight className="ml-auto h-3.5 w-3.5 text-sidebar-foreground/50" />
@@ -221,7 +226,7 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
 
                 <SidebarSeparator className="mx-3 bg-sidebar-border/30" />
 
-                
+
 
                 {/* Optional spacer */}
                 <div className="flex-1"></div>

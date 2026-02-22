@@ -164,17 +164,11 @@ export function GuardAssignmentCreateForm({
                     status: 'approved',
                     search: dutySearch.trim()
                 }
-
-                // If guard is selected, filter duties by guard
-                // if (formValues.guard_id && formValues.guard_id > 0) {
-                //     params.guard_id = formValues.guard_id
-                // }
-
                 dispatch(fetchDuties(params))
             }
         }, 300)
         return () => clearTimeout(timer)
-    }, [dutySearch, formValues.guard_id, dispatch])
+    }, [dutySearch, dispatch])
 
     // Update start_date field when date changes
     useEffect(() => {
@@ -256,75 +250,17 @@ export function GuardAssignmentCreateForm({
         }
     }
 
-    const handleCancel = () => {
-        const hasData = formValues.guard_id > 0 ||
-            formValues.duty_id > 0 ||
-            startDate !== null ||
-            endDate !== null
-
-        if (!hasData) {
+    const handleDialogOpenChange = (open: boolean) => {
+        if (!open) {
+            // Reset form when dialog closes
             reset()
             setStartDate(null)
             setEndDate(null)
-            onOpenChange?.(false)
-            return
+            setGuardSearch("")
+            setDutySearch("")
         }
-
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
-            if (result.isConfirmed) {
-                reset()
-                setStartDate(null)
-                setEndDate(null)
-                onOpenChange?.(false)
-            }
-        })
+        onOpenChange?.(open)
     }
-
-    // const handleDialogOpenChange = (open: boolean) => {
-    //     if (open) {
-    //         onOpenChange?.(true)
-    //     } else {
-    //         const hasData = formValues.guard_id > 0 ||
-    //             formValues.duty_id > 0 ||
-    //             startDate !== null ||
-    //             endDate !== null
-
-    //         if (!hasData) {
-    //             reset()
-    //             setStartDate(null)
-    //             setEndDate(null)
-    //             onOpenChange?.(false)
-    //         } else {
-    //             SweetAlertService.confirm(
-    //                 'Discard Changes?',
-    //                 'You have unsaved changes. Are you sure you want to close?',
-    //                 'Yes, discard',
-    //                 'No, keep'
-    //             ).then((result) => {
-    //                 if (result.isConfirmed) {
-    //                     reset()
-    //                     setStartDate(null)
-    //                     setEndDate(null)
-    //                     onOpenChange?.(false)
-    //                 } else {
-    //                     onOpenChange?.(true)
-    //                 }
-    //             })
-    //         }
-    //     }
-    // }
-
-    const handleDialogOpenChange = (open: boolean) => {
-    if (!open) {
-        reset()
-    }
-    onOpenChange?.(open)
-}
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
@@ -549,8 +485,6 @@ export function GuardAssignmentCreateForm({
                             </div>
                         </div>
                     </div>
-
-                    
 
                     {/* Footer Actions */}
                     <DialogActionFooter

@@ -115,7 +115,9 @@ export const toggleVisibility = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await dutyStatusReportService.toggleVisibility(id, visible_to_client);
+       await dutyStatusReportService.toggleVisibility(id, visible_to_client);
+       const updatedDutyStatusReport=await dutyStatusReportService.getReport(id)
+       return updatedDutyStatusReport.item
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -294,13 +296,13 @@ const dutyStatusReportSlice = createSlice({
       .addCase(toggleVisibility.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.reports.findIndex(
-          (report) => report.id === action.payload.item.id
+          (report) => report.id === action.payload.id
         );
         if (index !== -1) {
-          state.reports[index] = action.payload.item;
+          state.reports[index] = action.payload;
         }
-        if (state.currentReport?.id === action.payload.item.id) {
-          state.currentReport = action.payload.item;
+        if (state.currentReport?.id === action.payload.id) {
+          state.currentReport = action.payload;
         }
       })
       .addCase(toggleVisibility.rejected, (state, action) => {

@@ -110,19 +110,21 @@ export const deleteAssignment = createAsyncThunk(
   }
 );
 
-export const toggleAssignmentStatus = createAsyncThunk(
-  "guardAssignment/toggleStatus",
+export const updateAssignmentStatus = createAsyncThunk(
+  "guardAssignment/updateStatus",
   async (
     { id, status }: { id: number; status: string }, // Fixed: changed 'stauts' to 'status'
     { rejectWithValue }
   ) => {
     try {
-      return await guardAssignmentService.toggleStatus(id, status);
+       await guardAssignmentService.updateStatusStatus(id, status);
+       const updatedGuardAssignement=await guardAssignmentService.getAssignment(id)
+       return updatedGuardAssignement.item
     } catch (error: unknown) {
       const message =
         error instanceof Error
           ? error.message
-          : "Failed to toggle guard assignment status";
+          : "Failed to update guard assignment status";
       return rejectWithValue(message);
     }
   }
@@ -244,24 +246,24 @@ const guardAssignmentSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Toggle status
-      .addCase(toggleAssignmentStatus.pending, (state) => {
+      // update status
+      .addCase(updateAssignmentStatus.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(toggleAssignmentStatus.fulfilled, (state, action) => {
+      .addCase(updateAssignmentStatus.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.assignments.findIndex(
-          (assignment) => assignment.id === action.payload.item.id
+          (assignment) => assignment.id === action.payload.id
         );
         if (index !== -1) {
-          state.assignments[index] = action.payload.item;
+          state.assignments[index] = action.payload;
         }
-        if (state.currentAssignment?.id === action.payload.item.id) {
-          state.currentAssignment = action.payload.item;
+        if (state.currentAssignment?.id === action.payload.id) {
+          state.currentAssignment = action.payload;
         }
       })
-      .addCase(toggleAssignmentStatus.rejected, (state, action) => {
+      .addCase(updateAssignmentStatus.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

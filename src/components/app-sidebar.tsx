@@ -87,6 +87,11 @@ const data = {
     icon: Wallet,
   },
   {
+    title: "Expense Review",
+    url: "/expense-review",
+    icon: Wallet,
+  },
+  {
     title: "Complaint",
     url: "/complaint",
     icon: MessageSquareWarning,

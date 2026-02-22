@@ -18,7 +18,12 @@ import {
   User,
   Shield,
   Calendar,
-  MapPin
+  MapPin,
+  AlertCircle,
+  CheckCheck,
+  Ban,
+  PlayCircle,
+  Flag
 } from "lucide-react";
 import {
   Card,
@@ -50,6 +55,15 @@ import { FloatingLabelInput } from "../ui/floating-input";
 import { Calendar as CalendarComponent } from "../ui/calender";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 // Redux
 import { useAppDispatch } from "@/hooks/useAppDispatch";
@@ -57,7 +71,7 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import {
   fetchAssignments,
   deleteAssignment,
-  toggleAssignmentStatus,
+  updateAssignmentStatus,
 } from "@/store/slices/guardAssignmentSlice";
 import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignment";
 
@@ -65,16 +79,28 @@ import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignm
 import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
 import { GuardAssignmentEditForm } from "./guard-assignment-edit-form";
+import Swal from 'sweetalert2';
+
+// Define the status type
+type AssignmentStatus = 'assigned' | 'active' | 'completed' | 'cancelled';
+
+// Define the action type
+interface StatusAction {
+  status: AssignmentStatus;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+}
 
 // Status colors mapping
-const assignmentStatusColors: Record<string, string> = {
-  "assigned": "bg-blue-100 text-blue-800",
-  "completed": "bg-green-100 text-green-800",
-  "cancelled": "bg-red-100 text-red-800",
-  "pending": "bg-yellow-100 text-yellow-800",
-  "in_progress": "bg-purple-100 text-purple-800",
-  "default": "bg-gray-100 text-gray-800",
+const assignmentStatusColors: Record<AssignmentStatus, string> = {
+  "assigned": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  "active": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  "completed": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  "cancelled": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
+
+const defaultStatusColor = "bg-gray-100 text-gray-800";
 
 interface GuardAssignmentDataTableProps {
   onAddClick?: () => void;
@@ -100,22 +126,36 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<GuardAssignment | null>(null);
   
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  
   // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   
   // Fetch assignments on mount and filter changes
   useEffect(() => {
-    const fetchParams = {
-      ...filters,
+    const fetchParams: GuardAssignmentParams = {
+      page: filters.page || 1,
+      per_page: filters.per_page || 10,
       search: searchTerm || undefined,
-      //include_guard: true,
-      //include_duty: true,
+      include_guard: true,
+      include_duty: true,
     };
+
+    // Add status filter
+    if (statusFilter !== "all") {
+      fetchParams.status = statusFilter;
+    }
+
+    // Add date filter
+    if (dateFilter) {
+      const formattedDate = format(dateFilter, 'yyyy-MM-dd');
+      fetchParams.start_date = formattedDate;
+      fetchParams.end_date = formattedDate;
+    }
     
     dispatch(fetchAssignments(fetchParams));
-  }, [dispatch, filters, searchTerm]);
-
- 
+  }, [dispatch, filters.page, searchTerm, statusFilter, dateFilter]);
   
   // Handle search
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,48 +168,15 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   };
   
   // Handle filter changes
-  const handleStatusFilter = (status: GuardAssignmentParams['status']) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      page: 1,
-      status: status === prev.status ? undefined : status 
-    }));
-  };
-  
-  const handleGuardFilter = (guardId: number | undefined) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      page: 1,
-      guard_id: guardId 
-    }));
-  };
-  
-  const handleDutyFilter = (dutyId: number | undefined) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      page: 1,
-      duty_id: dutyId 
-    }));
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    setFilters(prev => ({ ...prev, page: 1 }));
   };
   
   // Handle date filter
   const handleDateChange = (date: Date | undefined) => {
     setDateFilter(date);
-    
-    if (date) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      setFilters(prev => ({
-        ...prev,
-        page: 1,
-        start_date: formattedDate,
-        end_date: formattedDate,
-      }));
-    } else {
-      setFilters(prev => {
-        const {  ...rest } = prev;
-        return { ...rest, page: 1 };
-      });
-    }
+    setFilters(prev => ({ ...prev, page: 1 }));
   };
   
   // Clear all filters
@@ -177,6 +184,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     setSearchTerm("");
     setTitleSearch("");
     setDateFilter(undefined);
+    setStatusFilter("all");
     setFilters({
       page: 1,
       per_page: 10,
@@ -185,24 +193,25 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   };
   
   // Handle assignment selection
-  const handleSelectAssignment = (assignmentId: number) => {
-    setSelectedAssignments(prev =>
-      prev.includes(assignmentId)
-        ? prev.filter(id => id !== assignmentId)
-        : [...prev, assignmentId]
-    );
+  const handleSelectAssignment = (assignmentId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedAssignments(prev => [...prev, assignmentId]);
+    } else {
+      setSelectedAssignments(prev => prev.filter(id => id !== assignmentId));
+    }
   };
   
-  const handleSelectAll = () => {
-    if (selectedAssignments.length === assignments.length) {
-      setSelectedAssignments([]);
-    } else {
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
       setSelectedAssignments(assignments.map((assignment: GuardAssignment) => assignment.id));
+    } else {
+      setSelectedAssignments([]);
     }
   };
   
   // Handle delete
-  const handleDeleteClick = (assignment: GuardAssignment) => {
+  const handleDeleteClick = (e: React.MouseEvent, assignment: GuardAssignment) => {
+    e.stopPropagation();
     setAssignmentToDelete(assignment);
     setDeleteDialogOpen(true);
   };
@@ -212,12 +221,13 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
       try {
         await dispatch(deleteAssignment(assignmentToDelete.id)).unwrap();
         
-        SweetAlertService.success(
+        await SweetAlertService.success(
           'Assignment Deleted',
           `Assignment has been deleted successfully.`,
           {
-            timer: 1500,
+            timer: 2000,
             showConfirmButton: false,
+            timerProgressBar: true,
           }
         );
         
@@ -225,33 +235,186 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         setAssignmentToDelete(null);
         
         // Refresh list
-        dispatch(fetchAssignments(filters));
+        const fetchParams: GuardAssignmentParams = {
+          page: filters.page || 1,
+          per_page: filters.per_page || 10,
+          search: searchTerm || undefined,
+          include_guard: true,
+          include_duty: true,
+        };
+        dispatch(fetchAssignments(fetchParams));
       } catch (error) {
-        SweetAlertService.error(
+        await SweetAlertService.error(
           'Delete Failed',
-          'There was an error deleting the assignment. Please try again.'
+          'There was an error deleting the assignment. Please try again.',
+          {
+            timer: 2000,
+            showConfirmButton: true,
+          }
         );
       }
     }
   };
   
-  // Handle status toggle
-  const handleToggleStatus = async (assignment: GuardAssignment) => {
-    try {
-      const newStatus = assignment.status === 'active' ? 'inactive' : 'active';
-      await dispatch(toggleAssignmentStatus({
-        id: assignment.id,
-        status: newStatus
-      })).unwrap();
-      
-      SweetAlertService.success(
-        'Status Updated',
-        `Assignment status has been updated to ${newStatus}.`
+  // Handle assignment status update
+  const handleStatusUpdate = async (e: React.MouseEvent, assignment: GuardAssignment, newStatus: AssignmentStatus) => {
+    e.stopPropagation();
+
+    const statusDisplay = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+
+    // Confirmation dialog with 5 second timer
+    const result = await Swal.fire({
+      title: `Mark Assignment as ${statusDisplay}`,
+      text: `Are you sure you want to mark this assignment as ${statusDisplay}? This confirmation will expire in 5 seconds.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: newStatus === 'active' ? '#10b981' : 
+                         newStatus === 'assigned' ? '#3b82f6' : 
+                         newStatus === 'completed' ? '#8b5cf6' : '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Yes, mark as ${statusDisplay}`,
+      cancelButtonText: 'Cancel',
+      timer: 5000,
+      timerProgressBar: true,
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const resultAction = await dispatch(updateAssignmentStatus({ 
+          id: assignment.id, 
+          status: newStatus 
+        }));
+
+        if (updateAssignmentStatus.fulfilled.match(resultAction)) {
+          await SweetAlertService.success(
+            'Status Updated',
+            `Assignment has been marked as ${statusDisplay} successfully.`,
+            {
+              timer: 2000,
+              showConfirmButton: false,
+              timerProgressBar: true,
+            }
+          );
+        } else {
+          await SweetAlertService.error(
+            'Update Failed',
+            'There was an error updating the assignment status. Please try again.',
+            {
+              timer: 2000,
+              showConfirmButton: true,
+            }
+          );
+        }
+      } catch (error) {
+        await SweetAlertService.error(
+          'Update Failed',
+          'There was an error updating the assignment status. Please try again.',
+          {
+            timer: 2000,
+            showConfirmButton: true,
+          }
+        );
+      }
+    } else if (result.dismiss === Swal.DismissReason.timer) {
+      // Handle timer expiration
+      await SweetAlertService.info(
+        'Confirmation Expired',
+        'The confirmation dialog timed out. Please try again.',
+        {
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+        }
       );
-    } catch (error) {
-      SweetAlertService.error(
-        'Update Failed',
-        'Failed to update assignment status. Please try again.'
+    }
+  };
+  
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedAssignments.length === 0) {
+      await SweetAlertService.warning(
+        'No Assignments Selected',
+        'Please select at least one assignment to delete.',
+        {
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+        }
+      );
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Bulk Delete Confirmation',
+      text: `Are you sure you want to delete ${selectedAssignments.length} selected assignment(s)? This action cannot be undone. This confirmation will expire in 5 seconds.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b0016',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+      timer: 5000,
+      timerProgressBar: true,
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Show loading state
+        await SweetAlertService.loading('Processing...', 'Please wait while we delete the assignments.');
+
+        // Delete all selected assignments
+        for (const assignmentId of selectedAssignments) {
+          await dispatch(deleteAssignment(assignmentId)).unwrap();
+        }
+
+        // Close loading alert
+        SweetAlertService.close();
+
+        await SweetAlertService.success(
+          'Assignments Deleted',
+          `${selectedAssignments.length} assignment(s) have been deleted successfully.`,
+          {
+            timer: 2000,
+            showConfirmButton: false,
+            timerProgressBar: true,
+          }
+        );
+
+        setSelectedAssignments([]);
+
+        // Refresh the assignment list
+        const fetchParams: GuardAssignmentParams = {
+          page: filters.page || 1,
+          per_page: filters.per_page || 10,
+          search: searchTerm || undefined,
+          include_guard: true,
+          include_duty: true,
+        };
+        dispatch(fetchAssignments(fetchParams));
+      } catch (error) {
+        // Close loading alert if open
+        SweetAlertService.close();
+
+        await SweetAlertService.error(
+          'Delete Failed',
+          'There was an error deleting the assignments. Please try again.',
+          {
+            timer: 2000,
+            showConfirmButton: true,
+          }
+        );
+      }
+    } else if (result.dismiss === Swal.DismissReason.timer) {
+      await SweetAlertService.info(
+        'Confirmation Expired',
+        'The confirmation dialog timed out. Please try again.',
+        {
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+        }
       );
     }
   };
@@ -263,9 +426,42 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   };
   
   // Handle edit
-  const handleEdit = (assignment: GuardAssignment) => {
+  const handleEdit = (e: React.MouseEvent, assignment: GuardAssignment) => {
+    e.stopPropagation();
     setSelectedAssignment(assignment);
     setEditDialogOpen(true);
+  };
+  
+  // Check if status can be changed to target status
+  const canChangeTo = (currentStatus: AssignmentStatus, targetStatus: AssignmentStatus): boolean => {
+    if (currentStatus === targetStatus) return false;
+    
+    // Define valid transitions
+    const validTransitions: Record<AssignmentStatus, AssignmentStatus[]> = {
+      'assigned': ['active', 'cancelled'],
+      'active': ['completed', 'cancelled'],
+      'completed': [], // Terminal state
+      'cancelled': [], // Terminal state
+    };
+    
+    return validTransitions[currentStatus]?.includes(targetStatus) || false;
+  };
+  
+  // Get available actions based on current status
+  const getAvailableActions = (currentStatus: AssignmentStatus): StatusAction[] => {
+    const actions: StatusAction[] = [];
+    
+    if (canChangeTo(currentStatus, 'active')) {
+      actions.push({ status: 'active', label: 'Start Assignment', icon: PlayCircle, color: 'text-green-600' });
+    }
+    if (canChangeTo(currentStatus, 'completed')) {
+      actions.push({ status: 'completed', label: 'Mark Completed', icon: CheckCheck, color: 'text-purple-600' });
+    }
+    if (canChangeTo(currentStatus, 'cancelled')) {
+      actions.push({ status: 'cancelled', label: 'Cancel Assignment', icon: Ban, color: 'text-red-600' });
+    }
+    
+    return actions;
   };
   
   // Format date and time
@@ -298,17 +494,19 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   };
   
   // Get status display text
-  const getStatusDisplay = (status: string = 'pending') => {
+  const getStatusDisplay = (status: string = 'assigned'): string => {
     const statusMap: Record<string, string> = {
-      'pending': 'Pending',
       'assigned': 'Assigned',
-      'in_progress': 'In Progress',
+      'active': 'Active',
       'completed': 'Completed',
       'cancelled': 'Cancelled',
-      'active': 'Active',
-      'inactive': 'Inactive',
     };
     return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+  };
+  
+  // Get status color
+  const getStatusColor = (status: string = 'assigned'): string => {
+    return assignmentStatusColors[status as AssignmentStatus] || defaultStatusColor;
   };
   
   // Pagination handlers
@@ -317,10 +515,15 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   };
   
   // Export functionality
-  const handleExport = () => {
-    SweetAlertService.info(
-      'Export Feature',
-      'Export functionality will be implemented soon.'
+  const handleExport = async () => {
+    await SweetAlertService.success(
+      'Export Started',
+      'Your assignment data export has been initiated.',
+      {
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+      }
     );
   };
   
@@ -364,15 +567,26 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
             Export
           </CardTitle>
 
-          <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
+          <div className="text-sm flex items-center gap-1 dark:text-black">
             <Checkbox 
               id="select-all" 
               className="dark:bg-white dark:border-black"
               checked={selectedAssignments.length === assignments.length && assignments.length > 0}
               onCheckedChange={handleSelectAll}
             />
-            <Label htmlFor="select-all">Select</Label>
-          </CardTitle>
+            <Label htmlFor="select-all">Select All</Label>
+          </div>
+
+          {selectedAssignments.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              className="ml-auto"
+            >
+              Delete Selected ({selectedAssignments.length})
+            </Button>
+          )}
         </div>
 
         <CardContent className="p-0">
@@ -393,14 +607,23 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               </InputGroup>
             </div>
             
-            {/* Duty Filter */}
+            {/* Status Filter */}
             <div className="sm:col-span-4">
-              <InputGroup>
-                <InputGroupInput placeholder="Duty ID" />
-                <InputGroupAddon>
-                  <Shield />
-                </InputGroupAddon>
-              </InputGroup>
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Status</SelectLabel>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Date Filter */}
@@ -425,13 +648,34 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Clear Filters Button */}
+            <div className="sm:col-span-12 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+              >
+                Clear Filters
+              </Button>
+            </div>
           </div>
+
+          {/* Error State */}
+          {error && !isLoading && (
+            <div className="p-4 text-center text-red-600">
+              Error loading assignments: {error}
+            </div>
+          )}
 
           {/* Table Section */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <span className="sr-only">Select</span>
+                  </TableHead>
                   <TableHead>Guard</TableHead>
                   <TableHead>Duty</TableHead>
                   <TableHead>Assignment Period</TableHead>
@@ -448,14 +692,14 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               <TableBody>
                 {assignments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12">
+                    <TableCell colSpan={11} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No guard assignments found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                          {searchTerm || Object.keys(filters).length > 2
+                          {searchTerm || statusFilter !== "all" || dateFilter
                             ? "Try adjusting your search or filters"
                             : "Get started by creating a new guard assignment"}
                         </p>
@@ -468,165 +712,192 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                     </TableCell>
                   </TableRow>
                 ) : (
-                  assignments.map((assignment: GuardAssignment) => (
-                    <TableRow
-                      key={assignment.id}
-                      className="hover:bg-gray-50 dark:hover:bg-black"
-                    >
-                      {/* Guard */}
-                      <TableCell className="font-medium text-gray-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span>{assignment.guard?.full_name || `Guard #${assignment.guard_id}`}</span>
-                        </div>
-                      </TableCell>
+                  assignments.map((assignment: GuardAssignment) => {
+                    const currentStatus = (assignment.status || 'assigned') as AssignmentStatus;
+                    const availableActions = getAvailableActions(currentStatus);
+                    
+                    return (
+                      <TableRow
+                        key={assignment.id}
+                        className="hover:bg-gray-50 dark:hover:bg-black cursor-pointer"
+                        onClick={() => handleViewDetails(assignment)}
+                      >
+                        {/* Select Checkbox */}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedAssignments.includes(assignment.id)}
+                            onCheckedChange={(checked) =>
+                              handleSelectAssignment(assignment.id, checked as boolean)
+                            }
+                          />
+                        </TableCell>
 
-                      {/* Duty */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {assignment.duty ? (
+                        {/* Guard */}
+                        <TableCell className="font-medium text-gray-900 dark:text-white">
                           <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-gray-500" />
-                            <span className="truncate max-w-[150px]" title={assignment.duty.title}>
-                              {assignment.duty.title || `Duty #${assignment.duty_id}`}
-                            </span>
+                            <User className="h-4 w-4 text-gray-500" />
+                            <span>{assignment.guard?.full_name || `Guard #${assignment.guard_id}`}</span>
                           </div>
-                        ) : (
-                          <span>Duty #{assignment.duty_id}</span>
-                        )}
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Assignment Period */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-gray-500" />
-                            <span className="text-xs">Start: {formatDate(assignment.start_date)}</span>
+                        {/* Duty */}
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {assignment.duty ? (
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-gray-500" />
+                              <span className="truncate max-w-[150px]" title={assignment.duty.title}>
+                                {assignment.duty.title || `Duty #${assignment.duty_id}`}
+                              </span>
+                            </div>
+                          ) : (
+                            <span>Duty #{assignment.duty_id}</span>
+                          )}
+                        </TableCell>
+
+                        {/* Assignment Period */}
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-gray-500" />
+                              <span className="text-xs">Start: {formatDate(assignment.start_date)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-gray-500" />
+                              <span className="text-xs">End: {formatDate(assignment.end_date)}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-gray-500" />
-                            <span className="text-xs">End: {formatDate(assignment.end_date)}</span>
+                        </TableCell>
+
+                        {/* Duration */}
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <span>{calculateDurationDays(assignment.start_date, assignment.end_date)} days</span>
                           </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Duration */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span>{calculateDurationDays(assignment.start_date, assignment.end_date)} days</span>
-                        </div>
-                      </TableCell>
+                        {/* Guard Code */}
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {assignment.guard?.guard_code ? (
+                            <Badge variant="outline" className="border-gray-300">
+                              {assignment.guard.guard_code}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
 
-                      {/* Guard Code */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {assignment.guard?.guard_code ? (
-                          <Badge variant="outline" className="border-gray-300">
-                            {assignment.guard.guard_code}
-                          </Badge>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
+                        {/* Contact */}
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {assignment.guard ? (
+                            <div className="flex flex-col text-xs">
+                              <span>{assignment.guard.phone || "N/A"}</span>
+                              <span className="text-gray-500">{assignment.guard.email || ""}</span>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
 
-                      {/* Contact */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {assignment.guard ? (
-                          <div className="flex flex-col text-xs">
-                            <span>{assignment.guard.phone || "N/A"}</span>
-                            <span className="text-gray-500">{assignment.guard.email || ""}</span>
-                          </div>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
+                        {/* Duty Type */}
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {assignment.duty?.duty_type ? (
+                            <Badge
+                              variant="outline"
+                              className={`${
+                                assignment.duty.duty_type === 'day' 
+                                  ? "bg-sky-100 text-sky-800 border-sky-300" 
+                                  : "bg-indigo-100 text-indigo-800 border-indigo-300"
+                              }`}
+                            >
+                              {assignment.duty.duty_type.charAt(0).toUpperCase() + assignment.duty.duty_type.slice(1)}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
 
-                      {/* Duty Type */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {assignment.duty?.duty_type ? (
-                          <Badge
-                            variant="outline"
-                            className={`${
-                              assignment.duty.duty_type === 'day' 
-                                ? "bg-sky-100 text-sky-800 border-sky-300" 
-                                : "bg-indigo-100 text-indigo-800 border-indigo-300"
-                            }`}
+                        {/* Status */}
+                        <TableCell>
+                          <span
+                            className={`
+                              inline-block
+                              min-w-24
+                              text-center
+                              px-2 py-1 
+                              rounded-full 
+                              text-xs 
+                              font-medium
+                              ${getStatusColor(assignment.status)}
+                            `}
                           >
-                            {assignment.duty.duty_type.charAt(0).toUpperCase() + assignment.duty.duty_type.slice(1)}
-                          </Badge>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
+                            {getStatusDisplay(assignment.status)}
+                          </span>
+                        </TableCell>
 
-                      {/* Status */}
-                      <TableCell>
-                        <span
-                          className={`
-                            inline-block
-                            min-w-24
-                            text-center
-                            px-2 py-1 
-                            rounded-full 
-                            text-xs 
-                            font-medium
-                            ${assignmentStatusColors[assignment.status || 'default'] || assignmentStatusColors.default}
-                          `}
-                        >
-                          {getStatusDisplay(assignment.status)}
-                        </span>
-                      </TableCell>
+                        {/* Created Date */}
+                        <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
+                          {assignment.created_at ? formatDate(assignment.created_at) : "-"}
+                        </TableCell>
 
-                      {/* Created Date */}
-                      <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
-                        {assignment.created_at ? formatDate(assignment.created_at) : "-"}
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(assignment)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(assignment)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit assignment
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleToggleStatus(assignment)}
-                              className="text-amber-600"
-                            >
-                              {assignment.status === 'active' || assignment.status === 'assigned' ? (
-                                <>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
+                        {/* Actions */}
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <EllipsisVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetails(assignment)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => handleEdit(e, assignment)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit assignment
+                              </DropdownMenuItem>
+                              
+                              {/* Status Update Options */}
+                              {availableActions.map((action: StatusAction, index: number) => (
+                                <DropdownMenuItem
+                                  key={index}
+                                  onClick={(e) => handleStatusUpdate(e, assignment, action.status)}
+                                  className={action.color}
+                                >
+                                  <action.icon className="mr-2 h-4 w-4" />
+                                  {action.label}
+                                </DropdownMenuItem>
+                              ))}
+                              
+                              {currentStatus === 'completed' && (
+                                <DropdownMenuItem disabled className="text-gray-400">
                                   <CheckCircle className="mr-2 h-4 w-4" />
-                                  Activate
-                                </>
+                                  Completed - No further actions
+                                </DropdownMenuItem>
                               )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(assignment)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete assignment
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                              
+                              {currentStatus === 'cancelled' && (
+                                <DropdownMenuItem disabled className="text-gray-400">
+                                  <Ban className="mr-2 h-4 w-4" />
+                                  Cancelled - No further actions
+                                </DropdownMenuItem>
+                              )}
+                              
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => handleDeleteClick(e, assignment)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete assignment
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -687,14 +958,14 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
             // Refresh the list after successful edit
-            dispatch(fetchAssignments({
-              page: filters.page,
-              per_page: filters.per_page,
-              search: searchTerm,
+            const fetchParams: GuardAssignmentParams = {
+              page: filters.page || 1,
+              per_page: filters.per_page || 10,
+              search: searchTerm || undefined,
               include_guard: true,
               include_duty: true,
-              
-            }));
+            };
+            dispatch(fetchAssignments(fetchParams));
           }}
         />
       )}

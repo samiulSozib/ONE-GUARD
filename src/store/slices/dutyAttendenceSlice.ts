@@ -114,7 +114,9 @@ export const toggleAttendanceStatus = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await dutyAttendanceService.toggleStatus(id, status);
+       await dutyAttendanceService.toggleStatus(id, status);
+       const updatedDutyAttendence=await dutyAttendanceService.getAttendance(id)
+       return updatedDutyAttendence.item
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -285,13 +287,13 @@ const dutyAttendanceSlice = createSlice({
       .addCase(toggleAttendanceStatus.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.attendences.findIndex(
-          (attendance) => attendance.id === action.payload.item.id
+          (attendance) => attendance.id === action.payload.id
         );
         if (index !== -1) {
-          state.attendences[index] = action.payload.item;
+          state.attendences[index] = action.payload;
         }
-        if (state.currentAttendence?.id === action.payload.item.id) {
-          state.currentAttendence = action.payload.item;
+        if (state.currentAttendence?.id === action.payload.id) {
+          state.currentAttendence = action.payload;
         }
       })
       .addCase(toggleAttendanceStatus.rejected, (state, action) => {
