@@ -1843,7 +1843,7 @@ export function GuardUpdateForm({
                 try {
                     const result = await dispatch(fetchGuard({ id: guardId }))
                     if (fetchGuard.fulfilled.match(result)) {
-                        const guardData = result.payload.item
+                        const guardData = result.payload
                         
                         // Populate form with guard data
                         setValue("guard_code", guardData.guard_code)
