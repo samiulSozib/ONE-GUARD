@@ -123,8 +123,10 @@ export const updateIncidentStatus = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await incidentService.updateIncidentStatus(id, status);
-      return response;
+      await incidentService.updateIncidentStatus(id, status);
+      const updatedIncident=await incidentService.getIncident(id)
+
+      return updatedIncident.item;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -143,8 +145,11 @@ export const toggleClientVisibility = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await incidentService.toggleClientVisibility(id, visible_to_client);
-      return response;
+      console.log(visible_to_client)
+      await incidentService.toggleClientVisibility(id, visible_to_client);
+      const updatedIncident=await incidentService.getIncident(id)
+
+      return updatedIncident.item;
     } catch (error: unknown) {
       const message =
         error instanceof Error

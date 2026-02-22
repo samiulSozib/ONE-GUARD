@@ -2,6 +2,8 @@
    Complaint Types (Based on API JSON Response)
    ========================================================= */
 
+import { Client } from "./client";
+import { Guard } from "./guard";
 import { Site } from "./site";
 
 
@@ -30,6 +32,8 @@ export interface Complaint {
 
   /* ---------- Relationships ---------- */
   site?: Partial<Site>;
+  reporter?:Partial<Client|Guard>
+  against?:Partial<Client|Guard>
 }
 
 /* ---------- Complaint Query Params ---------- */

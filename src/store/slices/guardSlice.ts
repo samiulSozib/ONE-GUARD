@@ -33,7 +33,8 @@ export const fetchGuard = createAsyncThunk(
   'guard/fetchGuard',
   async ({ id, params }: { id: number; params?: { include?: string[] } }, { rejectWithValue }) => {
     try {
-      return await guardService.getGuard(id, params);
+      const response = await guardService.getGuard(id, params);
+      return response.item;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch guard';
       return rejectWithValue(errorMessage);
@@ -45,7 +46,8 @@ export const createGuard = createAsyncThunk(
   'guard/createGuard',
   async (data: FormData | Omit<Guard, 'id' | 'created_at' | 'updated_at'>, { rejectWithValue }) => {
     try {
-      return await guardService.createGuard(data);
+      const response = await guardService.createGuard(data);
+      return response.item;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create guard';
       return rejectWithValue(errorMessage);
@@ -57,7 +59,8 @@ export const updateGuard = createAsyncThunk(
   'guard/updateGuard',
   async ({ id, data }: { id: number; data: FormData | Partial<Guard> }, { rejectWithValue }) => {
     try {
-      return await guardService.updateGuard(id, data);
+      const response = await guardService.updateGuard(id, data);
+      return response.item;
     } catch (error: unknown) {
       console.log(error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to update guard';
@@ -81,9 +84,14 @@ export const deleteGuard = createAsyncThunk(
 
 export const toggleGuardStatus = createAsyncThunk(
   'guard/toggleStatus',
-  async ({ id, is_active }: { id: number; is_active: boolean }, { rejectWithValue }) => {
+  async ({ id, is_active }: { id: number; is_active: boolean }, { rejectWithValue, dispatch }) => {
     try {
-      return await guardService.toggleStatus(id, is_active);
+      const response = await guardService.toggleStatus(id, is_active);
+      
+      // After successful status update, fetch the updated guard
+      const updatedGuard = await guardService.getGuard(id);
+      
+      return updatedGuard.item;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to toggle guard status';
       return rejectWithValue(errorMessage);
@@ -136,7 +144,7 @@ const guardSlice = createSlice({
       })
       .addCase(fetchGuard.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentGuard = action.payload.item;
+        state.currentGuard = action.payload;
       })
       .addCase(fetchGuard.rejected, (state, action) => {
         state.isLoading = false;
@@ -148,13 +156,10 @@ const guardSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      // Update the createGuard.fulfilled case
       .addCase(createGuard.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Add new guard to the beginning of the array
-        state.guards = [action.payload.item, ...state.guards];
-        state.currentGuard = action.payload.item;
-        // Increment total count
+        state.guards = [action.payload, ...state.guards];
+        state.currentGuard = action.payload;
         state.pagination.total += 1;
       })
       .addCase(createGuard.rejected, (state, action) => {
@@ -169,12 +174,12 @@ const guardSlice = createSlice({
       })
       .addCase(updateGuard.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.guards.findIndex(guard => guard.id === action.payload.item.id);
+        const index = state.guards.findIndex(guard => guard.id === action.payload.id);
         if (index !== -1) {
-          state.guards[index] = action.payload.item;
+          state.guards[index] = action.payload;
         }
-        if (state.currentGuard?.id === action.payload.item.id) {
-          state.currentGuard = action.payload.item;
+        if (state.currentGuard?.id === action.payload.id) {
+          state.currentGuard = action.payload;
         }
       })
       .addCase(updateGuard.rejected, (state, action) => {
@@ -193,6 +198,7 @@ const guardSlice = createSlice({
         if (state.currentGuard?.id === action.payload) {
           state.currentGuard = null;
         }
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
       })
       .addCase(deleteGuard.rejected, (state, action) => {
         state.isLoading = false;
@@ -206,12 +212,12 @@ const guardSlice = createSlice({
       })
       .addCase(toggleGuardStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.guards.findIndex(guard => guard.id === action.payload.item.id);
+        const index = state.guards.findIndex(guard => guard.id === action.payload.id);
         if (index !== -1) {
-          state.guards[index] = action.payload.item;
+          state.guards[index] = action.payload;
         }
-        if (state.currentGuard?.id === action.payload.item.id) {
-          state.currentGuard = action.payload.item;
+        if (state.currentGuard?.id === action.payload.id) {
+          state.currentGuard = action.payload;
         }
       })
       .addCase(toggleGuardStatus.rejected, (state, action) => {
@@ -227,4 +233,5 @@ export const {
   setGuards,
   updateGuardInList
 } = guardSlice.actions;
+
 export default guardSlice.reducer;

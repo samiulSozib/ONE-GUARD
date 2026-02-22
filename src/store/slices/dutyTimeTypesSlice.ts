@@ -83,7 +83,9 @@ export const toggleDutyTimeTypeStatus = createAsyncThunk(
   'dutyTimeType/toggleStatus',
   async ({ id, is_active }: { id: number; is_active: boolean }, { rejectWithValue }) => {
     try {
-      return await dutyTimeTypeService.toggleStatus(id, is_active);
+      await dutyTimeTypeService.toggleStatus(id, is_active);
+      const updatedDutyTimeType=await dutyTimeTypeService.getDutyTimeType(id)
+      return updatedDutyTimeType.item
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to toggle site location status';
       return rejectWithValue(errorMessage);
@@ -207,12 +209,12 @@ const dutyTimeTypeSlice = createSlice({
       })
       .addCase(toggleDutyTimeTypeStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        const index = state.dutyTimeTypes.findIndex(location => location.id === action.payload.item.id);
+        const index = state.dutyTimeTypes.findIndex(location => location.id === action.payload.id);
         if (index !== -1) {
-          state.dutyTimeTypes[index] = action.payload.item;
+          state.dutyTimeTypes[index] = action.payload;
         }
-        if (state.currentDutyTimeType?.id === action.payload.item.id) {
-          state.currentDutyTimeType = action.payload.item;
+        if (state.currentDutyTimeType?.id === action.payload.id) {
+          state.currentDutyTimeType = action.payload;
         }
       })
       .addCase(toggleDutyTimeTypeStatus.rejected, (state, action) => {

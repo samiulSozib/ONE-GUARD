@@ -626,7 +626,7 @@ export function ComplaintDataTable({ onAddClick, onViewClick }: ComplaintDataTab
                             {getReportedByDisplay(complaint.reported_by_type)}
                           </Badge>
                           <span className="text-xs text-gray-500">
-                            ID: {complaint.reported_by_id}
+                            Name: {complaint.reporter?.name}
                           </span>
                         </div>
                       </TableCell>
@@ -641,7 +641,7 @@ export function ComplaintDataTable({ onAddClick, onViewClick }: ComplaintDataTab
                             {getAgainstTypeDisplay(complaint.against_type)}
                           </Badge>
                           <span className="text-xs text-gray-500">
-                            ID: {complaint.against_id}
+                            Name: {complaint.against?.name}
                           </span>
                         </div>
                       </TableCell>

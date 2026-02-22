@@ -90,11 +90,11 @@ export const expenseService = {
   /* ---------- Change expense status via query param ---------- */
   changeStatus: (
     id: number,
-    status: 'pending' | 'approved' | 'rejected'
+    status: 'pending' | 'approved' | 'rejected' | 'completed' | 'paid'
   ) =>
     handleApiResponse(
-      api.get<ApiResponse<Expense>>(
-        `/admin/expenses/${id}?change_status=${status}`
+      api.get<ApiResponse<{message:string}>>(
+        `/admin/expenses/${id}/change-status?status=${status}`
       )
     ),
 };

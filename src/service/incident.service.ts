@@ -68,7 +68,7 @@ export const incidentService = {
   /* ---------- Update incident status ---------- */
   updateIncidentStatus: (id: number, status: string) =>
     handleApiResponse(
-      api.get<ApiResponse<Incident>>(
+      api.get<ApiResponse<{message:string}>>(
         `/admin/incidents/${id}/change-status?status=${status}`,
        
       )
@@ -76,10 +76,10 @@ export const incidentService = {
 
   /* ---------- Toggle incident client visibility ---------- */
   toggleClientVisibility: (id: number, visible_to_client: boolean) =>
+    
     handleApiResponse(
-      api.patch<ApiResponse<Incident>>(
-        `/admin/incidents/${id}/client-visibility`,
-       
+      api.get<ApiResponse<{message:string}>>(
+        `/admin/incidents/${id}/change-client-visibility?visible_to_client=${visible_to_client?1:0}`,
       )
     ),
 };

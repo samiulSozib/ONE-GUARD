@@ -190,10 +190,10 @@ export function ClientDataTable() {
                         }
                     );
                     // Refresh the client list
-                    dispatch(fetchClients({
-                        page: pagination.current_page,
-                        per_page: 10,
-                    }));
+                    // dispatch(fetchClients({
+                    //     page: pagination.current_page,
+                    //     per_page: 10,
+                    // }));
                 } else {
                     await SweetAlertService.error(
                         'Update Failed',

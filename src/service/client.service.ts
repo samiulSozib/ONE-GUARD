@@ -49,7 +49,7 @@ export const clientService = {
   // Toggle client status
   toggleStatus: (id: number, is_active: boolean) =>
     handleApiResponse(
-      api.get<ApiResponse<{item:Client}>>(
+      api.get<ApiResponse<{message:string}>>(
         `/admin/clients/${id}/change-status?is_active=${is_active?1:0}`
       )
     ),

@@ -132,7 +132,9 @@ export const updateLeaveStatus = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await leaveService.updateLeaveStatus(id, payload);
+      const response= await leaveService.updateLeaveStatus(id, payload);
+      const updatedLeave=await leaveService.getLeave(id)
+      return updatedLeave.item
     } catch (error: unknown) {
       const message =
         error instanceof Error

@@ -131,7 +131,8 @@ export const toggleExpenseVisibility = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await expenseService.toggleVisibility(id, payload);
+       return await expenseService.toggleVisibility(id, payload);
+       
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -146,11 +147,13 @@ export const toggleExpenseVisibility = createAsyncThunk(
 export const changeExpenseStatus = createAsyncThunk(
   "expense/changeStatus",
   async (
-    { id, status }: { id: number; status: 'pending' | 'approved' | 'rejected' },
+    { id, status }: { id: number; status: 'pending' | 'approved' | 'rejected' | 'completed' | 'paid' },
     { rejectWithValue }
   ) => {
     try {
-      return await expenseService.changeStatus(id, status);
+      await expenseService.changeStatus(id, status);
+      const updatedExpense=await expenseService.getExpense(id)
+      return updatedExpense.item
     } catch (error: unknown) {
       const message =
         error instanceof Error

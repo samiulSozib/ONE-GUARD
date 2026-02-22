@@ -104,16 +104,31 @@ export function DutyTimeTypeDataTable({
     }
   };
 
-  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
-    try {
-      await dispatch(toggleDutyTimeTypeStatus({ 
-        id, 
-        is_active: !currentStatus 
-      })).unwrap();
-    } catch (error) {
-      console.error("Failed to toggle status:", error);
-    }
-  };
+const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+  try {
+    const result = await dispatch(toggleDutyTimeTypeStatus({ 
+      id, 
+      is_active: !currentStatus 
+    })).unwrap();
+    
+    // Show success message
+    SweetAlertService.success(
+      'Status Updated',
+      `Duty time type has been ${!currentStatus ? 'activated' : 'deactivated'} successfully.`,
+      {
+        timer: 1500,
+        showConfirmButton: false,
+      }
+    );
+    
+  } catch (error) {
+    // Show error message
+    SweetAlertService.error(
+      'Update Failed',
+      'There was an error updating the status. Please try again.'
+    );
+  }
+};
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);

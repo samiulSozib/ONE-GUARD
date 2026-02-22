@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
 import {
   CalendarIcon,
@@ -114,6 +114,7 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
     page: 1,
     per_page: 10,
   });
+  
   const [selectedLeaves, setSelectedLeaves] = useState<number[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveToDelete, setLeaveToDelete] = useState<Leave | null>(null);
@@ -125,25 +126,22 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
   const [startDateFilter, setStartDateFilter] = useState<Date | undefined>(undefined);
   const [endDateFilter, setEndDateFilter] = useState<Date | undefined>(undefined);
 
-  // Fetch leaves on mount and filter changes
+  // FIX: Combine all filters including dates when fetching
   useEffect(() => {
     const fetchParams: LeaveParams = {
       ...filters,
       search: searchTerm || undefined,
       include_site: true,
       include_reviewer: true,
+      // Add date filters directly here instead of in a separate useEffect
+      from_date: startDateFilter ? format(startDateFilter, 'yyyy-MM-dd') : undefined,
+      to_date: endDateFilter ? format(endDateFilter, 'yyyy-MM-dd') : undefined,
     };
     
-    // Add date filters if set
-    if (startDateFilter) {
-      fetchParams.from_date = format(startDateFilter, 'yyyy-MM-dd');
-    }
-    if (endDateFilter) {
-      fetchParams.to_date = format(endDateFilter, 'yyyy-MM-dd');
-    }
+    console.log("Fetching leaves with params:", fetchParams); // Debug log
     
     dispatch(fetchLeaves(fetchParams));
-  }, [dispatch, filters, searchTerm, startDateFilter, endDateFilter]);
+  }, [dispatch, filters, searchTerm, startDateFilter, endDateFilter]); // Add date filters to dependency array
   
   // Handle search
   const handleGuardSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,11 +154,11 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
   };
   
   // Handle filter changes
-  const handleStatusFilter = (status: LeaveParams['status']) => {
+  const handleStatusFilter = (status: string) => {
     setFilters(prev => ({ 
       ...prev, 
       page: 1,
-      status: status === prev.status ? undefined : status 
+      status: status === "all" ? undefined : status as LeaveParams['status']
     }));
   };
   
@@ -168,7 +166,7 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
     setFilters(prev => ({ 
       ...prev, 
       page: 1,
-      leave_type: leaveType === prev.leave_type ? undefined : leaveType 
+      leave_type: leaveType === "all" ? undefined : leaveType 
     }));
   };
   
@@ -225,8 +223,16 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
         setDeleteDialogOpen(false);
         setLeaveToDelete(null);
         
-        // Refresh list
-        dispatch(fetchLeaves(filters));
+        // Refresh list with current filters
+        const fetchParams: LeaveParams = {
+          ...filters,
+          search: searchTerm || undefined,
+          include_site: true,
+          include_reviewer: true,
+          from_date: startDateFilter ? format(startDateFilter, 'yyyy-MM-dd') : undefined,
+          to_date: endDateFilter ? format(endDateFilter, 'yyyy-MM-dd') : undefined,
+        };
+        dispatch(fetchLeaves(fetchParams));
       } catch (error) {
         SweetAlertService.error(
           'Delete Failed',
@@ -253,6 +259,17 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
         'Status Updated',
         `Leave request has been ${status}.`
       );
+      
+      // Refresh list to show updated status
+      const fetchParams: LeaveParams = {
+        ...filters,
+        search: searchTerm || undefined,
+        include_site: true,
+        include_reviewer: true,
+        from_date: startDateFilter ? format(startDateFilter, 'yyyy-MM-dd') : undefined,
+        to_date: endDateFilter ? format(endDateFilter, 'yyyy-MM-dd') : undefined,
+      };
+      dispatch(fetchLeaves(fetchParams));
     } catch (error) {
       SweetAlertService.error(
         'Update Failed',
@@ -422,13 +439,16 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
             
             {/* Leave Type Filter */}
             <div className="sm:col-span-3">
-              <Select onValueChange={handleLeaveTypeFilter}>
+              <Select 
+                value={filters.leave_type || "all"} 
+                onValueChange={handleLeaveTypeFilter}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Leave Type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectLabel>All Types</SelectLabel>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="sick">Sick Leave</SelectItem>
                     <SelectItem value="annual">Annual Leave</SelectItem>
                     <SelectItem value="casual">Casual Leave</SelectItem>
@@ -444,13 +464,16 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
 
             {/* Status Filter */}
             <div className="sm:col-span-3">
-              <Select onValueChange={(value) => handleStatusFilter(value as LeaveParams['status'])}>
+              <Select 
+                value={filters.status || "all"} 
+                onValueChange={handleStatusFilter}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectLabel>All Status</SelectLabel>
+                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
@@ -553,7 +576,7 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
                           No leave requests found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                          {searchTerm || startDateFilter || endDateFilter
+                          {searchTerm || startDateFilter || endDateFilter || filters.status || filters.leave_type
                             ? "Try adjusting your search or filters"
                             : "Get started by creating a new leave request"}
                         </p>
@@ -678,14 +701,14 @@ export function LeaveDataTable({ onAddClick, onViewClick }: LeaveDataTableProps)
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(leave)}>
+                            {/* <DropdownMenuItem onClick={() => handleViewDetails(leave)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View details
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(leave)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit leave
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                             
                             {leave.status === 'pending' && (
                               <>

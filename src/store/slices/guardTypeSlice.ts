@@ -83,7 +83,9 @@ export const toggleGuardTypeStatus = createAsyncThunk(
   'guardType/toggleStatus',
   async ({ id, is_active }: { id: number; is_active: boolean }, { rejectWithValue }) => {
     try {
-      return await guardTypeService.toggleStatus(id, is_active);
+       await guardTypeService.toggleStatus(id, is_active);
+       const updatedExpense=await guardTypeService.getGuardType(id)
+       return updatedExpense.item
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to toggle site location status';
       return rejectWithValue(errorMessage);

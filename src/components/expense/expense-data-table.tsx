@@ -19,6 +19,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Ban,
+  CreditCard,
 } from "lucide-react";
 import {
   Card,
@@ -66,6 +68,7 @@ import {
   fetchExpenses,
   deleteExpense,
   clearCurrentExpense,
+  changeExpenseStatus,
 } from "@/store/slices/expenseSlice";
 import { Expense, ExpenseParams } from "@/app/types/expense";
 
@@ -74,7 +77,6 @@ import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
 // import { ViewExpense } from "./view-expense";
 import { ExpenseEditForm } from "./expense-edit-form";
-// import { ExpenseEditForm } from "./expense-edit-form";
 
 // Status colors mapping
 const statusColors: Record<string, string> = {
@@ -84,6 +86,8 @@ const statusColors: Record<string, string> = {
   rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   paid: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
 };
+type ExpenseStatus = 'pending' | 'approved' | 'rejected' | 'completed' | 'paid';
+
 
 const currencySymbols: Record<string, string> = {
   USD: "$",
@@ -121,7 +125,6 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
   
   // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
 
   // Fetch expenses on mount and filter changes
   useEffect(() => {
@@ -130,10 +133,11 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
       search: searchTerm || undefined,
       include_site: true,
       include_category: true,
+      expense_date: dateFilter ? format(dateFilter, 'yyyy-MM-dd') : undefined,
     };
     
     dispatch(fetchExpenses(fetchParams));
-  }, [dispatch, filters, searchTerm]);
+  }, [dispatch, filters, searchTerm, dateFilter]);
   
   // Handle search
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,11 +150,11 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
   };
   
   // Handle filter changes
-  const handleStatusFilter = (status: ExpenseParams['status']) => {
+  const handleStatusFilter = (status: string) => {
     setFilters(prev => ({ 
       ...prev, 
       page: 1,
-      status: status === prev.status ? undefined : status 
+      status: status === "all" ? undefined : status as ExpenseParams['status']
     }));
   };
   
@@ -168,25 +172,6 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
       page: 1,
       site_id: siteId === "all" ? undefined : parseInt(siteId)
     }));
-  };
-  
-  // Handle date filter
-  const handleDateChange = (date: Date | undefined) => {
-    setDateFilter(date);
-    
-    if (date) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      setFilters(prev => ({
-        ...prev,
-        page: 1,
-        expense_date: formattedDate,
-      }));
-    } else {
-      setFilters(prev => {
-        const {  ...rest } = prev;
-        return { ...rest, page: 1 };
-      });
-    }
   };
   
   // Clear all filters
@@ -241,14 +226,72 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
         setDeleteDialogOpen(false);
         setExpenseToDelete(null);
         
-        // Refresh list
-        dispatch(fetchExpenses(filters));
+        // Refresh list with current filters
+        const fetchParams = {
+          ...filters,
+          search: searchTerm || undefined,
+          include_site: true,
+          include_category: true,
+          expense_date: dateFilter ? format(dateFilter, 'yyyy-MM-dd') : undefined,
+        };
+        dispatch(fetchExpenses(fetchParams));
       } catch (error) {
         SweetAlertService.error(
           'Delete Failed',
           'There was an error deleting the expense. Please try again.'
         );
       }
+    }
+  };
+  
+  // Handle status update (approve/reject/complete/paid)
+  const handleStatusUpdate = async (expense: Expense, status: ExpenseStatus) => {
+    try {
+      // Set appropriate review note based on status
+      let review_note = '';
+      switch(status) {
+        case 'approved':
+          review_note = 'Approved by admin';
+          break;
+        case 'rejected':
+          review_note = 'Rejected by admin';
+          break;
+        case 'completed':
+          review_note = 'Marked as completed';
+          break;
+        case 'paid':
+          review_note = 'Payment processed';
+          break;
+        default:
+          review_note = `Status updated to ${status}`;
+      }
+      
+      await dispatch(changeExpenseStatus({
+        id: expense.id,
+        
+          status,
+        
+      })).unwrap();
+      
+      SweetAlertService.success(
+        'Status Updated',
+        `Expense has been ${status}.`
+      );
+      
+      // Refresh list to show updated status
+      const fetchParams = {
+        ...filters,
+        search: searchTerm || undefined,
+        include_site: true,
+        include_category: true,
+        expense_date: dateFilter ? format(dateFilter, 'yyyy-MM-dd') : undefined,
+      };
+      dispatch(fetchExpenses(fetchParams));
+    } catch (error) {
+      SweetAlertService.error(
+        'Update Failed',
+        `Failed to update expense status. Please try again.`
+      );
     }
   };
   
@@ -311,6 +354,42 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
     );
   };
   
+  // Get available status actions based on current status
+  const getAvailableStatusActions = (currentStatus: string) => {
+    const actions = [];
+    
+    switch(currentStatus) {
+      case 'pending':
+        actions.push(
+          { status: 'approved', label: 'Approve', icon: CheckCircle, color: 'text-green-600' },
+          { status: 'rejected', label: 'Reject', icon: XCircle, color: 'text-red-600' }
+        );
+        break;
+      case 'approved':
+        actions.push(
+          { status: 'completed', label: 'Mark Completed', icon: Clock, color: 'text-blue-600' },
+          { status: 'paid', label: 'Mark Paid', icon: CreditCard, color: 'text-purple-600' },
+          { status: 'rejected', label: 'Reject', icon: XCircle, color: 'text-red-600' }
+        );
+        break;
+      case 'completed':
+        actions.push(
+          { status: 'paid', label: 'Mark Paid', icon: CreditCard, color: 'text-purple-600' }
+        );
+        break;
+      case 'rejected':
+        actions.push(
+          { status: 'pending', label: 'Reopen', icon: Clock, color: 'text-yellow-600' }
+        );
+        break;
+      case 'paid':
+        // No further actions typically
+        break;
+    }
+    
+    return actions;
+  };
+  
   // Loading skeleton
   if (isLoading && expenses.length === 0) {
     return (
@@ -336,7 +415,7 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
   return (
     <>
       <Card className="shadow-sm rounded-2xl">
-        {/* Top Header Section - Exact match to original */}
+        {/* Top Header Section */}
         <div className="bg-[#F4F6F8] p-5 -mt-6 rounded-t-md flex flex-row items-center gap-4 w-full justify-between md:justify-start">
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
             <ListFilter size="14px" />
@@ -363,7 +442,7 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
         </div>
 
         <CardContent className="p-0">
-          {/* Filters Section - 4 columns grid matching original */}
+          {/* Filters Section */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
             {/* Title Search Input */}
             <div className="sm:col-span-3">
@@ -382,7 +461,10 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
             
             {/* Category Filter */}
             <div className="sm:col-span-3">
-              <Select onValueChange={handleCategoryFilter}>
+              <Select 
+                value={filters.category_id?.toString() || "all"} 
+                onValueChange={handleCategoryFilter}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -402,7 +484,10 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
 
             {/* Site Filter */}
             <div className="sm:col-span-3">
-              <Select onValueChange={handleSiteFilter}>
+              <Select 
+                value={filters.site_id?.toString() || "all"} 
+                onValueChange={handleSiteFilter}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select site" />
                 </SelectTrigger>
@@ -434,7 +519,7 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
                   <CalendarComponent
                     mode="single"
                     selected={dateFilter}
-                    onSelect={handleDateChange}
+                    onSelect={setDateFilter}
                     initialFocus
                   />
                 </PopoverContent>
@@ -449,7 +534,7 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
               <Button
                 variant={!filters.status ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleStatusFilter(undefined)}
+                onClick={() => handleStatusFilter("all")}
                 className="text-xs"
               >
                 All
@@ -478,24 +563,43 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
               >
                 Completed
               </Button>
-              {/* <Button
+              <Button
+                variant={filters.status === "paid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleStatusFilter("paid")}
+                className="text-xs"
+              >
+                Paid
+              </Button>
+              <Button
                 variant={filters.status === "rejected" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleStatusFilter("rejected")}
                 className="text-xs"
               >
                 Rejected
-              </Button> */}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-xs ml-auto"
+              >
+                Clear Filters
+              </Button>
             </div>
           </div>
 
-          {/* Table Section - Updated with expense data */}
+          {/* Table Section */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-                    <span className="sr-only">Select</span>
+                    <Checkbox 
+                      checked={selectedExpenses.length === expenses.length && expenses.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
                   </TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Category</TableHead>
@@ -517,7 +621,7 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
                           No expenses found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                          {searchTerm || filters.category_id || filters.site_id || filters.status
+                          {searchTerm || filters.category_id || filters.site_id || filters.status || dateFilter
                             ? "Try adjusting your search or filters"
                             : "Get started by creating a new expense"}
                         </p>
@@ -540,9 +644,7 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedExpenses.includes(expense.id)}
-                          onCheckedChange={(checked) => 
-                            handleSelectExpense(expense.id)
-                          }
+                          onCheckedChange={() => handleSelectExpense(expense.id)}
                         />
                       </TableCell>
 
@@ -618,6 +720,19 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit expense
                             </DropdownMenuItem>
+                            
+                            {/* Status Update Options */}
+                            {getAvailableStatusActions(expense.status).map((action, index) => (
+                              <DropdownMenuItem
+                                key={index}
+                                onClick={() => handleStatusUpdate(expense, action.status as ExpenseStatus)}
+                                className={action.color}
+                              >
+                                <action.icon className="mr-2 h-4 w-4" />
+                                {action.label}
+                              </DropdownMenuItem>
+                            ))}
+                            
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleDeleteClick(expense)}
@@ -640,7 +755,9 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
           {expenses.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t">
               <div className="text-sm text-gray-700">
-                Showing {expenses.length} of {pagination.total} expenses
+                Showing {((pagination.current_page - 1) * (pagination.per_page || 10)) + 1} to{' '}
+                {Math.min(pagination.current_page * (pagination.per_page || 10), pagination.total)} of{' '}
+                {pagination.total} expenses
                 {selectedExpenses.length > 0 && (
                   <span className="ml-2 text-blue-600">
                     ({selectedExpenses.length} selected)
@@ -701,11 +818,14 @@ export function ExpenseDataTable({ onAddClick, onViewClick }: ExpenseDataTablePr
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
             // Refresh the list after successful edit
-            dispatch(fetchExpenses({
-              page: 1,
-              per_page: 10,
-              search: searchTerm
-            }));
+            const fetchParams = {
+              ...filters,
+              search: searchTerm || undefined,
+              include_site: true,
+              include_category: true,
+              expense_date: dateFilter ? format(dateFilter, 'yyyy-MM-dd') : undefined,
+            };
+            dispatch(fetchExpenses(fetchParams));
           }}
         />
       )}

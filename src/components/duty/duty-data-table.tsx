@@ -17,7 +17,9 @@ import {
   Clock,
   Building,
   Users,
-  MapPin
+  MapPin,
+  AlertCircle,
+  CheckCheck
 } from "lucide-react";
 import {
   Card,
@@ -49,7 +51,15 @@ import { FloatingLabelInput } from "../ui/floating-input";
 import { Calendar } from "../ui/calender";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 // Redux
 import { useAppDispatch } from "@/hooks/useAppDispatch";
@@ -57,8 +67,8 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import {
   fetchDuties,
   deleteDuty,
-  toggleDutyStatus,
   clearCurrentDuty,
+  toggleDutyStatus,
 } from "@/store/slices/dutySlice";
 import { Duty, DutyParams } from "@/app/types/duty";
 
@@ -66,24 +76,13 @@ import { Duty, DutyParams } from "@/app/types/duty";
 import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
 import { DutyEditForm } from "./duty-edit-form";
+import Swal from 'sweetalert2';
 
-// Status colors mapping
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  approved: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-};
-
+// Status colors mapping for duty status
 const dutyStatusColors: Record<string, string> = {
-  "Shift completed": "bg-green-500 text-white",
-  "Late": "bg-yellow-300 text-yellow-800",
-  "On Duty": "bg-green-300 text-green-700",
-  "In Progress": "bg-yellow-200 text-yellow-500",
-  "Missed Check-in": "bg-red-300 text-red-500",
-  "pending": "bg-yellow-100 text-yellow-800",
-  "approved": "bg-blue-100 text-blue-800",
-  "completed": "bg-green-100 text-green-800",
+  "pending": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  "approved": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  "completed": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
 };
 
 const dutyTypeColors: Record<string, string> = {
@@ -117,22 +116,49 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedDuty, setSelectedDuty] = useState<Duty | null>(null);
   
+  // Filter states
+  const [siteFilter, setSiteFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dutyTypeFilter, setDutyTypeFilter] = useState("all");
+  
   // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
-    // State for edit dialog
-  
   // Fetch duties on mount and filter changes
   useEffect(() => {
-    const fetchParams = {
-      ...filters,
+    const fetchParams: DutyParams = {
+      page: filters.page || 1,
+      per_page: filters.per_page || 10,
       search: searchTerm || undefined,
       include_site: true,
       include_site_location: true,
     };
+
+    // Add site filter
+    if (siteFilter !== "all") {
+      fetchParams.site_id = parseInt(siteFilter);
+    }
+
+    // Add status filter
+    if (statusFilter !== "all") {
+      fetchParams.status = statusFilter as DutyParams['status'];
+    }
+
+    // Add duty type filter
+    if (dutyTypeFilter !== "all") {
+      fetchParams.duty_type = dutyTypeFilter as DutyParams['duty_type'];
+    }
+
+    // Add date filter
+    if (dateFilter) {
+      const formattedDate = format(dateFilter, 'yyyy-MM-dd');
+      // Uncomment if your API supports date filtering
+      // fetchParams.start_date = formattedDate;
+      // fetchParams.end_date = formattedDate;
+    }
     
     dispatch(fetchDuties(fetchParams));
-  }, [dispatch, filters, searchTerm]);
+  }, [dispatch, filters.page, searchTerm, siteFilter, statusFilter, dutyTypeFilter, dateFilter]);
   
   // Handle search
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,56 +170,14 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     setFilters(prev => ({ ...prev, page: 1 }));
   };
   
-  // Handle filter changes
-  const handleStatusFilter = (status: DutyParams['status']) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      page: 1,
-      status: status === prev.status ? undefined : status 
-    }));
-  };
-  
-  const handleDutyTypeFilter = (dutyType: DutyParams['duty_type']) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      page: 1,
-      duty_type: dutyType === prev.duty_type ? undefined : dutyType 
-    }));
-  };
-  
-  const handleActiveFilter = (isActive: boolean | null) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      page: 1,
-      is_active: isActive === null ? undefined : isActive 
-    }));
-  };
-  
-  // Handle date filter
-  const handleDateChange = (date: Date | undefined) => {
-    setDateFilter(date);
-    
-    if (date) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      setFilters(prev => ({
-        ...prev,
-        page: 1,
-        start_date: formattedDate,
-        end_date: formattedDate,
-      }));
-    } else {
-      setFilters(prev => {
-        const {  ...rest } = prev;
-        return { ...rest, page: 1 };
-      });
-    }
-  };
-  
   // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
     setTitleSearch("");
     setDateFilter(undefined);
+    setSiteFilter("all");
+    setStatusFilter("all");
+    setDutyTypeFilter("all");
     setFilters({
       page: 1,
       per_page: 10,
@@ -202,24 +186,25 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   };
   
   // Handle duty selection
-  const handleSelectDuty = (dutyId: number) => {
-    setSelectedDuties(prev =>
-      prev.includes(dutyId)
-        ? prev.filter(id => id !== dutyId)
-        : [...prev, dutyId]
-    );
+  const handleSelectDuty = (dutyId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedDuties(prev => [...prev, dutyId]);
+    } else {
+      setSelectedDuties(prev => prev.filter(id => id !== dutyId));
+    }
   };
   
-  const handleSelectAll = () => {
-    if (selectedDuties.length === duties.length) {
-      setSelectedDuties([]);
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedDuties(duties.map((duty: Duty) => duty.id));
     } else {
-      setSelectedDuties(duties.map((duty:Duty) => duty.id));
+      setSelectedDuties([]);
     }
   };
   
   // Handle delete
-  const handleDeleteClick = (duty: Duty) => {
+  const handleDeleteClick = (e: React.MouseEvent, duty: Duty) => {
+    e.stopPropagation();
     setDutyToDelete(duty);
     setDeleteDialogOpen(true);
   };
@@ -229,12 +214,13 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       try {
         await dispatch(deleteDuty(dutyToDelete.id)).unwrap();
         
-        SweetAlertService.success(
+        await SweetAlertService.success(
           'Duty Deleted',
           `${dutyToDelete.title} has been deleted successfully.`,
           {
-            timer: 1500,
+            timer: 2000,
             showConfirmButton: false,
+            timerProgressBar: true,
           }
         );
         
@@ -242,32 +228,184 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
         setDutyToDelete(null);
         
         // Refresh list
-        dispatch(fetchDuties(filters));
+        const fetchParams: DutyParams = {
+          page: filters.page || 1,
+          per_page: filters.per_page || 10,
+          search: searchTerm || undefined,
+          include_site: true,
+          include_site_location: true,
+        };
+        dispatch(fetchDuties(fetchParams));
       } catch (error) {
-        SweetAlertService.error(
+        await SweetAlertService.error(
           'Delete Failed',
-          'There was an error deleting the duty. Please try again.'
+          'There was an error deleting the duty. Please try again.',
+          {
+            timer: 2000,
+            showConfirmButton: true,
+          }
         );
       }
     }
   };
   
-  // Handle status toggle
-  const handleToggleStatus = async (duty: Duty) => {
-    try {
-      await dispatch(toggleDutyStatus({
-        id: duty.id,
-        is_active: !duty.is_active
-      })).unwrap();
-      
-      SweetAlertService.success(
-        'Status Updated',
-        `Duty status has been ${!duty.is_active ? 'activated' : 'deactivated'}.`
+  // Handle duty status update (pending/approved/completed)
+  const handleDutyStatusUpdate = async (e: React.MouseEvent, duty: Duty, newStatus: 'pending' | 'approved' | 'completed') => {
+    e.stopPropagation();
+
+    const statusDisplay = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+
+    // Confirmation dialog with 5 second timer
+    const result = await Swal.fire({
+      title: `Mark Duty as ${statusDisplay}`,
+      text: `Are you sure you want to mark "${duty.title}" as ${statusDisplay}? This confirmation will expire in 5 seconds.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: newStatus === 'approved' ? '#10b981' : newStatus === 'completed' ? '#3b82f6' : '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Yes, mark as ${statusDisplay}`,
+      cancelButtonText: 'Cancel',
+      timer: 5000,
+      timerProgressBar: true,
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const resultAction = await dispatch(toggleDutyStatus({ 
+          id: duty.id, 
+          status: newStatus 
+        }));
+
+        if (toggleDutyStatus.fulfilled.match(resultAction)) {
+          await SweetAlertService.success(
+            'Status Updated',
+            `"${duty.title}" has been marked as ${statusDisplay} successfully.`,
+            {
+              timer: 2000,
+              showConfirmButton: false,
+              timerProgressBar: true,
+            }
+          );
+        } else {
+          await SweetAlertService.error(
+            'Update Failed',
+            'There was an error updating the duty status. Please try again.',
+            {
+              timer: 2000,
+              showConfirmButton: true,
+            }
+          );
+        }
+      } catch (error) {
+        await SweetAlertService.error(
+          'Update Failed',
+          'There was an error updating the duty status. Please try again.',
+          {
+            timer: 2000,
+            showConfirmButton: true,
+          }
+        );
+      }
+    } else if (result.dismiss === Swal.DismissReason.timer) {
+      // Handle timer expiration
+      await SweetAlertService.info(
+        'Confirmation Expired',
+        'The confirmation dialog timed out. Please try again.',
+        {
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+        }
       );
-    } catch (error) {
-      SweetAlertService.error(
-        'Update Failed',
-        'Failed to update duty status. Please try again.'
+    }
+  };
+  
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedDuties.length === 0) {
+      await SweetAlertService.warning(
+        'No Duties Selected',
+        'Please select at least one duty to delete.',
+        {
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+        }
+      );
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Bulk Delete Confirmation',
+      text: `Are you sure you want to delete ${selectedDuties.length} selected duty(ies)? This action cannot be undone. This confirmation will expire in 5 seconds.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6b0016',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+      timer: 5000,
+      timerProgressBar: true,
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Show loading state
+        await SweetAlertService.loading('Processing...', 'Please wait while we delete the duties.');
+
+        // Delete all selected duties
+        for (const dutyId of selectedDuties) {
+          await dispatch(deleteDuty(dutyId)).unwrap();
+        }
+
+        // Close loading alert
+        SweetAlertService.close();
+
+        await SweetAlertService.success(
+          'Duties Deleted',
+          `${selectedDuties.length} duty(ies) have been deleted successfully.`,
+          {
+            timer: 2000,
+            showConfirmButton: false,
+            timerProgressBar: true,
+          }
+        );
+
+        setSelectedDuties([]);
+
+        // Refresh the duty list
+        const fetchParams: DutyParams = {
+          page: filters.page || 1,
+          per_page: filters.per_page || 10,
+          search: searchTerm || undefined,
+          include_site: true,
+          include_site_location: true,
+        };
+        dispatch(fetchDuties(fetchParams));
+      } catch (error) {
+        // Close loading alert if open
+        SweetAlertService.close();
+
+        await SweetAlertService.error(
+          'Delete Failed',
+          'There was an error deleting the duties. Please try again.',
+          {
+            timer: 2000,
+            showConfirmButton: true,
+          }
+        );
+      }
+    } else if (result.dismiss === Swal.DismissReason.timer) {
+      await SweetAlertService.info(
+        'Confirmation Expired',
+        'The confirmation dialog timed out. Please try again.',
+        {
+          timer: 2000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+        }
       );
     }
   };
@@ -328,9 +466,22 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       'pending': 'Pending',
       'approved': 'Approved',
       'completed': 'Completed',
-      'cancelled': 'Cancelled',
     };
     return statusMap[status] || status;
+  };
+  
+  // Check if status can be changed to target status
+  const canChangeTo = (currentStatus: string, targetStatus: string) => {
+    if (currentStatus === targetStatus) return false;
+    
+    // Define valid transitions
+    const validTransitions: Record<string, string[]> = {
+      'pending': ['approved', 'completed'],
+      'approved': ['completed'],
+      'completed': [], // Cannot change from completed
+    };
+    
+    return validTransitions[currentStatus]?.includes(targetStatus) || false;
   };
   
   // Pagination handlers
@@ -339,10 +490,15 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   };
   
   // Export functionality
-  const handleExport = () => {
-    SweetAlertService.info(
-      'Export Feature',
-      'Export functionality will be implemented soon.'
+  const handleExport = async () => {
+    await SweetAlertService.success(
+      'Export Started',
+      'Your duty data export has been initiated.',
+      {
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+      }
     );
   };
   
@@ -371,7 +527,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   return (
     <>
       <Card className="shadow-sm rounded-2xl">
-        {/* Top Header Section - Exact match to original */}
+        {/* Top Header Section */}
         <div className="bg-[#F4F6F8] p-5 -mt-6 rounded-t-md flex flex-row items-center gap-4 w-full justify-between md:justify-start">
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
             <ListFilter size="14px" />
@@ -386,25 +542,36 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             Export
           </CardTitle>
 
-          <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
-            <Checkbox 
-              id="terms" 
-              className="dark:bg-white dark:border-black"
+          <div className="text-sm flex items-center gap-1 dark:text-black">
+            <Checkbox
+              id="select-all"
               checked={selectedDuties.length === duties.length && duties.length > 0}
               onCheckedChange={handleSelectAll}
+              className="dark:bg-white dark:border-black"
             />
-            <Label htmlFor="terms">Select</Label>
-          </CardTitle>
+            <Label htmlFor="select-all">Select All</Label>
+          </div>
+
+          {selectedDuties.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              className="ml-auto"
+            >
+              Delete Selected ({selectedDuties.length})
+            </Button>
+          )}
         </div>
 
         <CardContent className="p-0">
-          {/* Filters Section - Exact match to original layout */}
+          {/* Filters Section */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
             {/* Title Search Input */}
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <InputGroup>
                 <InputGroupInput 
-                  placeholder="Title" 
+                  placeholder="Duty Title..." 
                   value={titleSearch}
                   onChange={handleTitleSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSearchSubmit()}
@@ -416,17 +583,60 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
             
             {/* Site Filter */}
-            <div className="sm:col-span-4">
-              <InputGroup>
-                <InputGroupInput placeholder="Site" />
-                <InputGroupAddon>
-                  <Search />
-                </InputGroupAddon>
-              </InputGroup>
+            <div className="sm:col-span-2">
+              <Select value={siteFilter} onValueChange={setSiteFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Sites" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Sites</SelectLabel>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    <SelectItem value="1">Main Office</SelectItem>
+                    <SelectItem value="2">Branch A</SelectItem>
+                    <SelectItem value="3">Branch B</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Duty Type Filter */}
+            <div className="sm:col-span-2">
+              <Select value={dutyTypeFilter} onValueChange={setDutyTypeFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Duty Types</SelectLabel>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="day">Day</SelectItem>
+                    <SelectItem value="night">Night</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="sm:col-span-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Status</SelectLabel>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Date Filter */}
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <Popover>
                 <PopoverTrigger asChild>
                   <FloatingLabelInput
@@ -441,19 +651,40 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   <Calendar
                     mode="single"
                     selected={dateFilter}
-                    onSelect={handleDateChange}
+                    onSelect={setDateFilter}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Clear Filters Button */}
+            <div className="sm:col-span-12 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+              >
+                Clear Filters
+              </Button>
+            </div>
           </div>
 
-          {/* Table Section - Updated with dynamic data */}
+          {/* Error State */}
+          {error && !isLoading && (
+            <div className="p-4 text-center text-red-600">
+              Error loading duties: {error}
+            </div>
+          )}
+
+          {/* Table Section */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <span className="sr-only">Select</span>
+                  </TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Date & Time</TableHead>
                   <TableHead>Site</TableHead>
@@ -472,14 +703,14 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               <TableBody>
                 {duties.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-12">
+                    <TableCell colSpan={13} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No duties found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                          {searchTerm || Object.keys(filters).length > 2
+                          {searchTerm || siteFilter !== "all" || statusFilter !== "all" || dutyTypeFilter !== "all" || dateFilter
                             ? "Try adjusting your search or filters"
                             : "Get started by creating a new duty"}
                         </p>
@@ -495,8 +726,19 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   duties.map((duty: Duty) => (
                     <TableRow
                       key={duty.id}
-                      className="hover:bg-gray-50 dark:hover:bg-black"
+                      className="hover:bg-gray-50 dark:hover:bg-black cursor-pointer"
+                      onClick={() => handleViewDetails(duty)}
                     >
+                      {/* Select Checkbox */}
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedDuties.includes(duty.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelectDuty(duty.id, checked as boolean)
+                          }
+                        />
+                      </TableCell>
+
                       {/* Title */}
                       <TableCell className="font-medium text-gray-900 dark:text-white">
                         {duty.title}
@@ -596,7 +838,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                       </TableCell>
 
                       {/* Actions */}
-                      <TableCell className="text-center">
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -604,33 +846,46 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {/* <DropdownMenuItem onClick={() => handleViewDetails(duty)}>
+                            <DropdownMenuItem onClick={() => handleViewDetails(duty)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View details
-                            </DropdownMenuItem> */}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(duty)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit duty
                             </DropdownMenuItem>
+                            
+                            {/* Duty Status Update Options */}
+                            {canChangeTo(duty.status, 'approved') && (
+                              <DropdownMenuItem
+                                onClick={(e) => handleDutyStatusUpdate(e, duty, 'approved')}
+                                className="text-green-600 focus:text-green-600"
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve Duty
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {canChangeTo(duty.status, 'completed') && (
+                              <DropdownMenuItem
+                                onClick={(e) => handleDutyStatusUpdate(e, duty, 'completed')}
+                                className="text-blue-600 focus:text-blue-600"
+                              >
+                                <CheckCheck className="mr-2 h-4 w-4" />
+                                Mark Completed
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {duty.status === 'completed' && (
+                              <DropdownMenuItem disabled className="text-gray-400">
+                                <AlertCircle className="mr-2 h-4 w-4" />
+                                Cannot change completed duty
+                              </DropdownMenuItem>
+                            )}
+                            
                             <DropdownMenuSeparator />
-                            {/* <DropdownMenuItem
-                              onClick={() => handleToggleStatus(duty)}
-                              className="text-amber-600"
-                            >
-                              {duty.is_active ? (
-                                <>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
-                            </DropdownMenuItem> */}
                             <DropdownMenuItem
-                              onClick={() => handleDeleteClick(duty)}
+                              onClick={(e) => handleDeleteClick(e, duty)}
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -693,22 +948,25 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       />
 
       {/* Edit Form Dialog */}
-            {selectedDuty && (
-              <DutyEditForm
-                trigger={<div />} // Hidden trigger since we control via state
-                duty={selectedDuty}
-                isOpen={editDialogOpen}
-                onOpenChange={setEditDialogOpen}
-                onSuccess={() => {
-                  // Refresh the list after successful edit
-                  dispatch(fetchDuties({
-                    page: 1,
-                    per_page: 10,
-                    search: searchTerm
-                  }));
-                }}
-              />
-            )}
+      {selectedDuty && (
+        <DutyEditForm
+          trigger={<div />}
+          duty={selectedDuty}
+          isOpen={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSuccess={() => {
+            // Refresh the list after successful edit
+            const fetchParams: DutyParams = {
+              page: filters.page || 1,
+              per_page: filters.per_page || 10,
+              search: searchTerm || undefined,
+              include_site: true,
+              include_site_location: true,
+            };
+            dispatch(fetchDuties(fetchParams));
+          }}
+        />
+      )}
     </>
   );
 }

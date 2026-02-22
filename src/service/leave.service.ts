@@ -70,8 +70,8 @@ export const leaveService = {
     }
   ) =>
     handleApiResponse(
-      api.get<ApiResponse<Leave>>(
-        `/admin/leaves/${id}/update-status?is_active=${payload.status?1:0}`
+      api.get<ApiResponse<{message:string}>>(
+        `/admin/leaves/${id}/change-status?status=${payload.status}`
       )
     ),
 

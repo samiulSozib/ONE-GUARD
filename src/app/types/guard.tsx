@@ -23,6 +23,7 @@ export interface Guard {
   guard_type_id?: number;
   license_expiry_date?: string;
   issuing_source?: string;
+  name?:string;
   
   // Profile data
   profile_data?: {

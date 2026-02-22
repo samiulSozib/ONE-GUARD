@@ -83,7 +83,9 @@ export const toggleExpenseCategoryStatus = createAsyncThunk(
   'expenseCategory/toggleStatus',
   async ({ id, is_active }: { id: number; is_active: boolean }, { rejectWithValue }) => {
     try {
-      return await expenseCategoryService.toggleStatus(id, is_active);
+       await expenseCategoryService.toggleStatus(id, is_active);
+       const updatedExpenseCategory=await expenseCategoryService.getExpenseCategory(id)
+       return updatedExpenseCategory.item
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to toggle site location status';
       return rejectWithValue(errorMessage);

@@ -15,7 +15,7 @@ import { CalendarIcon, Clock, User, Briefcase } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { createLeave } from "@/store/slices/leaveSlice"
+import { createLeave, fetchLeaves } from "@/store/slices/leaveSlice"
 import { fetchGuards } from "@/store/slices/guardSlice"
 import { fetchSites } from "@/store/slices/siteSlice"
 import { Leave } from "@/app/types/leave"
@@ -68,16 +68,10 @@ const leaveSchema = z.object({
         .min(1, { message: "Reason is required" })
         .max(500, { message: "Reason must be less than 500 characters" }),
 
-    calculation_unit: z.string()
-        .min(1, { message: "Calculation unit is required" }),
-
-    amount: z.string()
-        .min(1, { message: "Amount is required" })
-        .regex(/^\d+(\.\d{1,2})?$/, { message: "Amount must be a valid number" }),
+    
 
     start_time: z.string().optional(),
     end_time: z.string().optional(),
-    status: z.enum(["pending", "approved", "rejected", "completed"])
 
 }).refine((data) => {
     const start = new Date(data.start_date)
@@ -156,11 +150,9 @@ export function LeaveCreateForm({
             start_date: "",
             end_date: "",
             reason: "",
-            calculation_unit: "days",
-            amount: "",
+            
             start_time: "09:00",
             end_time: "17:00",
-            status: "pending"
         },
         mode: "onBlur"
     })
@@ -268,20 +260,20 @@ export function LeaveCreateForm({
         setIsLoading(true)
         try {
             // Prepare data for API
-            const submitData: Omit<Leave, 'id' | 'created_at' | 'site' | 'reviewer' | 'total_days'> = {
+            const submitData: Omit<Leave, 'id' | 'created_at' | 'site' | 'reviewer' | 'total_days'|'status'> = {
                 guard_id: data.guard_id,
                 site_id: data.site_id,
                 leave_type: data.leave_type,
                 start_date: data.start_date,
                 end_date: data.end_date,
                 reason: data.reason.trim(),
-                status: data.status,
                 review_note: null
             }
 
             const result = await dispatch(createLeave(submitData))
 
             if (createLeave.fulfilled.match(result)) {
+                dispatch(fetchLeaves({page:1,per_page:10}))
                 SweetAlertService.success(
                     'Leave Request Created',
                     'Leave request has been created successfully.'
@@ -296,6 +288,7 @@ export function LeaveCreateForm({
                     setSiteSearch("")
                     onSuccess?.()
                     onOpenChange?.(false)
+                    
                 })
             } else {
                 throw result.payload
@@ -325,8 +318,7 @@ export function LeaveCreateForm({
             formValues.leave_type ||
             startDate ||
             endDate ||
-            formValues.reason.trim() ||
-            formValues.amount
+            formValues.reason.trim() 
 
         if (!hasData) {
             reset()
@@ -360,9 +352,7 @@ export function LeaveCreateForm({
                 formValues.leave_type ||
                 startDate ||
                 endDate ||
-                formValues.reason.trim() ||
-                formValues.amount
-
+                formValues.reason.trim() 
             if (!hasData) {
                 reset()
                 setStartDate(undefined)
@@ -518,75 +508,10 @@ export function LeaveCreateForm({
                                 )}
                             </div>
 
-                            {/* Calculation Unit Dropdown */}
-                            <div className="space-y-2">
-                                <Label htmlFor="calculation_unit" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Calculation Unit <span className="text-red-500">*</span>
-                                </Label>
-                                <Select
-                                    value={formValues.calculation_unit}
-                                    onValueChange={(value) => setValue("calculation_unit", value, { shouldValidate: true })}
-                                >
-                                    <SelectTrigger className="w-full h-11">
-                                        <SelectValue placeholder="Select unit" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectLabel>Units</SelectLabel>
-                                            {calculationUnits.map((unit) => (
-                                                <SelectItem key={unit.value} value={unit.value}>
-                                                    {unit.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                                {errors.calculation_unit && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.calculation_unit.message}</p>
-                                )}
-                            </div>
+                            
+                            
 
-                            {/* Amount */}
-                            <div className="space-y-2">
-                                <FloatingLabelInput
-                                    label="Amount *"
-                                    type="text"
-                                    placeholder="0.00"
-                                    {...register("amount")}
-                                    error={errors.amount?.message}
-                                    disabled={isLoading}
-                                />
-                            </div>
-
-                            {/* Status Dropdown */}
-                            <div className="space-y-2">
-                                <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Status <span className="text-red-500">*</span>
-                                </Label>
-                                <Select
-                                    value={formValues.status}
-                                    onValueChange={(value: "pending" | "approved" | "rejected" | "completed") => 
-                                        setValue("status", value, { shouldValidate: true })
-                                    }
-                                >
-                                    <SelectTrigger className="w-full h-11">
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectLabel>Status</SelectLabel>
-                                            {statusOptions.map((status) => (
-                                                <SelectItem key={status.value} value={status.value}>
-                                                    {status.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                                {errors.status && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.status.message}</p>
-                                )}
-                            </div>
+                            
                         </div>
                     </div>
 

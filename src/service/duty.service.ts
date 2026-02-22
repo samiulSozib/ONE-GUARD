@@ -54,10 +54,10 @@ export const dutyService = {
     ),
 
   // Toggle duty status
-  toggleStatus: (id: number, is_active: boolean) =>
+  toggleStatus: (id: number, status: string) =>
     handleApiResponse(
-      api.get<ApiResponse<{item:Duty}>>(
-        `/admin/duties/${id}/change-status?is_active=${is_active?1:0}`
+      api.get<ApiResponse<{message:string}>>(
+        `/admin/duties/${id}/change-status?status=${status}`
         
       )
     ),

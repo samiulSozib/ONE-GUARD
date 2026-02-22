@@ -107,6 +107,7 @@ export interface Client {
   documents_count?: number;
   contacts_count?: number;
   media_count?: number;
+  name?:string
 }
 
 // ==================== Create/Update Payload Types ====================

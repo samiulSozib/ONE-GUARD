@@ -89,7 +89,10 @@ export const toggleClientStatus = createAsyncThunk(
   async ({ id, is_active }: { id: number; is_active: boolean }, { rejectWithValue }) => {
     try {
       const response = await clientService.toggleStatus(id, is_active);
-      return response.item;
+      // After successful status update, fetch the updated guard
+      const updatedClient = await clientService.getClient(id);
+
+      return updatedClient.item;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to toggle client status';
       return rejectWithValue(errorMessage);
@@ -145,7 +148,7 @@ const clientSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Fetch Single Client
       .addCase(fetchClient.pending, (state) => {
         state.isLoading = true;
@@ -159,7 +162,7 @@ const clientSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Create Client
       .addCase(createClient.pending, (state) => {
         state.isLoading = true;
@@ -175,7 +178,7 @@ const clientSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Update Client
       .addCase(updateClient.pending, (state) => {
         state.isLoading = true;
@@ -196,7 +199,7 @@ const clientSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Delete Client
       .addCase(deleteClient.pending, (state) => {
         state.isLoading = true;
@@ -214,7 +217,7 @@ const clientSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      
+
       // Toggle Status
       .addCase(toggleClientStatus.pending, (state) => {
         state.isLoading = true;
@@ -222,25 +225,24 @@ const clientSlice = createSlice({
       })
       .addCase(toggleClientStatus.fulfilled, (state, action) => {
         state.isLoading = false;
-        const updatedClient = action.payload;
-        const index = state.clients.findIndex(client => client.id === updatedClient.id);
+        const index = state.clients.findIndex(client => client.id === action.payload.id);
         if (index !== -1) {
-          state.clients[index] = updatedClient;
+          state.clients[index] = action.payload;
         }
-        if (state.currentClient?.id === updatedClient.id) {
-          state.currentClient = updatedClient;
+        if (state.currentClient?.id === action.payload.id) {
+          state.currentClient = action.payload;
         }
       })
       .addCase(toggleClientStatus.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
-      })
-      
+      });
+
   },
 });
 
-export const { 
-  clearClientError, 
+export const {
+  clearClientError,
   clearCurrentClient,
   clearClients,
   setClients,

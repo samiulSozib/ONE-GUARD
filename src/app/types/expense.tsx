@@ -37,7 +37,7 @@ export interface ExpenseParams {
   site_id?: number;
   category_id?:number;
 
-  status?: "pending" | "approved" | "completed";
+  status?: 'pending' | 'approved' | 'rejected' | 'completed' | 'paid';
 
   include_site?: boolean | number;
   
@@ -87,3 +87,5 @@ export interface CreateExpenseDto {
   category?:Partial<ExpenseCategory>
   site?:Partial<Site>
 }
+
+

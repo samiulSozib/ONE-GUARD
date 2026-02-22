@@ -106,11 +106,13 @@ export const deleteDuty = createAsyncThunk(
 export const toggleDutyStatus = createAsyncThunk(
   "duty/toggleStatus",
   async (
-    { id, is_active }: { id: number; is_active: boolean },
+    { id, status }: { id: number; status: string },
     { rejectWithValue }
   ) => {
     try {
-      return await dutyService.toggleStatus(id, is_active);
+       await dutyService.toggleStatus(id, status);
+       const updatedDuty=await dutyService.getDuty(id)
+       return updatedDuty.item
     } catch (error: unknown) {
       console.log(error)
       const message =
@@ -226,13 +228,13 @@ const dutySlice = createSlice({
       .addCase(toggleDutyStatus.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.duties.findIndex(
-          (duty) => duty.id === action.payload.item.id
+          (duty) => duty.id === action.payload.id
         );
         if (index !== -1) {
-          state.duties[index] = action.payload.item;
+          state.duties[index] = action.payload;
         }
-        if (state.currentDuty?.id === action.payload.item.id) {
-          state.currentDuty = action.payload.item;
+        if (state.currentDuty?.id === action.payload.id) {
+          state.currentDuty = action.payload;
         }
       });
   },

@@ -191,10 +191,10 @@ export function GuardDataTable() {
                         }
                     );
                     // Refresh the guard list
-                    dispatch(fetchGuards({
-                        page: pagination.current_page,
-                        per_page: 10,
-                    }));
+                    // dispatch(fetchGuards({
+                    //     page: pagination.current_page,
+                    //     per_page: 10,
+                    // }));
                 }else{
                     await SweetAlertService.error(
                     'Update Failed',
@@ -208,7 +208,7 @@ export function GuardDataTable() {
 
 
             } catch (error) {
-                console.log(error)
+                ///console.log(error)
                 await SweetAlertService.error(
                     'Update Failed',
                     'There was an error updating the guard status. Please try again.',
