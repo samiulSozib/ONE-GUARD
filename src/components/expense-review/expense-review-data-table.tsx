@@ -72,6 +72,7 @@ import { ExpenseReview, ExpenseReviewParams } from "@/app/types/expenseReview";
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
+import { ExpenseReviewEditForm } from "./expense-review-edit-form";
 // import { ViewExpenseReview } from "./view-expense-review";
 // import { ExpenseReviewEditForm } from "./expense-review-edit-form";
 
@@ -652,10 +653,10 @@ export function ExpenseReviewDataTable({ onAddClick, onViewClick }: ExpenseRevie
       )} */}
 
       {/* Edit Form Dialog */}
-      {/* {selectedReview && (
+      {selectedReview && (
         <ExpenseReviewEditForm
           trigger={<div />}
-          review={selectedReview}
+          expenseReview={selectedReview}
           isOpen={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
@@ -668,7 +669,7 @@ export function ExpenseReviewDataTable({ onAddClick, onViewClick }: ExpenseRevie
             dispatch(fetchExpenseReviews(fetchParams));
           }}
         />
-      )} */}
+      )}
     </>
   );
 }
