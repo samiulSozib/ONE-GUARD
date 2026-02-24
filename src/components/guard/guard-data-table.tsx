@@ -518,7 +518,7 @@ export function GuardDataTable() {
                                     <TableHead>Guard Name</TableHead>
                                     <TableHead>ID Number</TableHead>
                                     <TableHead>Type</TableHead>
-                                    <TableHead>Card Number</TableHead>
+                                    <TableHead>Guard Code</TableHead>
                                     <TableHead>Phone Number</TableHead>
                                     <TableHead>Driver License</TableHead>
                                     <TableHead>Issuing Source</TableHead>

@@ -34,7 +34,7 @@ const ViewGuardTopCard = ({ guard }: ViewGuardTopCardProps) => {
             Back to list
           </Button>
 
-          {/* <AddGuardArmsForm trigger={
+          <AddGuardArmsForm trigger={
             <Button
               className="flex-shrink-0 justify-center text-xs sm:text-sm bg-[#B5A28A] hover:bg-[#9b8a73] text-white"
               variant="default"
@@ -60,7 +60,7 @@ const ViewGuardTopCard = ({ guard }: ViewGuardTopCardProps) => {
             >
               Add Availability
             </Button>
-          } /> */}
+          } />
         </div>
       </div>
     </Card>

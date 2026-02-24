@@ -70,15 +70,18 @@ export function SearchableDropdown({
   }, [])
 
   // debounced search
-//   useEffect(() => {
-//     if (!onSearch) return
+useEffect(() => {
+  if (!onSearch) return
 
-//     const timer = setTimeout(() => {
-//       onSearch(searchTerm)
-//     }, 300)
+  // 🚫 empty / whitespace search ignore
+  if (!searchTerm.trim()) return
 
-//     return () => clearTimeout(timer)
-//   }, [searchTerm, onSearch])
+  const timer = setTimeout(() => {
+    onSearch(searchTerm)
+  }, 300)
+
+  return () => clearTimeout(timer)
+}, [searchTerm])
 
   const handleSelect = (option: SearchableDropdownOption) => {
     onValueChange(option.value)

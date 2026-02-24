@@ -2,7 +2,6 @@
 
 import {
     Dialog,
-    DialogClose,
     DialogContent,
     DialogTrigger,
 } from "@/components/ui/dialog"
@@ -20,18 +19,12 @@ import {
     Contact,
     FileText,
     Copy,
-    Globe,
     MapPin,
-    Calendar,
-    Link,
-    User,
-    Phone,
-    Award
 } from "lucide-react"
 import { useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { createClient, fetchClients } from "@/store/slices/clientSlice"
+import { createClient } from "@/store/slices/clientSlice"
 import SweetAlertService from "@/lib/sweetAlert"
 import {
     clientBasicSchema,
@@ -42,7 +35,6 @@ import {
     BUSINESS_TYPES,
     INDUSTRIES,
     CLIENT_DOCUMENT_TYPES,
-    SITE_DOCUMENT_TYPES
 } from "@/lib/validation/client.types"
 import { Textarea } from "../ui/textarea"
 import { DialogTitle } from "@radix-ui/react-dialog"
@@ -76,7 +68,7 @@ export function ClientCreateForm({
         control,
         register,
         handleSubmit,
-        formState: { errors },
+        formState: { errors, isValid },
         reset,
         watch,
         setValue,
@@ -90,14 +82,14 @@ export function ClientCreateForm({
             email: "",
             phone: "",
             password: "",
-            client_code: "",
+            client_code: "HGF4",
             company_name: "",
             tax_id: "",
             country: "",
             city: "",
             address: "",
             zip_code: "",
-            currency_id: undefined,
+            currency_id: null,
             registration_date: "",
             business_type: "",
             industry: "",
@@ -134,9 +126,6 @@ export function ClientCreateForm({
         name: "sites"
     })
 
-    // Generate client code
-
-
     // Initialize form
     useEffect(() => {
         const initializeForm = async () => {
@@ -149,6 +138,13 @@ export function ClientCreateForm({
         initializeForm()
     }, [isOpen, setValue, lastClientCode])
 
+    // Debug validation errors
+    useEffect(() => {
+        if (Object.keys(errors).length > 0) {
+            console.log("Validation errors:", errors)
+        }
+    }, [errors])
+
     const copyClientCode = () => {
         if (clientCodeRef.current) {
             clientCodeRef.current.select()
@@ -157,53 +153,31 @@ export function ClientCreateForm({
         }
     }
 
-
-
     // Generate client code
     const generateClientCode = async (): Promise<string> => {
         try {
             setIsGeneratingCode(true)
             const currentYear = new Date().getFullYear()
-
-            // Always generate a random number between 100 and 999 for uniqueness
-            // This ensures each regenerate gives a different code
-            const randomNum = Math.floor(Math.random() * 900) + 100 // 100-999
-
-            // Add timestamp milliseconds to ensure uniqueness if needed
-            const timestamp = new Date().getTime().toString().slice(-3) // Last 3 digits of timestamp
-
-            // Combine random number with timestamp for guaranteed uniqueness
-            const uniqueNum = randomNum
-
-            return `CL-${currentYear}-${uniqueNum}`
+            const randomNum = Math.floor(Math.random() * 900) + 100
+            return `CL-${currentYear}-${randomNum}`
         } catch (error) {
             console.error("Error generating client code:", error)
             const currentYear = new Date().getFullYear()
             const randomNum = Math.floor(Math.random() * 900) + 100
-            const timestamp = new Date().getTime().toString().slice(-3)
-            return `CL-${currentYear}-${randomNum}${timestamp}`
+            return `CL-${currentYear}-${randomNum}`
         } finally {
             setIsGeneratingCode(false)
         }
     }
 
-    // Alternative: More unique version with timestamp
+    // More unique version with timestamp
     const generateUniqueClientCode = async (): Promise<string> => {
         try {
             setIsGeneratingCode(true)
             const currentYear = new Date().getFullYear()
-
-            // Get current timestamp in milliseconds
-            const timestamp = new Date().getTime()
-
-            // Take last 4 digits of timestamp
-            const timePart = timestamp.toString().slice(-4)
-
-            // Add random number between 100-999
+            const timestamp = new Date().getTime().toString().slice(-4)
             const randomPart = Math.floor(Math.random() * 900) + 100
-
-            // Combine for guaranteed uniqueness
-            return `CL-${currentYear}-${randomPart}${timePart}`
+            return `CL-${currentYear}-${randomPart}${timestamp}`
         } catch (error) {
             console.error("Error generating client code:", error)
             const currentYear = new Date().getFullYear()
@@ -214,9 +188,8 @@ export function ClientCreateForm({
         }
     }
 
-    // Use either function - I recommend the unique version
     const regenerateClientCode = async () => {
-        const newCode = await generateUniqueClientCode() // or generateClientCode()
+        const newCode = await generateUniqueClientCode()
         setAutoGeneratedCode(newCode)
         setValue("client_code", newCode)
         SweetAlertService.info("Code Regenerated", "New unique client code has been generated.")
@@ -282,27 +255,27 @@ export function ClientCreateForm({
         })
     }
 
-    const addSite = () => {
-        appendSite({
-            site_name: "",
-            site_instruction: "",
-            address: "",
-            guards_required: 1,
-            latitude: 0,
-            longitude: 0,
-            status: "planned",
-            locations: [],
-            site_document_types: []
-        })
-    }
+const addSite = () => {
+    appendSite({
+        site_name: "New Site",
+        site_instruction: "",
+        address: "",
+        guards_required: 1,
+        latitude: 0,
+        longitude: 0,
+        status: "planned", // This is fine but make sure it matches the enum
+        locations: [],
+        site_document_types: []
+    })
+}
 
     const addLocationToSite = (siteIndex: number) => {
         const currentLocations = watch(`sites.${siteIndex}.locations`) || []
         setValue(`sites.${siteIndex}.locations`, [
             ...currentLocations,
             {
-                title: "",
-                description: "",
+                title: "New Loc",
+                description: "Desc",
                 latitude: 0,
                 longitude: 0,
                 is_active: true
@@ -324,18 +297,19 @@ export function ClientCreateForm({
     }
 
     const onSubmit = async (data: ClientFormData) => {
+        console.log("on submit triggered", data)
         setIsSubmitting(true)
 
         try {
             const formData = new FormData()
-            const finalClientCode = data.client_code || autoGeneratedCode
+           // const finalClientCode = "GHD45"
 
             // Append all form fields
             Object.entries(data).forEach(([key, value]) => {
                 if (value !== undefined && value !== null) {
                     if (key === 'contacts' || key === 'sites') {
                         formData.append(key, JSON.stringify(value || []))
-                    } else if (key === 'client_document_types' || key === 'media_categories') {
+                    } else if (key === 'client_document_types' || key === 'media_categories' || key === 'site_document_types') {
                         formData.append(key, JSON.stringify(value || []))
                     } else if (typeof value === 'boolean') {
                         formData.append(key, value ? '1' : '0')
@@ -347,7 +321,7 @@ export function ClientCreateForm({
                 }
             })
 
-            formData.append('client_code', finalClientCode)
+            //formData.append('client_code', "GFH")
 
             if (profileImage) {
                 formData.append('profile_image', profileImage)
@@ -362,7 +336,7 @@ export function ClientCreateForm({
             if (createClient.fulfilled.match(result)) {
                 SweetAlertService.success(
                     'Success!',
-                    `${data.company_name || data.full_name} has been created with code: ${finalClientCode}`,
+                    `${data.company_name || data.full_name} has been created`,
                     { timer: 2000 }
                 )
 
@@ -383,7 +357,7 @@ export function ClientCreateForm({
                 throw new Error(result.payload as string || 'Failed to create client')
             }
         } catch (error) {
-            //console.log(error)
+            console.error("Creation error:", error)
             SweetAlertService.error(
                 'Creation Failed',
                 error instanceof Error ? error.message : 'There was an error creating the client.'
@@ -396,11 +370,10 @@ export function ClientCreateForm({
     const validateStep = async (currentStep: number): Promise<boolean> => {
         if (currentStep === 1) {
             // Only validate required fields
-            const requiredFields = ['full_name', 'email', 'phone', 'password']
-            const result = await triggerValidation(requiredFields as [])
+            const requiredFields = ['full_name', 'email', 'phone', 'password'] as const
+            const result = await triggerValidation(requiredFields)
             return result
         }
-        // Other steps are optional
         return true
     }
 
@@ -464,7 +437,6 @@ export function ClientCreateForm({
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)}>
-                    {/* Step 1: Basic Info (Only Required Fields) */}
                     {/* Step 1: Basic Info */}
                     {step === 1 && (
                         <div className="space-y-6">
@@ -796,22 +768,22 @@ export function ClientCreateForm({
 
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <Controller name={`contacts.${index}.name`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Name" {...field} />
+                                                <FloatingLabelInput label="Name" {...field} value={field.value || ''} />
                                             )} />
                                             <Controller name={`contacts.${index}.phone`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Phone" type="tel" {...field} />
+                                                <FloatingLabelInput label="Phone" type="tel" {...field} value={field.value || ''} />
                                             )} />
                                             <Controller name={`contacts.${index}.email`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Email" type="email" {...field} />
+                                                <FloatingLabelInput label="Email" type="email" {...field} value={field.value || ''} />
                                             )} />
                                             <Controller name={`contacts.${index}.position`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Position" {...field} />
+                                                <FloatingLabelInput label="Position" {...field} value={field.value || ''} />
                                             )} />
                                             <Controller name={`contacts.${index}.department`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Department" {...field} />
+                                                <FloatingLabelInput label="Department" {...field} value={field.value || ''} />
                                             )} />
                                             <Controller name={`contacts.${index}.notes`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Notes" {...field} />
+                                                <FloatingLabelInput label="Notes" {...field} value={field.value || ''} />
                                             )} />
                                         </div>
                                     </div>
@@ -820,92 +792,221 @@ export function ClientCreateForm({
                         </div>
                     )}
 
-                    {/* Step 3: Sites (All Optional) */}
-                    {step === 3 && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">Sites (Optional)</h3>
-                                <Button type="button" onClick={addSite} variant="outline" size="sm">
-                                    <Plus size={16} className="mr-1" /> Add Site
-                                </Button>
-                            </div>
+                   {/* Step 3: Sites (All Optional) */}
+{step === 3 && (
+    <div className="space-y-6">
+        <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Sites (Optional)</h3>
+            <Button type="button" onClick={addSite} variant="outline" size="sm">
+                <Plus size={16} className="mr-1" /> Add Site
+            </Button>
+        </div>
 
-                            {siteFields.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    No sites added. Click Add Site to add one.
+        {siteFields.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+                No sites added. Click Add Site to add one.
+            </div>
+        ) : (
+            siteFields.map((site, siteIndex) => (
+                <div key={site.id} className="border rounded-lg p-4 mb-6">
+                    <div className="flex justify-between mb-4">
+                        <h4 className="font-semibold">Site {siteIndex + 1}</h4>
+                        <Button type="button" onClick={() => removeSite(siteIndex)} variant="ghost" size="sm" className="text-red-500">
+                            <X size={16} />
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <Controller 
+                            name={`sites.${siteIndex}.site_name`} 
+                            control={control} 
+                            render={({ field }) => (
+                                <FloatingLabelInput 
+                                    label="Site Name *" 
+                                    {...field} 
+                                    value={field.value || ''} 
+                                    error={errors.sites?.[siteIndex]?.site_name?.message}
+                                />
+                            )} 
+                        />
+                        
+                        <Controller 
+                            name={`sites.${siteIndex}.address`} 
+                            control={control} 
+                            render={({ field }) => (
+                                <FloatingLabelInput 
+                                    label="Address" 
+                                    {...field} 
+                                    value={field.value || ''} 
+                                />
+                            )} 
+                        />
+                        
+                        <Controller 
+                            name={`sites.${siteIndex}.guards_required`} 
+                            control={control} 
+                            render={({ field }) => (
+                                <FloatingLabelInput 
+                                    label="Guards Required" 
+                                    type="number" 
+                                    {...field} 
+                                    value={field.value || 1} 
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                />
+                            )} 
+                        />
+                        
+                        <Controller 
+                            name={`sites.${siteIndex}.status`} 
+                            control={control} 
+                            render={({ field }) => (
+                                <FloatingLabelSelect 
+                                    label="Status" 
+                                    {...field} 
+                                    value={field.value || 'planned'}
+                                >
+                                    <option value="planned">Planned</option>
+                                    <option value="running">Running</option>
+                                    <option value="paused">Paused</option>
+                                    <option value="completed">Completed</option>
+                                </FloatingLabelSelect>
+                            )} 
+                        />
+                        
+                        <Controller 
+                            name={`sites.${siteIndex}.latitude`} 
+                            control={control} 
+                            render={({ field }) => (
+                                <FloatingLabelInput 
+                                    label="Latitude" 
+                                    type="number" 
+                                    step="any"
+                                    {...field} 
+                                    value={field.value || 0} 
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                            )} 
+                        />
+                        
+                        <Controller 
+                            name={`sites.${siteIndex}.longitude`} 
+                            control={control} 
+                            render={({ field }) => (
+                                <FloatingLabelInput 
+                                    label="Longitude" 
+                                    type="number" 
+                                    step="any"
+                                    {...field} 
+                                    value={field.value || 0} 
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                            )} 
+                        />
+                        
+                        <div className="md:col-span-3">
+                            <Controller 
+                                name={`sites.${siteIndex}.site_instruction`} 
+                                control={control} 
+                                render={({ field }) => (
+                                    <FloatingLabelTextarea 
+                                        label="Instructions" 
+                                        {...field} 
+                                        value={field.value || ''} 
+                                    />
+                                )} 
+                            />
+                        </div>
+                    </div>
+
+                    {/* Locations */}
+                    <div className="mt-4">
+                        <div className="flex justify-between items-center mb-3">
+                            <h5 className="font-medium">Locations</h5>
+                            <Button type="button" onClick={() => addLocationToSite(siteIndex)} variant="outline" size="sm">
+                                <Plus size={14} className="mr-1" /> Add Location
+                            </Button>
+                        </div>
+
+                        {watch(`sites.${siteIndex}.locations`)?.map((location, locationIndex) => (
+                            <div key={locationIndex} className="bg-gray-50 dark:bg-gray-700 rounded p-3 mb-2">
+                                <div className="flex justify-between mb-2">
+                                    <span className="font-medium">Location {locationIndex + 1}</span>
+                                    <Button 
+                                        type="button" 
+                                        onClick={() => removeLocationFromSite(siteIndex, locationIndex)} 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-red-500 h-6 w-6 p-0"
+                                    >
+                                        <X size={14} />
+                                    </Button>
                                 </div>
-                            ) : (
-                                siteFields.map((site, siteIndex) => (
-                                    <div key={site.id} className="border rounded-lg p-4 mb-6">
-                                        <div className="flex justify-between mb-4">
-                                            <h4 className="font-semibold">Site {siteIndex + 1}</h4>
-                                            <Button type="button" onClick={() => removeSite(siteIndex)} variant="ghost" size="sm" className="text-red-500">
-                                                <X size={16} />
-                                            </Button>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                            <Controller name={`sites.${siteIndex}.site_name`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Site Name" {...field} />
-                                            )} />
-                                            <Controller name={`sites.${siteIndex}.address`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Address" {...field} />
-                                            )} />
-                                            <Controller name={`sites.${siteIndex}.guards_required`} control={control} render={({ field }) => (
-                                                <FloatingLabelInput label="Guards Required" type="number" {...field} />
-                                            )} />
-                                            <Controller name={`sites.${siteIndex}.status`} control={control} render={({ field }) => (
-                                                <FloatingLabelSelect label="Status" {...field}>
-                                                    <option value="planned">Planned</option>
-                                                    <option value="running">Running</option>
-                                                    <option value="paused">Paused</option>
-                                                    <option value="completed">Completed</option>
-                                                </FloatingLabelSelect>
-                                            )} />
-                                            <Controller name={`sites.${siteIndex}.site_instruction`} control={control} render={({ field }) => (
-                                                <FloatingLabelTextarea label="Instructions" {...field} className="md:col-span-3" />
-                                            )} />
-                                        </div>
-
-                                        {/* Locations */}
-                                        <div className="mt-4">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <h5 className="font-medium">Locations</h5>
-                                                <Button type="button" onClick={() => addLocationToSite(siteIndex)} variant="outline" size="sm">
-                                                    <Plus size={14} className="mr-1" /> Add Location
-                                                </Button>
-                                            </div>
-
-                                            {watch(`sites.${siteIndex}.locations`)?.map((location, locationIndex) => (
-                                                <div key={locationIndex} className="bg-gray-50 dark:bg-gray-700 rounded p-3 mb-2">
-                                                    <div className="flex justify-between mb-2">
-                                                        <span className="font-medium">Location {locationIndex + 1}</span>
-                                                        <Button type="button" onClick={() => removeLocationFromSite(siteIndex, locationIndex)} variant="ghost" size="sm" className="text-red-500 h-6 w-6 p-0">
-                                                            <X size={14} />
-                                                        </Button>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                                                        <Controller name={`sites.${siteIndex}.locations.${locationIndex}.title`} control={control} render={({ field }) => (
-                                                            <input type="text" placeholder="Title" className="px-2 py-1 border rounded text-sm" {...field} />
-                                                        )} />
-                                                        <Controller name={`sites.${siteIndex}.locations.${locationIndex}.description`} control={control} render={({ field }) => (
-                                                            <input type="text" placeholder="Description" className="px-2 py-1 border rounded text-sm" {...field} />
-                                                        )} />
-                                                        <Controller name={`sites.${siteIndex}.locations.${locationIndex}.latitude`} control={control} render={({ field }) => (
-                                                            <input type="number" step="any" placeholder="Lat" className="px-2 py-1 border rounded text-sm" {...field} />
-                                                        )} />
-                                                        <Controller name={`sites.${siteIndex}.locations.${locationIndex}.longitude`} control={control} render={({ field }) => (
-                                                            <input type="number" step="any" placeholder="Lng" className="px-2 py-1 border rounded text-sm" {...field} />
-                                                        )} />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                    <Controller 
+                                        name={`sites.${siteIndex}.locations.${locationIndex}.title`} 
+                                        control={control} 
+                                        render={({ field }) => (
+                                            <input 
+                                                type="text" 
+                                                placeholder="Title" 
+                                                className="px-2 py-1 border rounded text-sm" 
+                                                {...field} 
+                                                value={field.value || ''} 
+                                            />
+                                        )} 
+                                    />
+                                    <Controller 
+                                        name={`sites.${siteIndex}.locations.${locationIndex}.description`} 
+                                        control={control} 
+                                        render={({ field }) => (
+                                            <input 
+                                                type="text" 
+                                                placeholder="Description" 
+                                                className="px-2 py-1 border rounded text-sm" 
+                                                {...field} 
+                                                value={field.value || ''} 
+                                            />
+                                        )} 
+                                    />
+                                    <Controller 
+                                        name={`sites.${siteIndex}.locations.${locationIndex}.latitude`} 
+                                        control={control} 
+                                        render={({ field }) => (
+                                            <input 
+                                                type="number" 
+                                                step="any" 
+                                                placeholder="Lat" 
+                                                className="px-2 py-1 border rounded text-sm" 
+                                                {...field} 
+                                                value={field.value || 0} 
+                                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                            />
+                                        )} 
+                                    />
+                                    <Controller 
+                                        name={`sites.${siteIndex}.locations.${locationIndex}.longitude`} 
+                                        control={control} 
+                                        render={({ field }) => (
+                                            <input 
+                                                type="number" 
+                                                step="any" 
+                                                placeholder="Lng" 
+                                                className="px-2 py-1 border rounded text-sm" 
+                                                {...field} 
+                                                value={field.value || 0} 
+                                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                            />
+                                        )} 
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))
+        )}
+    </div>
+)}
 
                     {/* Step 4: Documents & Final */}
                     {step === 4 && (
@@ -917,7 +1018,7 @@ export function ClientCreateForm({
                                 <label className="block text-sm font-medium mb-3">Document Types</label>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     {CLIENT_DOCUMENT_TYPES.map((docType) => (
-                                        <label key={docType.id} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer">
+                                        <label key={docType.id} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedDocumentTypes.includes(docType.id)}
@@ -961,9 +1062,15 @@ export function ClientCreateForm({
                                     <div className="flex flex-col items-center">
                                         <input type="file" id="profileImage" onChange={handleProfileImageUpload} className="hidden" accept="image/*" />
                                         <label htmlFor="profileImage" className="cursor-pointer">
-                                            <div className="relative w-32 h-32 rounded-full border-2 border-dashed flex flex-col items-center justify-center">
+                                            <div className="relative w-32 h-32 rounded-full border-2 border-dashed flex flex-col items-center justify-center hover:bg-gray-50 transition">
                                                 {profileImage ? (
-                                                    <Image src={URL.createObjectURL(profileImage)} alt="Preview" width={128} height={128} className="rounded-full object-cover" />
+                                                    <Image 
+                                                        src={URL.createObjectURL(profileImage)} 
+                                                        alt="Preview" 
+                                                        width={128} 
+                                                        height={128} 
+                                                        className="rounded-full object-cover w-full h-full"
+                                                    />
                                                 ) : (
                                                     <>
                                                         <Plus className="w-8 h-8 text-gray-400 mb-2" />
@@ -986,11 +1093,11 @@ export function ClientCreateForm({
                                         </label>
 
                                         {documents.length > 0 && (
-                                            <div className="mt-4 w-full">
+                                            <div className="mt-4 w-full max-h-40 overflow-y-auto">
                                                 {documents.map((doc, index) => (
-                                                    <div key={index} className="flex justify-between bg-gray-50 p-2 rounded mb-2">
-                                                        <span className="text-sm truncate">{doc.name}</span>
-                                                        <button type="button" onClick={() => removeDocument(index)} className="text-red-500">
+                                                    <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded mb-2">
+                                                        <span className="text-sm truncate max-w-[200px]">{doc.name}</span>
+                                                        <button type="button" onClick={() => removeDocument(index)} className="text-red-500 hover:text-red-700">
                                                             <X size={16} />
                                                         </button>
                                                     </div>
@@ -1003,8 +1110,13 @@ export function ClientCreateForm({
 
                             {/* Active Status */}
                             <div className="flex items-center gap-2">
-                                <input type="checkbox" {...register("is_active")} defaultChecked className="rounded" />
-                                <label>Active Client</label>
+                                <input 
+                                    type="checkbox" 
+                                    {...register("is_active")} 
+                                    defaultChecked={true} 
+                                    className="rounded w-4 h-4 text-blue-600"
+                                />
+                                <label className="text-sm text-gray-700">Active Client</label>
                             </div>
                         </div>
                     )}
@@ -1022,7 +1134,7 @@ export function ClientCreateForm({
                         ) : (
                             <div className="flex gap-2">
                                 <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
-                                <Button type="submit" disabled={isSubmitting} className="bg-green-600">
+                                <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
                                     {isSubmitting ? 'Creating...' : 'Create Client'}
                                 </Button>
                             </div>

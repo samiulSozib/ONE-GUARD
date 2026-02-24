@@ -1,74 +1,75 @@
 import { z } from 'zod';
 
-// Site Location Schema - all optional
+// Site Location Schema - all optional with defaults
 export const siteLocationSchema = z.object({
-    title: z.string().optional(),
-    description: z.string().optional(),
+    title: z.string().optional().default(''),
+    description: z.string().optional().default(''),
     latitude: z.number().optional().default(0),
     longitude: z.number().optional().default(0),
-    is_active: z.boolean().optional().default(true)
+    is_active: z.boolean().optional()
 });
 
 // Site Schema - only essential fields required
+// Site Schema - only essential fields required
 export const siteSchema = z.object({
-    site_name: z.string().min(1, 'Site name is required'),
-    site_instruction: z.string().optional(),
-    address: z.string().optional(),
+  site_name: z.string().optional().default(""),
+    site_instruction: z.string().optional().default(''),
+    address: z.string().optional().default(''),
     guards_required: z.number().optional().default(1),
     latitude: z.number().optional().default(0),
     longitude: z.number().optional().default(0),
-    status: z.enum(['planned', 'running', 'paused', 'completed']).optional().default('planned'),
+    status: z.enum(['planned', 'running', 'paused', 'completed']).optional(),
     locations: z.array(siteLocationSchema).optional().default([]),
     site_document_types: z.array(z.string()).optional().default([])
 });
 
-// Contact Schema - all optional
+// Contact Schema - all optional with defaults
 export const contactSchema = z.object({
-    name: z.string().optional(),
-    phone: z.string().optional(),
-    email: z.string().email('Invalid email').optional().or(z.literal('')),
-    position: z.string().optional(),
-    department: z.string().optional(),
+    name: z.string().optional().default(''),
+    phone: z.string().optional().default(''),
+    email: z.string().email('Invalid email').optional().or(z.literal('')).default(''),
+    position: z.string().optional().default(''),
+    department: z.string().optional().default(''),
     is_primary: z.boolean().optional().default(false),
-    notes: z.string().optional()
+    notes: z.string().optional().default('')
 });
 
 // Main Client Schema - only essential fields required
 export const clientBasicSchema = z.object({
-    // Basic Info (only these 4 are required)
+    // Basic Info (required)
     full_name: z.string().min(1, 'Full name is required'),
     email: z.string().email('Invalid email').min(1, 'Email is required'),
     phone: z.string().min(1, 'Phone is required'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     
-    // Everything else is optional
+    // Everything else is optional with defaults
     client_code: z.string().optional(),
-    company_name: z.string().optional(),
-    tax_id: z.string().optional(),
-    license_number: z.string().optional(),
+    company_name: z.string().optional().default(''),
+    tax_id: z.string().optional().default(''),
+    license_number: z.string().optional().default(''),
     
     // Location
-    country: z.string().optional(),
-    city: z.string().optional(),
-    address: z.string().optional(),
-    zip_code: z.string().optional(),
+    country: z.string().optional().default(''),
+    city: z.string().optional().default(''),
+    address: z.string().optional().default(''),
+    zip_code: z.string().optional().default(''),
     
     // Business Details
-    business_type: z.string().optional(),
-    industry: z.string().optional(),
-    registration_date: z.string().optional(),
-    website: z.string().url('Invalid URL').optional().or(z.literal('')),
-    currency_id: z.number().optional().nullable(),
+    business_type: z.string().optional().default(''),
+    industry: z.string().optional().default(''),
+    registration_date: z.string().optional().default(''),
+    website: z.string().url('Invalid URL').optional().or(z.literal('')).default(''),
+    currency_id: z.union([z.number(), z.null(), z.undefined()]).optional().default(null),
     
     // Additional Contacts
-    contact_person: z.string().optional(),
-    contact_person_phone: z.string().optional(),
+    contact_person: z.string().optional().default(''),
+    contact_person_phone: z.string().optional().default(''),
     
     // Notes & Status
-    notes: z.string().optional(),
+    notes: z.string().optional().default(''),
     is_active: z.boolean().optional().default(true),
     
-    // Arrays
+    // Arrays - always provide defaults
     contacts: z.array(contactSchema).optional().default([]),
     sites: z.array(siteSchema).optional().default([]),
     client_document_types: z.array(z.string()).optional().default([]),
@@ -77,40 +78,40 @@ export const clientBasicSchema = z.object({
 });
 
 export const clientUpdateSchema = z.object({
-    // Basic Info (only these 4 are required)
+    // Basic Info (required)
     full_name: z.string().min(1, 'Full name is required'),
     email: z.string().email('Invalid email').min(1, 'Email is required'),
     phone: z.string().min(1, 'Phone is required'),
-    password: z.string().optional(),
+    password: z.string().optional().default(''),
     
-    // Everything else is optional
-    client_code: z.string().optional(),
-    company_name: z.string().optional(),
-    tax_id: z.string().optional(),
-    license_number: z.string().optional(),
+    // Everything else is optional with defaults
+    client_code: z.string().optional().default(''),
+    company_name: z.string().optional().default(''),
+    tax_id: z.string().optional().default(''),
+    license_number: z.string().optional().default(''),
     
     // Location
-    country: z.string().optional(),
-    city: z.string().optional(),
-    address: z.string().optional(),
-    zip_code: z.string().optional(),
+    country: z.string().optional().default(''),
+    city: z.string().optional().default(''),
+    address: z.string().optional().default(''),
+    zip_code: z.string().optional().default(''),
     
     // Business Details
-    business_type: z.string().optional(),
-    industry: z.string().optional(),
-    registration_date: z.string().optional(),
-    website: z.string().url('Invalid URL').optional().or(z.literal('')),
-    currency_id: z.number().optional().nullable(),
+    business_type: z.string().optional().default(''),
+    industry: z.string().optional().default(''),
+    registration_date: z.string().optional().default(''),
+    website: z.string().url('Invalid URL').optional().or(z.literal('')).default(''),
+    currency_id: z.union([z.number(), z.null(), z.undefined()]).optional().default(null),
     
     // Additional Contacts
-    contact_person: z.string().optional(),
-    contact_person_phone: z.string().optional(),
+    contact_person: z.string().optional().default(''),
+    contact_person_phone: z.string().optional().default(''),
     
     // Notes & Status
-    notes: z.string().optional(),
+    notes: z.string().optional().default(''),
     is_active: z.boolean().optional().default(true),
     
-    // Arrays
+    // Arrays - always provide defaults
     contacts: z.array(contactSchema).optional().default([]),
     sites: z.array(siteSchema).optional().default([]),
     client_document_types: z.array(z.string()).optional().default([]),
@@ -123,8 +124,4 @@ export type SiteLocationFormData = z.input<typeof siteLocationSchema>;
 export type SiteFormData = z.input<typeof siteSchema>;
 export type ContactFormData = z.input<typeof contactSchema>;
 export type ClientFormData = z.input<typeof clientBasicSchema>;
-
-
-
-// Update the type
 export type ClientUpdateFormData = z.input<typeof clientUpdateSchema>;

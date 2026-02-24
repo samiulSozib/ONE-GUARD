@@ -148,7 +148,7 @@ export function GuardAssignmentCreateForm({
                 dispatch(fetchGuards({
                     page: 1,
                     per_page: 10,
-                    search: guardSearch.trim()
+                    search: guardSearch
                 }))
             }
         }, 300)
@@ -300,12 +300,13 @@ export function GuardAssignmentCreateForm({
                                         ...guard
                                     }))}
                                     onSearch={(search) => {
+                                        console.log(search)
                                         setGuardSearch(search)
-                                        dispatch(fetchGuards({
-                                            page: 1,
-                                            per_page: 10,
-                                            search: search
-                                        }))
+                                        // dispatch(fetchGuards({
+                                        //     page: 1,
+                                        //     per_page: 10,
+                                        //     search: search
+                                        // }))
                                     }}
                                     placeholder="Select guard"
                                     disabled={isLoading || guardsLoading}
