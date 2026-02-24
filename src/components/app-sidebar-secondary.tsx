@@ -209,12 +209,12 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                                                     "h-4 w-4 shrink-0 transition-transform",
                                                     isActive && "scale-105"
                                                 )} />
-                                                <span className="text-sm tracking-wide">{item.title}</span>
+                                                <span className="mr-1 text-sm tracking-wide">{item.title}</span>
 
                                                 {/* Subtle active indicator */}
-                                                {isActive && (
-                                                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-sidebar-foreground/50" />
-                                                )}
+                                                {/* {isActive && (
+                                                    <ChevronRight className="h-3.5 w-3.5 text-sidebar-foreground/50" />
+                                                )} */}
                                             </Link>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
