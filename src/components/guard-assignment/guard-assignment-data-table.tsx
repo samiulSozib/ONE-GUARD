@@ -80,6 +80,7 @@ import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
 import { GuardAssignmentEditForm } from "./guard-assignment-edit-form";
 import Swal from 'sweetalert2';
+import { useRouter } from "next/navigation";
 
 // Define the status type
 type AssignmentStatus = 'assigned' | 'active' | 'completed' | 'cancelled';
@@ -112,6 +113,8 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   
   // Redux state
   const { assignments, pagination, isLoading, error } = useAppSelector((state) => state.guardAssignment);
+
+  const router=useRouter()
   
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
@@ -421,8 +424,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   
   // Handle view details
   const handleViewDetails = (assignment: GuardAssignment) => {
-    setSelectedAssignment(assignment);
-    if (onViewClick) onViewClick(assignment);
+    router.push(`/guard-assignment/${assignment.id}`)
   };
   
   // Handle edit

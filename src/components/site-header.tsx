@@ -122,9 +122,9 @@ export function SiteHeader() {
             </Button>
 
             <div className="hidden sm:flex items-center gap-1">
-              <NotificationPopover/>
+              {/* <NotificationPopover/> */}
 
-              <Button 
+              {/* <Button 
                 variant="ghost" 
                 size="sm" 
                 className="h-9 w-9 p-0" 
@@ -137,7 +137,7 @@ export function SiteHeader() {
               <Button variant="ghost" size="sm" className="h-9 gap-1">
                 <Plus className="h-4 w-4" />
                 <span className="sr-only">New</span>
-              </Button>
+              </Button> */}
 
               <Separator
                 orientation="vertical"
@@ -280,7 +280,7 @@ export function SiteHeader() {
                     )}
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem 
+                  {/* <DropdownMenuItem 
                     className="flex items-center gap-2 cursor-pointer" 
                     onClick={() => setNotificationOpen(true)}
                   >
@@ -294,7 +294,7 @@ export function SiteHeader() {
                   >
                     <MessageSquare className="h-4 w-4" />
                     Messages
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   
                   <DropdownMenuItem 
                     className="flex items-center gap-2 cursor-pointer"
@@ -325,7 +325,7 @@ export function SiteHeader() {
               </DropdownMenu>
             </div>
 
-            <ModeToggle />
+            {/* <ModeToggle /> */}
           </div>
         </div>
       </header>
