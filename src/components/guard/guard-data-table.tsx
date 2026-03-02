@@ -438,7 +438,7 @@ export function GuardDataTable() {
                     <div className="sm:col-span-3">
                         <InputGroup>
                             <InputGroupInput
-                                placeholder="ID Number..."
+                                placeholder="Employee ID"
                                 value={idSearch}
                                 onChange={(e) => setIdSearch(e.target.value)}
                             />
@@ -464,7 +464,7 @@ export function GuardDataTable() {
                     <div className="sm:col-span-3">
                         <InputGroup>
                             <InputGroupInput
-                                placeholder="Driver License..."
+                                placeholder="Driver's License..."
                                 value={licenseSearch}
                                 onChange={(e) => setLicenseSearch(e.target.value)}
                             />
@@ -482,7 +482,7 @@ export function GuardDataTable() {
                             <SelectContent>
                                 <SelectGroup>
                                     <SelectLabel>Status</SelectLabel>
-                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="all">All Statuses</SelectItem>
                                     <SelectItem value="active">Active</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
                                 </SelectGroup>
@@ -495,14 +495,14 @@ export function GuardDataTable() {
                 {isLoading && (
                     <div className="flex justify-center items-center p-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                        <span className="ml-2">Loading guards...</span>
+                        <span className="ml-2">Loading security officers...</span>
                     </div>
                 )}
 
                 {/* Error State */}
                 {error && !isLoading && (
                     <div className="p-4 text-center text-red-600">
-                        Error loading guards: {error}
+                        Error loading security officers: {error}
                     </div>
                 )}
 
@@ -515,14 +515,13 @@ export function GuardDataTable() {
                                     <TableHead className="w-12">
                                         <span className="sr-only">Select</span>
                                     </TableHead>
-                                    <TableHead>Guard Name</TableHead>
-                                    <TableHead>ID Number</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Guard Code</TableHead>
+                                    <TableHead>Officer Name</TableHead>
+                                    <TableHead>Employee ID</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Guard Card No</TableHead>
                                     <TableHead>Phone Number</TableHead>
-                                    <TableHead>Driver License</TableHead>
-                                    <TableHead>Issuing Source</TableHead>
-                                    <TableHead>City</TableHead>
+                                    <TableHead>Driver&apos;s License</TableHead>                                    <TableHead>Issuing Source</TableHead>
+                                    <TableHead>State</TableHead>
                                     <TableHead>Country</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -533,7 +532,7 @@ export function GuardDataTable() {
                                 {guards.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={12} className="text-center py-8">
-                                            No guards found
+                                            No security officer found
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -660,16 +659,16 @@ export function GuardDataTable() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={(e) => viewDetails(e, guard)}>
-                                                            View details
+                                                            View Profile
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleEditClick(guard)}>
-                                                            Edit guard
+                                                            Edit Officer Record
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={(e) => handleDeleteClick(e, guard)}
                                                             className="text-red-600 focus:text-red-600"
                                                         >
-                                                            Delete guard
+                                                            Terminate Officer Record
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>

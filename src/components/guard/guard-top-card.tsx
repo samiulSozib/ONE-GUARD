@@ -20,7 +20,7 @@ const GuardTopCard = () => {
                     variant="outline"
                     className='flex-1 md:flex-initial text-xs sm:text-sm bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:text-green-700 dark:bg-green-950 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900'
                 >
-                    <span className="">Guards</span>
+                    <span className="">Security Officers</span>
                 </Button>
                 <Button
                     variant="outline"
@@ -39,7 +39,7 @@ const GuardTopCard = () => {
                             variant='default'
                         >
                             <IconBrandGoogleMaps className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            <span className="">Live Map</span>
+                            <span className="">Live Tracking</span>
                         </Button>
                     }
                 />
@@ -50,7 +50,7 @@ const GuardTopCard = () => {
                             variant='default'
                         >
                             <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            <span className="">Create Guard</span>
+                            <span className="">Create Security Officer</span>
                         </Button>
                     } />
 

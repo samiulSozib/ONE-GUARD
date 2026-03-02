@@ -23,7 +23,8 @@ import {
     COUNTRIES,
     BLOOD_GROUPS,
     MARITAL_STATUS,
-    DOCUMENT_TYPES
+    DOCUMENT_TYPES,
+    US_STATES
 } from "@/lib/validation/guard.types"
 import { DialogTitle } from "@radix-ui/react-dialog"
 import { GuardProfileData } from "@/app/types/guard"
@@ -608,7 +609,7 @@ export function GuardCreateForm({
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-[1200px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
-                <DialogTitle className="sr-only">Add New Guard</DialogTitle>
+                <DialogTitle className="sr-only">Add Security Officer</DialogTitle>
 
                 {/* Header */}
                 <div className="flex items-center gap-2 text-lg font-semibold mb-6">
@@ -653,10 +654,10 @@ export function GuardCreateForm({
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div>
                                         <h4 className="font-semibold text-gray-700 dark:text-gray-300">
-                                            Guard Code
+                                            Officer ID
                                         </h4>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            This code is automatically generated
+                                            This ID is automatically generated
                                         </p>
                                     </div>
 
@@ -777,7 +778,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="Employee Card Number *"
+                                            label="Guard Card Number *"
                                             value={field.value || ''}
                                             onChange={field.onChange}
                                             error={errors.employee_company_card_number?.message}
@@ -790,7 +791,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="Driver License"
+                                            label="Driver's License"
                                             value={field.value || ''}
                                             onChange={field.onChange}
                                         />
@@ -867,7 +868,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="Zip Code"
+                                            label="ZIP Code"
                                             value={field.value || ''}
                                             onChange={field.onChange}
                                         />
@@ -882,7 +883,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="Contract ID"
+                                            label="Contract Number"
                                             type="number"
                                             value={field.value?.toString() || ''}
                                             onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
@@ -899,7 +900,7 @@ export function GuardCreateForm({
                         <div className="space-y-6">
                             <h3 className="text-lg font-semibold flex items-center gap-2">
                                 <Briefcase size={20} />
-                                Guard Information
+                                Officer Information
                             </h3>
 
                             {/* First Row */}
@@ -909,7 +910,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="Joining Date *"
+                                            label="Start Date *"
                                             type="date"
                                             value={field.value || ''}
                                             onChange={field.onChange}
@@ -924,7 +925,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="License Expiry Date"
+                                            label="License Expiration Date"
                                             type="date"
                                             value={field.value || ''}
                                             onChange={field.onChange}
@@ -938,16 +939,26 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelSelect
-                                            label="Issuing Source"
-                                            value={field.value || ''}
-                                            onChange={field.onChange}
-                                        >
-                                            <option value="">Select...</option>
-                                            <option value="state">State</option>
-                                            <option value="federal">Federal</option>
-                                            <option value="private">Private</option>
-                                            <option value="dubai_police">Dubai Police</option>
-                                        </FloatingLabelSelect>
+  label="Issuing Authority"
+  value={field.value || ''}
+  onChange={field.onChange}
+>
+  <option value="">Select...</option>
+
+  {/* General authorities */}
+  <option value="federal">Federal</option>
+  <option value="private">Private</option>
+  <option value="dubai_police">Dubai Police</option>
+
+  {/* USA States */}
+  <optgroup label="USA States">
+    {US_STATES.map(state => (
+      <option key={state} value={state.toLowerCase().replace(/\s+/g, "_")}>
+        {state}
+      </option>
+    ))}
+  </optgroup>
+</FloatingLabelSelect>
                                     )}
                                 />
 
@@ -956,7 +967,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelSelect
-                                            label="Guard Type"
+                                            label="Officer Classification"
                                             value={field.value?.toString() || ''}
                                             onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                                             error={errors.guard_type_id?.message}
@@ -985,7 +996,7 @@ export function GuardCreateForm({
                                     control={control}
                                     render={({ field }) => (
                                         <FloatingLabelInput
-                                            label="Password (for system access)"
+                                            label="System Access Password"
                                             type="password"
                                             value={field.value || ''}
                                             onChange={field.onChange}
@@ -1019,7 +1030,7 @@ export function GuardCreateForm({
                                         control={control}
                                         render={({ field }) => (
                                             <FloatingLabelSelect
-                                                label="Country of Origin"
+                                                label="Country of Citizenship"
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                             >
@@ -1050,7 +1061,7 @@ export function GuardCreateForm({
                                         control={control}
                                         render={({ field }) => (
                                             <FloatingLabelInput
-                                                label="National ID Number"
+                                                label="Social Security Number"
                                                 value={field.value || ''}
                                                 onChange={field.onChange}
                                             />
@@ -1237,7 +1248,7 @@ export function GuardCreateForm({
 
                                 {/* Visa Information */}
                                 <div className="mb-6">
-                                    <label className="block text-sm font-medium mb-2">Visa Countries</label>
+                                    <label className="block text-sm font-medium mb-2">Work Authorization Contries</label>
                                     <div className="flex gap-2 mb-2">
                                         <input
                                             type="text"
@@ -1402,7 +1413,7 @@ export function GuardCreateForm({
                                             {...register("profile_data.has_security_training")}
                                             className="rounded"
                                         />
-                                        <span>Has Security Training</span>
+                                        <span>Security Certification</span>
                                     </label>
                                 </div>
                             </div>
@@ -1410,204 +1421,336 @@ export function GuardCreateForm({
                     )}
 
                     {/* Step 3: Documents & Final Details */}
-                    {step === 3 && (
-                        <div className="space-y-6">
-                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <FileText size={20} />
-                                Documents & Final Details
-                            </h3>
+                    {/* Step 3: Documents & Final Details */}
+{step === 3 && (
+    <div className="space-y-8">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+            <FileText size={20} />
+            Documents & Final Details
+        </h3>
 
-                            {/* Document Types */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium mb-3">Required Documents</label>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {DOCUMENT_TYPES.map((docType) => (
-                                        <label key={docType.id} className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedDocumentTypes.includes(docType.id)}
-                                                onChange={() => handleDocumentTypeChange(docType.id)}
-                                                className="rounded"
-                                            />
-                                            <span className="text-sm">
-                                                {docType.name}
-                                                {docType.required && <span className="text-red-500 ml-1">*</span>}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
+        {/* Required Documents with File Upload - Responsive Grid */}
+        <div>
+            <label className="block text-sm font-medium mb-4">Required Documents</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {DOCUMENT_TYPES.map((docType) => {
+                    const isSelected = selectedDocumentTypes.includes(docType.id);
+                    const documentIndex = documents.findIndex(doc => 
+                        doc.name.includes(docType.id) || doc.name.includes(docType.name)
+                    );
+                    
+                    return (
+                        <div 
+                            key={docType.id} 
+                            className={`border rounded-xl p-4 transition-all ${
+                                isSelected 
+                                    ? 'border-blue-300 bg-blue-50/50 dark:bg-blue-900/10' 
+                                    : 'hover:border-gray-300'
+                            }`}
+                        >
+                            <div className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    id={`doc-${docType.id}`}
+                                    checked={isSelected}
+                                    onChange={() => handleDocumentTypeChange(docType.id)}
+                                    className="rounded w-4 h-4 text-blue-600 mt-1 flex-shrink-0"
+                                />
+                                <label 
+                                    htmlFor={`doc-${docType.id}`}
+                                    className="text-sm font-medium cursor-pointer flex-1 flex items-center gap-1"
+                                >
+                                    {docType.name}
+                                    {docType.required && (
+                                        <span className="text-red-500 text-xs">*</span>
+                                    )}
+                                </label>
                             </div>
-
-                            {/* File Upload Section */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                {/* Profile Photo */}
-                                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6">
-                                    <div className="flex flex-col items-center">
-                                        <div className="relative mb-4">
+                            
+                            {/* File Upload Section - Visible only when checkbox is selected */}
+                            {isSelected && (
+                                <div className="mt-4 ml-7">
+                                    {documentIndex === -1 ? (
+                                        <div className="space-y-2">
                                             <input
                                                 type="file"
-                                                id="profileImage"
-                                                onChange={handleProfileImageUpload}
+                                                id={`file-${docType.id}`}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        // Validate file type
+                                                        const validTypes = [
+                                                            'application/pdf',
+                                                            'image/jpeg',
+                                                            'image/jpg',
+                                                            'image/png',
+                                                            'application/msword',
+                                                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                                                        ];
+                                                        
+                                                        if (!validTypes.includes(file.type)) {
+                                                            SweetAlertService.error(
+                                                                'Invalid File Type',
+                                                                'Please upload PDF, JPG, PNG, or DOC files only'
+                                                            );
+                                                            return;
+                                                        }
+                                                        
+                                                        if (file.size > 10 * 1024 * 1024) {
+                                                            SweetAlertService.error(
+                                                                'File Too Large',
+                                                                'Please upload a file smaller than 10MB'
+                                                            );
+                                                            return;
+                                                        }
+                                                        
+                                                        // Add document with type identifier
+                                                        const documentWithType = new File(
+                                                            [file], 
+                                                            `${docType.name}-${file.name}`, 
+                                                            { type: file.type }
+                                                        );
+                                                        setDocuments(prev => [...prev, documentWithType]);
+                                                        
+                                                        // Clear the input value so the same file can be selected again if needed
+                                                        e.target.value = '';
+                                                    }
+                                                }}
                                                 className="hidden"
-                                                accept="image/*"
+                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                             />
-                                            <label htmlFor="profileImage" className="cursor-pointer">
-                                                <div className="relative w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-white hover:border-gray-400 transition dark:bg-gray-800 dark:border-gray-600">
-                                                    {profileImage ? (
-                                                        <>
-                                                            <Image
-                                                                src={URL.createObjectURL(profileImage)}
-                                                                alt="Profile preview"
-                                                                width={128}
-                                                                height={128}
-                                                                className="rounded-full object-cover w-full h-full"
-                                                            />
-                                                            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                                <Plus className="w-8 h-8 text-white" />
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Plus className="w-8 h-8 text-gray-400 mb-2" />
-                                                            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                                                                Profile Photo
-                                                            </p>
-                                                        </>
-                                                    )}
+                                            
+                                            <label 
+                                                htmlFor={`file-${docType.id}`}
+                                                className="block w-full cursor-pointer"
+                                            >
+                                                <div className="border-2 border-dashed rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-center">
+                                                    <UploadCloud className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                                    <span className="text-sm text-gray-600 block mb-1">Click to upload</span>
+                                                    <span className="text-xs text-gray-400">PDF, JPG, PNG, DOC (max 10MB)</span>
                                                 </div>
                                             </label>
                                         </div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                                            Upload a clear profile photo
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Documents Upload */}
-                                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 dark:border-gray-600">
-                                    <div className="flex flex-col items-center">
-                                        <UploadCloud className="w-12 h-12 text-gray-400 mb-3" />
-                                        <p className="text-gray-600 dark:text-gray-300 font-medium text-center mb-3">
-                                            Upload Required Documents
-                                        </p>
-                                        <input
-                                            type="file"
-                                            id="documents"
-                                            multiple
-                                            onChange={handleDocumentUpload}
-                                            className="hidden"
-                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                        />
-                                        <label htmlFor="documents" className="cursor-pointer">
-                                            <Button type="button" variant="outline">
-                                                Select Files
-                                            </Button>
-                                        </label>
-
-                                        {documents.length > 0 && (
-                                            <div className="mt-4 w-full">
-                                                <p className="text-sm font-medium mb-2">Selected files:</p>
-                                                <div className="space-y-2 max-h-40 overflow-y-auto">
-                                                    {documents.map((doc, index) => (
-                                                        <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText size={14} className="text-gray-500" />
-                                                                <span className="text-sm truncate max-w-[200px] dark:text-gray-300">
-                                                                    {doc.name}
-                                                                </span>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeDocument(index)}
-                                                                className="text-red-500 hover:text-red-700"
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg border">
+                                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                                                <span className="text-sm truncate max-w-[150px] sm:max-w-[180px]" title={documents[documentIndex].name}>
+                                                    {documents[documentIndex].name}
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Emergency Contact */}
-                            <div className="bg-yellow-50 dark:bg-gray-800 rounded-lg p-6 mb-6">
-                                <h4 className="font-semibold mb-4">Emergency Contact</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <Controller
-                                        name="profile_data.emergency_contact_name"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Contact Name"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                            />
-                                        )}
-                                    />
-
-                                    <Controller
-                                        name="profile_data.emergency_contact_phone"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Contact Phone"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                type="tel"
-                                            />
-                                        )}
-                                    />
-
-                                    <Controller
-                                        name="profile_data.emergency_contact_relation"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <FloatingLabelInput
-                                                label="Relationship"
-                                                value={field.value || ''}
-                                                onChange={field.onChange}
-                                                placeholder="e.g., Spouse, Parent"
-                                            />
-                                        )}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Notes */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium mb-2">Additional Notes</label>
-                                <Controller
-                                    name="profile_data.notes"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Textarea
-                                            {...field}
-                                            placeholder="Any additional information..."
-                                            className="w-full h-32 resize-none dark:bg-gray-700 dark:border-gray-600"
-                                            value={field.value || ''}
-                                            onChange={field.onChange}
-                                        />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => {
+                                                    setDocuments(prev => prev.filter((_, i) => i !== documentIndex));
+                                                }} 
+                                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-full transition-all flex-shrink-0"
+                                                title="Remove file"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
                                     )}
-                                />
-                            </div>
-
-                            {/* Status */}
-                            <div className="mb-6">
-                                <label className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        {...register("is_active")}
-                                        defaultChecked={true}
-                                        className="rounded"
-                                    />
-                                    <span>Set as Active Guard</span>
-                                </label>
-                            </div>
+                                </div>
+                            )}
+                            
+                            
                         </div>
+                    );
+                })}
+            </div>
+        </div>
+
+        {/* Profile Photo and Documents Upload in 2 Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Profile Photo */}
+            <div className="border-2 border-dashed rounded-xl p-6">
+                <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <User size={18} className="text-blue-500" />
+                    Profile Photo
+                </h4>
+                <div className="flex flex-col items-center">
+                    <div className="relative mb-4">
+                        <input
+                            type="file"
+                            id="profileImage"
+                            onChange={handleProfileImageUpload}
+                            className="hidden"
+                            accept="image/*"
+                        />
+                        <label htmlFor="profileImage" className="cursor-pointer">
+                            <div className="relative w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-white hover:border-blue-400 hover:bg-blue-50/50 transition-all dark:bg-gray-800 dark:border-gray-600">
+                                {profileImage ? (
+                                    <>
+                                        <Image
+                                            src={URL.createObjectURL(profileImage)}
+                                            alt="Profile preview"
+                                            width={128}
+                                            height={128}
+                                            className="rounded-full object-cover w-full h-full"
+                                        />
+                                        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                            <Plus className="w-8 h-8 text-white" />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-8 h-8 text-gray-400 mb-2" />
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 text-center px-2">
+                                            Upload Photo
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                        </label>
+                    </div>
+                    {profileImage && (
+                        <button
+                            type="button"
+                            onClick={() => setProfileImage(null)}
+                            className="mt-2 text-red-500 hover:text-red-700 text-sm flex items-center gap-1 px-3 py-1 rounded-full hover:bg-red-50 transition-all"
+                        >
+                            <X size={14} /> Remove Photo
+                        </button>
                     )}
+                    <p className="text-xs text-gray-500 mt-3 text-center">
+                        JPG, PNG, GIF. Max 5MB. Square image recommended.
+                    </p>
+                </div>
+            </div>
+
+            {/* Emergency Contact - Now combined with Documents Upload info */}
+            <div className="bg-yellow-50 dark:bg-gray-800 rounded-xl p-6">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                    <Briefcase size={18} className="text-yellow-600" />
+                    Emergency Contact
+                </h4>
+                <div className="space-y-4">
+                    <Controller
+                        name="profile_data.emergency_contact_name"
+                        control={control}
+                        render={({ field }) => (
+                            <FloatingLabelInput
+                                label="Contact Name"
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                            />
+                        )}
+                    />
+
+                    <Controller
+                        name="profile_data.emergency_contact_phone"
+                        control={control}
+                        render={({ field }) => (
+                            <FloatingLabelInput
+                                label="Contact Phone"
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                type="tel"
+                            />
+                        )}
+                    />
+
+                    <Controller
+                        name="profile_data.emergency_contact_relation"
+                        control={control}
+                        render={({ field }) => (
+                            <FloatingLabelInput
+                                label="Relationship"
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                placeholder="e.g., Spouse, Parent"
+                            />
+                        )}
+                    />
+                </div>
+            </div>
+        </div>
+
+        {/* Notes and Status in 2 Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Notes - spans 2 columns */}
+            <div className="lg:col-span-2">
+                <label className="block text-sm font-medium mb-2">Additional Notes</label>
+                <Controller
+                    name="profile_data.notes"
+                    control={control}
+                    render={({ field }) => (
+                        <Textarea
+                            {...field}
+                            placeholder="Any additional information about the guard..."
+                            className="w-full h-32 resize-none dark:bg-gray-700 dark:border-gray-600"
+                            value={field.value || ''}
+                            onChange={field.onChange}
+                        />
+                    )}
+                />
+            </div>
+
+            {/* Status */}
+            <div className="lg:col-span-1">
+                <label className="block text-sm font-medium mb-2">Guard Status</label>
+                <div className="border rounded-xl p-6 h-32 flex items-center justify-center bg-gray-50/50 dark:bg-gray-800/50">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            {...register("is_active")}
+                            defaultChecked={true}
+                            className="rounded w-5 h-5 text-blue-600"
+                        />
+                        <span className="text-base text-gray-700 dark:text-gray-300">
+                            Active Guard
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        {/* Uploaded Documents Summary */}
+        {documents.length > 0 && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                        <FileText size={18} className="text-blue-500" />
+                        Uploaded Documents ({documents.length})
+                    </h4>
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setDocuments([])}
+                        className="text-red-500 hover:text-red-700"
+                    >
+                        Clear All
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {documents.map((doc, index) => (
+                        <div 
+                            key={index} 
+                            className="bg-white dark:bg-gray-900 rounded-lg p-3 flex items-center justify-between group hover:shadow-md transition-all border"
+                        >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                                <span className="text-sm truncate" title={doc.name}>
+                                    {doc.name.length > 30 ? doc.name.substring(0, 30) + '...' : doc.name}
+                                </span>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => removeDocument(index)} 
+                                className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full"
+                                title="Remove file"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+    </div>
+)}
 
                     {/* Navigation Buttons */}
                     <div className="flex justify-between items-center pt-6 border-t dark:border-gray-700">
@@ -1634,7 +1777,7 @@ export function GuardCreateForm({
                                 type="button"
                                 onClick={nextStep}
                             >
-                                Next Step →
+                                Continue →
                             </Button>
                         ) : (
                             <div className="flex gap-2">

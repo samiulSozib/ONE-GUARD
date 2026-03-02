@@ -1008,118 +1008,294 @@ const addSite = () => {
     </div>
 )}
 
-                    {/* Step 4: Documents & Final */}
-                    {step === 4 && (
-                        <div className="space-y-6">
-                            <h3 className="text-lg font-semibold">Documents & Final Details (Optional)</h3>
+{/* Step 4: Documents & Final */}
+{step === 4 && (
+    <div className="space-y-8">
+        <h3 className="text-lg font-semibold">Documents & Final Details</h3>
 
-                            {/* Document Types */}
-                            <div>
-                                <label className="block text-sm font-medium mb-3">Document Types</label>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {CLIENT_DOCUMENT_TYPES.map((docType) => (
-                                        <label key={docType.id} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+        {/* Document Types with File Upload - Responsive Grid */}
+        <div>
+            <label className="block text-sm font-medium mb-4">Document Types</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {CLIENT_DOCUMENT_TYPES.map((docType) => {
+                    const isSelected = selectedDocumentTypes.includes(docType.id);
+                    const documentIndex = documents.findIndex(doc => 
+                        doc.name.includes(docType.id) || doc.name.includes(docType.name)
+                    );
+                    
+                    return (
+                        <div 
+                            key={docType.id} 
+                            className={`border rounded-xl p-4 transition-all ${
+                                isSelected ? 'border-blue-300 bg-blue-50/50 dark:bg-blue-900/10' : 'hover:border-gray-300'
+                            }`}
+                        >
+                            <div className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    id={`doc-${docType.id}`}
+                                    checked={isSelected}
+                                    onChange={() => handleDocumentTypeChange(docType.id)}
+                                    className="rounded w-4 h-4 text-blue-600 mt-1 flex-shrink-0"
+                                />
+                                <label 
+                                    htmlFor={`doc-${docType.id}`}
+                                    className="text-sm font-medium cursor-pointer flex-1"
+                                >
+                                    {docType.name}
+                                </label>
+                            </div>
+                            
+                            {/* File Upload Section - Visible only when checkbox is selected */}
+                            {isSelected && (
+                                <div className="mt-4 ml-7">
+                                    {documentIndex === -1 ? (
+                                        <div className="space-y-2">
                                             <input
-                                                type="checkbox"
-                                                checked={selectedDocumentTypes.includes(docType.id)}
-                                                onChange={() => handleDocumentTypeChange(docType.id)}
-                                                className="rounded"
+                                                type="file"
+                                                id={`file-${docType.id}`}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        // Validate file type
+                                                        const validTypes = [
+                                                            'application/pdf',
+                                                            'image/jpeg',
+                                                            'image/jpg',
+                                                            'image/png',
+                                                            'application/msword',
+                                                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                                                        ];
+                                                        
+                                                        if (!validTypes.includes(file.type)) {
+                                                            SweetAlertService.error(
+                                                                'Invalid File Type',
+                                                                'Please upload PDF, JPG, PNG, or DOC files only'
+                                                            );
+                                                            return;
+                                                        }
+                                                        
+                                                        if (file.size > 10 * 1024 * 1024) {
+                                                            SweetAlertService.error(
+                                                                'File Too Large',
+                                                                'Please upload a file smaller than 10MB'
+                                                            );
+                                                            return;
+                                                        }
+                                                        
+                                                        // Add document with type identifier
+                                                        const documentWithType = new File(
+                                                            [file], 
+                                                            `${docType.name}-${file.name}`, 
+                                                            { type: file.type }
+                                                        );
+                                                        setDocuments(prev => [...prev, documentWithType]);
+                                                        
+                                                        // Clear the input value so the same file can be selected again if needed
+                                                        e.target.value = '';
+                                                    }
+                                                }}
+                                                className="hidden"
+                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                             />
-                                            <span className="text-sm">{docType.name}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Media Categories */}
-                            <div>
-                                <label className="block text-sm font-medium mb-3">Media Categories</label>
-                                <Controller
-                                    name="media_categories"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Textarea
-                                            {...field}
-                                            placeholder="Enter categories separated by commas (e.g., logo, photos)"
-                                            className="w-full h-20"
-                                            value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                                            onChange={(e) => {
-                                                const value = e.target.value
-                                                    .split(',')
-                                                    .map(item => item.trim())
-                                                    .filter(item => item.length > 0)
-                                                field.onChange(value)
-                                            }}
-                                        />
+                                            
+                                            <label 
+                                                htmlFor={`file-${docType.id}`}
+                                                className="block w-full cursor-pointer"
+                                            >
+                                                <div className="border-2 border-dashed rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-center">
+                                                    <UploadCloud className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                                    <span className="text-sm text-gray-600 block mb-1">Click to upload</span>
+                                                    <span className="text-xs text-gray-400">PDF, JPG, PNG, DOC (max 10MB)</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg border">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                                                <span className="text-sm truncate max-w-[150px] sm:max-w-[180px]" title={documents[documentIndex].name}>
+                                                    {documents[documentIndex].name}
+                                                </span>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => {
+                                                    setDocuments(prev => prev.filter((_, i) => i !== documentIndex));
+                                                }} 
+                                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-full transition-all flex-shrink-0"
+                                                title="Remove file"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
                                     )}
-                                />
-                            </div>
-
-                            {/* File Uploads */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Profile Image */}
-                                <div className="border-2 border-dashed rounded-xl p-6">
-                                    <div className="flex flex-col items-center">
-                                        <input type="file" id="profileImage" onChange={handleProfileImageUpload} className="hidden" accept="image/*" />
-                                        <label htmlFor="profileImage" className="cursor-pointer">
-                                            <div className="relative w-32 h-32 rounded-full border-2 border-dashed flex flex-col items-center justify-center hover:bg-gray-50 transition">
-                                                {profileImage ? (
-                                                    <Image 
-                                                        src={URL.createObjectURL(profileImage)} 
-                                                        alt="Preview" 
-                                                        width={128} 
-                                                        height={128} 
-                                                        className="rounded-full object-cover w-full h-full"
-                                                    />
-                                                ) : (
-                                                    <>
-                                                        <Plus className="w-8 h-8 text-gray-400 mb-2" />
-                                                        <p className="text-sm text-gray-600">Company Logo</p>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </label>
-                                    </div>
                                 </div>
-
-                                {/* Documents */}
-                                <div className="border-2 border-dashed rounded-xl p-6">
-                                    <div className="flex flex-col items-center">
-                                        <UploadCloud className="w-12 h-12 text-gray-400 mb-3" />
-                                        <p className="font-medium mb-3">Upload Documents</p>
-                                        <input type="file" id="documents" multiple onChange={handleDocumentUpload} className="hidden" />
-                                        <label htmlFor="documents" className="cursor-pointer">
-                                            <Button type="button" variant="outline">Select Files</Button>
-                                        </label>
-
-                                        {documents.length > 0 && (
-                                            <div className="mt-4 w-full max-h-40 overflow-y-auto">
-                                                {documents.map((doc, index) => (
-                                                    <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded mb-2">
-                                                        <span className="text-sm truncate max-w-[200px]">{doc.name}</span>
-                                                        <button type="button" onClick={() => removeDocument(index)} className="text-red-500 hover:text-red-700">
-                                                            <X size={16} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                            )}
+                            
+                            {!isSelected && (
+                                <div className="mt-4 ml-7 h-12 flex items-center">
+                                    <p className="text-xs text-gray-400 italic">Check to upload {docType.name}</p>
                                 </div>
-                            </div>
-
-                            {/* Active Status */}
-                            <div className="flex items-center gap-2">
-                                <input 
-                                    type="checkbox" 
-                                    {...register("is_active")} 
-                                    defaultChecked={true} 
-                                    className="rounded w-4 h-4 text-blue-600"
-                                />
-                                <label className="text-sm text-gray-700">Active Client</label>
-                            </div>
+                            )}
                         </div>
+                    );
+                })}
+            </div>
+        </div>
+
+        {/* Media Categories and Active Status - Responsive Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Media Categories - spans 2 columns on large screens */}
+            <div className="lg:col-span-2">
+                <label className="block text-sm font-medium mb-2">Media Categories</label>
+                <Controller
+                    name="media_categories"
+                    control={control}
+                    render={({ field }) => (
+                        <Textarea
+                            {...field}
+                            placeholder="Enter categories separated by commas (e.g., logo, photos, brochures)"
+                            className="w-full h-24 resize-none"
+                            value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                            onChange={(e) => {
+                                const value = e.target.value
+                                    .split(',')
+                                    .map(item => item.trim())
+                                    .filter(item => item.length > 0)
+                                field.onChange(value)
+                            }}
+                        />
                     )}
+                />
+                <p className="text-xs text-gray-500 mt-1">Separate multiple categories with commas</p>
+            </div>
+
+            {/* Active Status */}
+            <div className="lg:col-span-1">
+                <label className="block text-sm font-medium mb-2">Client Status</label>
+                <div className="border rounded-xl p-6 h-24 flex items-center justify-center bg-gray-50/50 dark:bg-gray-800/50">
+                    <div className="flex items-center gap-3">
+                        <input 
+                            type="checkbox" 
+                            {...register("is_active")} 
+                            defaultChecked={true} 
+                            className="rounded w-5 h-5 text-blue-600"
+                            id="is_active"
+                        />
+                        <label htmlFor="is_active" className="text-base text-gray-700 dark:text-gray-300 cursor-pointer">
+                            Active Client
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Company Logo - Responsive Grid */}
+        <div>
+            <label className="block text-sm font-medium mb-3">Company Logo</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1">
+                    <div className="border-2 border-dashed rounded-xl p-6 hover:border-blue-400 transition-all">
+                        <div className="flex flex-col items-center">
+                            <input 
+                                type="file" 
+                                id="profileImage" 
+                                onChange={handleProfileImageUpload} 
+                                className="hidden" 
+                                accept="image/*" 
+                            />
+                            <label htmlFor="profileImage" className="cursor-pointer w-full">
+                                <div className="relative w-32 h-32 mx-auto rounded-full border-2 border-dashed flex flex-col items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-all overflow-hidden">
+                                    {profileImage ? (
+                                        <Image 
+                                            src={URL.createObjectURL(profileImage)} 
+                                            alt="Preview" 
+                                            width={128} 
+                                            height={128} 
+                                            className="rounded-full object-cover w-full h-full"
+                                        />
+                                    ) : (
+                                        <>
+                                            <Plus className="w-8 h-8 text-gray-400 mb-2" />
+                                            <p className="text-xs text-gray-500 text-center px-2">Upload Logo</p>
+                                        </>
+                                    )}
+                                </div>
+                            </label>
+                            {profileImage && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setProfileImage(null)} 
+                                    className="mt-3 text-red-500 hover:text-red-700 text-sm flex items-center gap-1 px-3 py-1 rounded-full hover:bg-red-50 transition-all"
+                                >
+                                    <X size={14} /> Remove
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className="md:col-span-2">
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-6 h-full flex items-center">
+                        <div className="space-y-2">
+                            <h4 className="font-medium text-sm">Logo Guidelines:</h4>
+                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                                <li>Accepted formats: JPG, PNG, GIF</li>
+                                <li>Maximum file size: 5MB</li>
+                                <li>Recommended size: 500x500px</li>
+                                <li>Square image works best</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Uploaded Documents Summary */}
+        {documents.length > 0 && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                        <FileText size={18} className="text-blue-500" />
+                        Uploaded Documents ({documents.length})
+                    </h4>
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setDocuments([])}
+                        className="text-red-500 hover:text-red-700"
+                    >
+                        Clear All
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {documents.map((doc, index) => (
+                        <div 
+                            key={index} 
+                            className="bg-white dark:bg-gray-900 rounded-lg p-3 flex items-center justify-between group hover:shadow-md transition-all border"
+                        >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                                <span className="text-sm truncate" title={doc.name}>
+                                    {doc.name.length > 30 ? doc.name.substring(0, 30) + '...' : doc.name}
+                                </span>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => removeDocument(index)} 
+                                className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full"
+                                title="Remove file"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+    </div>
+)}
 
                     {/* Navigation */}
                     <div className="flex justify-between pt-6 border-t mt-6">

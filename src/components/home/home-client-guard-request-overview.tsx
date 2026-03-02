@@ -91,7 +91,7 @@ export function ClientGurdRequestOverview() {
         <Card className="shadow-sm rounded-2xl">
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-semibold">
-                    Client Guard Request Overview
+                    Recent Clients
                 </CardTitle>
                 <Button variant="link" className="text-sm text-black-600 font-medium">
                     View All <ChevronRight />

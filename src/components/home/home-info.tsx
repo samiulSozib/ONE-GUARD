@@ -59,7 +59,7 @@ export function HomeInfo() {
     const cards = [
         {
             title: totalGuards.toLocaleString(),
-            label: "Total Guards",
+            label: "Total Security Officers",
             color: "#EFE6E8",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05">
@@ -69,7 +69,7 @@ export function HomeInfo() {
         },
         {
             title: totalClients.toLocaleString(),
-            label: "Total Clients",
+            label: "Active Clients",
             color: "#FFF7CD",
             icon: (<svg width="124" height="112" viewBox="0 0 124 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05">
@@ -84,7 +84,7 @@ export function HomeInfo() {
         },
         {
             title: ongoingShifts.toLocaleString(),
-            label: "Ongoing Shifts",
+            label: "Active Shifts",
             color: "#F8F6F3",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05" clipPath="url(#clip0_3056_23479)">
@@ -99,7 +99,7 @@ export function HomeInfo() {
         },
         {
             title: profit.toLocaleString(),
-            label: "Estimated Profit",
+            label: "Projected Profit",
             color: "#E9FCD4",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.12">
@@ -109,7 +109,7 @@ export function HomeInfo() {
         },
         {
             title: loss.toLocaleString(),
-            label: "Estimated Loss",
+            label: "Projected Loss",
             color: "#FFE7D9",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.12">
