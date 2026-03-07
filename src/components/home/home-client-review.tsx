@@ -45,7 +45,7 @@ export function ClientReviewCard() {
 
                 {/* Review Text */}
                 <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
-                    I hired a security guard for my birthday event. Overall, the experience was good — the guard was polite, professional,{" "}
+                    I hired a security officer for my birthday event. Overall, the experience was good — the guard was polite, professional,{" "}
                     <span className="text-blue-500 cursor-pointer">Show more...</span>
                 </p>
 

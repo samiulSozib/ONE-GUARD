@@ -186,7 +186,7 @@ export function GuardTypeCreateForm({
             <DialogContent className="sm:max-w-[500px] w-[90vw] max-w-[90vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
                 <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6">
                      <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Add New Guard Type</span>
+                    <span className="whitespace-nowrap">Add New Officer Type</span>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -201,7 +201,7 @@ export function GuardTypeCreateForm({
                                 {...register("name")}
                                 error={errors.name?.message}
                                 disabled={isLoading}
-                                placeholder="e.g., Bodyguard, Security Guard, etc."
+                                placeholder="e.g., Bodyguard, Security Officer, etc."
                             />
                             <p className="text-xs text-gray-500 mt-1">
                                 Enter a descriptive name for the guard type

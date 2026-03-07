@@ -9,6 +9,7 @@ export const guardBasicSchema = z.object({
     gender: z.enum(["male", "female", "other"]),
     country: z.string().min(1, "Country is required"),
     city: z.string().min(1, "City is required"),
+    state:z.string().min(1, "City is required"),
     joining_date: z.string().min(1, "Joining date is required"),
 
     // Optional fields
@@ -47,6 +48,8 @@ export const guardBasicSchema = z.object({
         current_country: z.string().optional(),
         current_city: z.string().optional(),
         current_address: z.string().optional(),
+        current_state: z.string().optional(),
+        current_zip_code: z.string().optional(),
         citizenship: z.string().optional(),
         visa_expiry_date: z.string().optional(),
         father_name: z.string().optional(),
@@ -80,6 +83,7 @@ export const guardUpdateSchema = z.object({
     gender: z.enum(["male", "female", "other"]),
     country: z.string().min(1, "Country is required"),
     city: z.string().min(1, "City is required"),
+    state: z.string().min(1, "City is required"),
     joining_date: z.string().min(1, "Joining date is required"),
 
     // Optional fields
@@ -118,6 +122,8 @@ export const guardUpdateSchema = z.object({
         current_country: z.string().optional(),
         current_city: z.string().optional(),
         current_address: z.string().optional(),
+        current_state: z.string().optional(),
+        current_zip_code: z.string().optional(),
         citizenship: z.string().optional(),
         visa_expiry_date: z.string().optional(),
         father_name: z.string().optional(),

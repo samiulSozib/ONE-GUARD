@@ -50,7 +50,7 @@ const data = {
   },
   teams: [
     { name: "OGS Security", logo: GalleryVerticalEnd, plan: "Enterprise" },
-    
+
   ],
 }
 
@@ -92,6 +92,8 @@ const navGroups = [
   {
     label: "Issues",
     items: [
+      { title: "Client Contracts", url: "/client-contracts", icon: MessageSquareWarning },
+
       { title: "Client Concerns", url: "/complaint", icon: MessageSquareWarning },
       { title: "Incidents", url: "/incident", icon: AlertTriangle },
     ],

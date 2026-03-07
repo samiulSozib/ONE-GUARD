@@ -83,6 +83,7 @@ const navGroups = [
   {
     label: "Reports & Issues",
     items: [
+      { title: "Client Contracts", url: "/client-contracts", icon: MessageSquareWarning },
       { title: "Client Concerns", url: "/complaint", icon: MessageSquareWarning },
       { title: "Incidents", url: "/incident", icon: AlertTriangle },
     ],

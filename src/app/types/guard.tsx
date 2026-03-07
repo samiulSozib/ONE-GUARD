@@ -19,6 +19,7 @@ export interface Guard {
   gender: 'male' | 'female' | 'other';
   country?: string;
   city?: string;
+  state?:string;
   address?: string;
   guard_type_id?: number;
   license_expiry_date?: string;
@@ -32,6 +33,8 @@ export interface Guard {
     current_country?: string;
     current_city?: string;
     current_address?: string;
+    current_state?:string;
+    current_zip_code?:string;
     citizenship?: string;
     visa_countries?: string[];
     visa_expiry_date?: string;
@@ -70,6 +73,8 @@ export interface Guard {
     current_country?: string;
     current_city?: string;
     current_address?: string;
+    current_state?:string;
+    current_zip_code?:string;
     citizenship?: string;
     visa_countries?: string[];
     visa_expiry_date?: string;
@@ -189,6 +194,8 @@ export interface GuardProfileData {
     current_country?: string
     current_city?: string
     current_address?: string
+    current_state?:string;
+    current_zip_code?:string;
     citizenship?: string
     visa_countries?: string[]
     visa_expiry_date?: string

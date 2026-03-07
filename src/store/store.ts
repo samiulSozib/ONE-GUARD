@@ -17,6 +17,7 @@ import expenseReducer from './slices/expenseSlice'
 import leaveReducer from './slices/leaveSlice'
 import incidentReducer from './slices/incidentSlice'
 import expenseReviewReducer from './slices/expenseReviewSlice'
+import clientContractReducer from './slices/clientContractSlice'
 
 export const store = configureStore({
   reducer: {
@@ -37,7 +38,8 @@ export const store = configureStore({
     expense:expenseReducer,
     leave:leaveReducer,
     incident:incidentReducer,
-    expenseReview:expenseReviewReducer
+    expenseReview:expenseReviewReducer,
+    clientContract:clientContractReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
