@@ -1,24 +1,19 @@
 import React from "react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { IconBrandGoogleMaps } from "@tabler/icons-react";
 import { ChevronLeft, Edit2Icon, PlusIcon } from "lucide-react";
-import { ViewGuardTopCardProps } from "@/app/types/guard";
 import { ViewClientTopCardProps } from "@/app/types/client";
-import { AddSiteForm } from "./add-site-form";
-
-
-
+import { CreateSiteForm } from "./create-site-form";
 
 const ViewClientTopCard = ({ client }: ViewClientTopCardProps) => {
   return (
     <Card className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-3 sm:p-4">
-      {/* Guard Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-        <span className="font-bold text-base sm:text-lg text-black dark:text-white break-words">
+      {/* Client Info */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-w-0">
+        <span className="font-bold text-base sm:text-lg text-black dark:text-white break-words truncate">
           {client?.full_name}
         </span>
-        <span className="font-medium text-gray-400 text-xs sm:text-sm">
+        <span className="font-medium text-gray-400 text-xs sm:text-sm shrink-0">
           ID: {client.client_code}
         </span>
       </div>
@@ -34,27 +29,30 @@ const ViewClientTopCard = ({ client }: ViewClientTopCardProps) => {
             Back to list
           </Button>
 
-          {/* <AddGuardArmsForm trigger={ */}
-            <Button
-              className="flex-shrink-0 justify-center text-xs sm:text-sm bg-[#B5A28A] hover:bg-[#9b8a73] text-white"
-              variant="default"
-            >
-              <Edit2Icon className="h-4 w-4 mr-1" />
-              Edit Profile
-            </Button>
-          {/* } /> */}
+          <Button
+            className="flex-shrink-0 justify-center text-xs sm:text-sm bg-[#B5A28A] hover:bg-[#9b8a73] text-white"
+            variant="default"
+          >
+            <Edit2Icon className="h-4 w-4 mr-1" />
+            Edit Profile
+          </Button>
 
-          <AddSiteForm trigger={
-            <Button
-              className="flex-shrink-0 justify-center text-xs sm:text-sm bg-[#5F0015] hover:bg-[#7a1a2b] text-white"
-              variant="default"
-            >
-              <PlusIcon/>
-              Add New Site
-            </Button>
-           } /> 
-
-          
+          <CreateSiteForm
+            trigger={
+              <Button
+                className="flex-shrink-0 justify-center text-xs sm:text-sm bg-[#5F0015] hover:bg-[#7a1a2b] text-white"
+                variant="default"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add New Site
+              </Button>
+            }
+            clientId={client?.id}
+            onSuccess={() => {
+              // Refresh sites list or show success message
+              console.log('Site created successfully')
+            }}
+          />
         </div>
       </div>
     </Card>

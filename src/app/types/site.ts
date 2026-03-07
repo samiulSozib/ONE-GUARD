@@ -93,3 +93,47 @@ export interface SiteLocationState {
   isLoading: boolean;
   error: string | null;
 }
+
+export interface CreateSiteDto {
+  client_id: number;
+  client_contract_id?: number;  // Optional
+  site_name: string;
+  address: string;
+  guards_required: number;
+  latitude?: number;  // Optional
+  longitude?: number; // Optional
+  status: 'planned' | 'active' | 'paused' | 'completed';
+  site_instruction?: string;
+  is_active?: boolean; // Optional, defaults to true
+  locations?: CreateSiteLocationDto[];
+}
+
+export interface CreateSiteLocationDto {
+  title: string;
+  description?: string;
+  latitude: number;
+  longitude: number;
+  is_active: boolean;
+}
+
+export interface UpdateSiteDto {
+  client_id?: number;
+  client_contract_id?: number | null; // null to remove contract assignment
+  site_name?: string;
+  address?: string;
+  guards_required?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  status?: 'planned' | 'active' | 'paused' | 'completed';
+  site_instruction?: string | null;
+  is_active?: boolean;
+  locations?: CreateSiteLocationDto[]; // This will replace all locations
+}
+
+export interface UpdateSiteLocationDto {
+  title?: string;
+  description?: string | null;
+  latitude?: number;
+  longitude?: number;
+  is_active?: boolean;
+}

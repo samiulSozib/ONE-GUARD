@@ -1,4 +1,4 @@
-import { Site, SiteLocation, SiteParams } from "@/app/types/site";
+import { CreateSiteDto, Site, SiteLocation, SiteParams, UpdateSiteDto } from "@/app/types/site";
 import api, { handleApiResponse } from "./api.service";
 import { ApiResponse } from "@/app/types/api.types";
 
@@ -22,13 +22,13 @@ export const siteService = {
     handleApiResponse(api.get<ApiResponse<Site>>(`/admin/sites/${id}`, { params })),
   
   // Create site
-  createSite: (data: FormData | Omit<Site, 'id' | 'created_at' | 'updated_at'>) =>
+  createSite: (data: FormData | CreateSiteDto) =>
     handleApiResponse(api.post<ApiResponse<Site>>('/admin/sites', data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
   // Update site
-  updateSite: (id: number, data: FormData | Partial<Site>) =>
+  updateSite: (id: number, data: FormData |UpdateSiteDto) =>
     handleApiResponse(api.put<ApiResponse<Site>>(`/admin/sites/${id}`, data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),

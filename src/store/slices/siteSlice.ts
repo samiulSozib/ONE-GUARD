@@ -1,4 +1,4 @@
-import { Site, SiteParams, SiteState } from '@/app/types/site';
+import { CreateSiteDto, Site, SiteParams, SiteState, UpdateSiteDto } from '@/app/types/site';
 import { siteService } from '@/service/site.service';
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
@@ -43,7 +43,7 @@ export const fetchSite = createAsyncThunk(
 
 export const createSite = createAsyncThunk(
   'site/createSite',
-  async (data: FormData | Omit<Site, 'id' | 'created_at' | 'updated_at'>, { rejectWithValue }) => {
+  async (data: FormData | CreateSiteDto, { rejectWithValue }) => {
     try {
       return await siteService.createSite(data);
     } catch (error: unknown) {
@@ -55,7 +55,7 @@ export const createSite = createAsyncThunk(
 
 export const updateSite = createAsyncThunk(
   'site/updateSite',
-  async ({ id, data }: { id: number; data: FormData | Partial<Site> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: FormData | UpdateSiteDto }, { rejectWithValue }) => {
     try {
       return await siteService.updateSite(id, data);
     } catch (error: unknown) {
