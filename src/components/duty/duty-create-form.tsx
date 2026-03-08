@@ -128,7 +128,7 @@ export function DutyCreateForm({
         watch,
         reset,
     } = useForm<DutyFormData>({
-        resolver: zodResolver(dutySchema),
+        // resolver: zodResolver(dutySchema),
         defaultValues: {
             title: "",
             site_id: undefined,
@@ -456,7 +456,7 @@ export function DutyCreateForm({
                                     }}
                                     options={sites.map((site: Site) => ({
                                         value: site.id,
-                                        label: site.title || `Site ${site.id}`,
+                                        label: site.site_name || `Site ${site.id}`,
                                         ...site
                                     }))}
                                     onSearch={(search) => {

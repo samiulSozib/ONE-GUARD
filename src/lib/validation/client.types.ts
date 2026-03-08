@@ -24,7 +24,8 @@ export const BUSINESS_TYPES = [
     'Freelancer',
     'Government Entity',
     'Non-Profit Organization',
-    'Branch Office'
+    'Branch Office',
+    'Hotel'
 ];
 
 // Industries

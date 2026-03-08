@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileIcon, MessageCircleIcon, Star, Building, User as UserIcon } from "lucide-react";
+import { Building, MessageCircleIcon, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tabs,
@@ -115,7 +115,7 @@ export default function ViewClientContent({ client }: ViewClientContentProps) {
                     {client.company_name && (
                       <div className="flex items-center gap-2">
                         <Building size={16} className="opacity-70" />
-                        <span className="text-sm opacity-90">{client.company_name}</span>
+                        <span className="text-sm opacity-90 truncate">{client.company_name}</span>
                       </div>
                     )}
                     
@@ -179,7 +179,7 @@ export default function ViewClientContent({ client }: ViewClientContentProps) {
             </TabsContent>
 
             <TabsContent value="sites" className="m-2">
-              {/* <Site client={client}/> */}
+              <Site client={client}/>
             </TabsContent>
 
             <TabsContent value="message" className="m-2">
