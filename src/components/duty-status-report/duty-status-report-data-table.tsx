@@ -288,7 +288,7 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
 
   // Get guard name
   const getGuardName = (report: DutyStatusReport) => {
-    return report.guard?.full_name || `Guard #${report.guard_id || 'N/A'}`;
+    return report.guard?.full_name || `Officer #${report.guard_id || 'N/A'}`;
   };
 
   // Get duty title
@@ -471,7 +471,7 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
-                  <TableHead>Guard</TableHead>
+                  <TableHead>Officer</TableHead>
                   <TableHead>Duty</TableHead>
                   <TableHead>Message</TableHead>
                   <TableHead>Status</TableHead>

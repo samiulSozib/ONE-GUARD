@@ -56,7 +56,7 @@ const expenseSchema = z.object({
         .min(1, { message: "Site is required" }),
 
     guard_id: z.number()
-        .min(1, { message: "Guard is required" }),
+        .min(1, { message: "Officer is required" }),
 
     amount: z.string()
         .min(1, { message: "Amount is required" })
@@ -386,7 +386,7 @@ export function ExpenseCreateForm({
                         {/* Guard */}
                         <div className="space-y-2">
                             <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Guard *
+                                Officer *
                             </Label>
                             <SearchableDropdownWithIcon
                                 value={formValues.guard_id || ""}
@@ -409,14 +409,14 @@ export function ExpenseCreateForm({
                                 placeholder="Select guard"
                                 disabled={isLoading || guardsLoading}
                                 isLoading={guardsLoading}
-                                emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                searchPlaceholder="Search guards..."
+                                emptyMessage={guardSearch ? "No officers found" : "No officers available"}
+                                searchPlaceholder="Search officers..."
                                 icon={Users}
                                 iconPosition="left"
                                 displayValue={(value, options) => {
-                                    if (!value) return "Select guard"
+                                    if (!value) return "Select officer"
                                     const option = options.find(opt => opt.value === value)
-                                    return option?.label || "Select guard"
+                                    return option?.label || "Select officer"
                                 }}
                             />
                             {errors.guard_id && (

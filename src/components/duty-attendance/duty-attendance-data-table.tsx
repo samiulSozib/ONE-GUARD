@@ -393,7 +393,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
             <div className="sm:col-span-4">
               <InputGroup>
                 <InputGroupInput 
-                  placeholder="Search by guard name..." 
+                  placeholder="Search by officer name..." 
                   value={guardSearch}
                   onChange={handleGuardSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleGuardSearchSubmit()}
@@ -489,7 +489,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-gray-500" />
                           <div>
-                            <div>{attendance.guard?.full_name || `Guard #${attendance.guard?.guard_code}`}</div>
+                            <div>{attendance.guard?.full_name || `Officer #${attendance.guard?.guard_code}`}</div>
                             <div className="text-xs text-gray-500">
                               {attendance.guard?.guard_code || 'N/A'}
                             </div>

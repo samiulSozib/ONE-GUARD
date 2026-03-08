@@ -45,7 +45,7 @@ interface DutyAttendanceCreateFormProps {
 // Zod schema for duty attendance
 const dutyAttendanceSchema = z.object({
     guard_id: z.number()
-        .min(1, { message: "Guard is required" }),
+        .min(1, { message: "Officer is required" }),
 
     duty_id: z.number()
         .min(1, { message: "Duty is required" }),
@@ -338,7 +338,7 @@ export function DutyAttendanceCreateForm({
             if (createAttendance.fulfilled.match(result)) {
                 SweetAlertService.success(
                     'Attendance Recorded Successfully',
-                    `Attendance for guard has been recorded successfully.`
+                    `Attendance for officer has been recorded successfully.`
                 ).then(() => {
                     // Reset all states
                     reset()
@@ -473,7 +473,7 @@ export function DutyAttendanceCreateForm({
                             {/* Guard Selection */}
                             <div className="space-y-2">
                                 <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Guard *
+                                    Officer *
                                 </Label>
                                 <SearchableDropdownWithIcon
                                     value={formValues.guard_id || ""}
@@ -493,17 +493,17 @@ export function DutyAttendanceCreateForm({
                                             search: search
                                         }))
                                     }}
-                                    placeholder="Select guard"
+                                    placeholder="Select officer"
                                     disabled={isLoading || guardsLoading || !!preSelectedGuard}
                                     isLoading={guardsLoading}
-                                    emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                    searchPlaceholder="Search guards..."
+                                    emptyMessage={guardSearch ? "No officers found" : "No officers available"}
+                                    searchPlaceholder="Search officers..."
                                     icon={Shield}
                                     iconPosition="left"
                                     displayValue={(value, options) => {
-                                        if (!value) return "Select guard"
+                                        if (!value) return "Select officer"
                                         const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select guard"
+                                        return option?.label || "Select officer"
                                     }}
                                 />
                                 {errors.guard_id && (

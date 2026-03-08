@@ -410,7 +410,7 @@ export function ContactEditForm({
                                     value={formData.contactable_type}
                                     onChange={handleSelectChange}
                                 >
-                                    <option value="guard">Guard</option>
+                                    <option value="guard">Officer</option>
                                     <option value="client">Client</option>
                                     <option value="site">Site</option>
                                 </FloatingLabelSelect>

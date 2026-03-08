@@ -591,7 +591,7 @@ export function DutyStatusReportEditForm({
                                 {/* Guard Selection (Optional) */}
                                 <div className="space-y-2">
                                     <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Guard
+                                        Officer
                                     </Label>
                                     <SearchableDropdownWithIcon
                                         value={formValues.guard_id || ""}
@@ -614,14 +614,14 @@ export function DutyStatusReportEditForm({
                                         placeholder="Select guard (optional)"
                                         disabled={isLoading || isFetching || guardsLoading}
                                         isLoading={guardsLoading}
-                                        emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                        searchPlaceholder="Search guards..."
+                                        emptyMessage={guardSearch ? "No officers found" : "No officers available"}
+                                        searchPlaceholder="Search officers..."
                                         icon={User}
                                         iconPosition="left"
                                         displayValue={(value, options) => {
-                                            if (!value) return "Select guard (optional)"
+                                            if (!value) return "Select officer (optional)"
                                             const option = options.find(opt => opt.value === value)
-                                            return option?.label || "Select guard (optional)"
+                                            return option?.label || "Select officer (optional)"
                                         }}
                                     />
                                 </div>

@@ -44,7 +44,7 @@ const dutyStatusReportSchema = z.object({
         .min(1, { message: "Duty is required" }),
 
     guard_id: z.number()
-        .min(1, { message: "Guard is required" }),
+        .min(1, { message: "Officer is required" }),
 
     message: z.string()
         .min(1, { message: "Message is required" })
@@ -492,7 +492,7 @@ export function DutyStatusReportCreateForm({
                             {/* Guard Selection */}
                             <div className="space-y-2">
                                 <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Guard *
+                                    Officer *
                                 </Label>
                                 <SearchableDropdownWithIcon
                                     value={formValues.guard_id || ""}
@@ -512,17 +512,17 @@ export function DutyStatusReportCreateForm({
                                             search: search
                                         }))
                                     }}
-                                    placeholder="Select guard"
+                                    placeholder="Select officer"
                                     disabled={isLoading || guardsLoading}
                                     isLoading={guardsLoading}
-                                    emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                    searchPlaceholder="Search guards..."
+                                    emptyMessage={guardSearch ? "No officers found" : "No officers available"}
+                                    searchPlaceholder="Search officers..."
                                     icon={User}
                                     iconPosition="left"
                                     displayValue={(value, options) => {
-                                        if (!value) return "Select guard"
+                                        if (!value) return "Select officer"
                                         const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select guard"
+                                        return option?.label || "Select officer"
                                     }}
                                 />
                                 {errors.guard_id && (

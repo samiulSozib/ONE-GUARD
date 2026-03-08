@@ -17,7 +17,7 @@ export default function GuardDetailsPage() {
         const decodedGuard = JSON.parse(decodeURIComponent(guardParam));
         return decodedGuard as Guard;
       } catch (error) {
-        console.error('Error parsing guard from params:', error);
+        console.error('Error parsing officer from params:', error);
         return null;
       }
     }
@@ -28,9 +28,9 @@ export default function GuardDetailsPage() {
   if (!guardToDisplay) {
     return (
       <div className="text-center py-10">
-        <h2>Guard not found</h2>
+        <h2>Officer not found</h2>
         <p className="text-gray-600 mt-2">
-          Please navigate from the guards list or provide guard data.
+          Please navigate from the officers list or provide officer data.
         </p>
       </div>
     );

@@ -77,8 +77,8 @@ export function ExpenseCategoryDataTable({
         await dispatch(deleteExpenseCategory(expenseCategoryToDelete.id)).unwrap();
 
         SweetAlertService.success(
-          'Guard Type Deleted',
-          `${expenseCategoryToDelete.name || 'Guard Type'} has been deleted successfully.`,
+          'Officer Type Deleted',
+          `${expenseCategoryToDelete.name || 'Officer Type'} has been deleted successfully.`,
           {
             timer: 1500,
             showConfirmButton: false,
@@ -97,7 +97,7 @@ export function ExpenseCategoryDataTable({
       } catch (error) {
         SweetAlertService.error(
           'Delete Failed',
-          'There was an error deleting the guard type. Please try again.'
+          'There was an error deleting the officer type. Please try again.'
         );
       }
     }
@@ -112,7 +112,7 @@ export function ExpenseCategoryDataTable({
       
       SweetAlertService.success(
         'Status Updated',
-        `Guard type status has been ${!currentStatus ? 'activated' : 'deactivated'} successfully.`,
+        `Officer type status has been ${!currentStatus ? 'activated' : 'deactivated'} successfully.`,
         {
           timer: 1500,
           showConfirmButton: false,
@@ -121,7 +121,7 @@ export function ExpenseCategoryDataTable({
     } catch (error) {
       SweetAlertService.error(
         'Update Failed',
-        'There was an error updating the guard type status. Please try again.'
+        'There was an error updating the officer type status. Please try again.'
       );
     }
   };
@@ -239,12 +239,12 @@ export function ExpenseCategoryDataTable({
                   <Search className="h-12 w-12 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No guard types found
+                  No officer types found
                 </h3>
                 <p className="text-gray-500 mb-6">
                   {searchTerm || activeFilter !== null
                     ? "Try adjusting your search or filters"
-                    : "Get started by creating a new guard type"}
+                    : "Get started by creating a new officer type"}
                 </p>
                 {searchTerm || activeFilter !== null ? (
                   <Button variant="outline" onClick={handleClearFilters}>
@@ -253,7 +253,7 @@ export function ExpenseCategoryDataTable({
                 ) : (
                   <Button onClick={onAddClick}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Guard Type
+                    Add Officer Type
                   </Button>
                 )}
               </div>
@@ -275,7 +275,7 @@ export function ExpenseCategoryDataTable({
                             </div>
                             <div>
                               <h3 className="font-medium text-gray-900">
-                                {type.name || "Untitled Guard Type"}
+                                {type.name || "Untitled Officer Type"}
                               </h3>
                               <Badge 
                                 variant={type.is_active ? "default" : "secondary"} 
@@ -346,7 +346,7 @@ export function ExpenseCategoryDataTable({
                 {!isLoading && expenseCategories.length > 0 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t">
                     <div className="text-sm text-gray-700">
-                      Showing {expenseCategories.length} of {pagination.total} guard types
+                      Showing {expenseCategories.length} of {pagination.total} officer types
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -392,7 +392,7 @@ export function ExpenseCategoryDataTable({
         isOpen={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title="Delete Guard Type"
+        title="Delete Officer Type"
         description={`Are you sure you want to delete "${expenseCategoryToDelete?.name}"? This action cannot be undone.`}
       />
 

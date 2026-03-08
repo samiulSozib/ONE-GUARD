@@ -54,7 +54,7 @@ const complaintSchema = z.object({
     reported_by_type: z.enum(["guard"]), // Fixed to only guard
 
     reported_by_id: z.number()
-        .min(1, { message: "Guard is required" }),
+        .min(1, { message: "Officer is required" }),
 
     against_type: z.enum(["client"]), // Fixed to only client
 
@@ -472,7 +472,7 @@ export function ComplaintCreateForm({
                             {/* Reported By - Guard */}
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Reported By (Guard) *
+                                    Reported By (Officer) *
                                 </Label>
                                 <SearchableDropdownWithIcon
                                     value={formValues.reported_by_id || ""}
@@ -493,17 +493,17 @@ export function ComplaintCreateForm({
                                             search: search
                                         }))
                                     }}
-                                    placeholder="Select guard"
+                                    placeholder="Select officer"
                                     disabled={isLoading || guardsLoading}
                                     isLoading={guardsLoading}
-                                    emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                    searchPlaceholder="Search guards by name or code..."
+                                    emptyMessage={guardSearch ? "No officers found" : "No Officers available"}
+                                    searchPlaceholder="Search officers by name or code..."
                                     icon={Shield}
                                     iconPosition="left"
                                     displayValue={(value, options) => {
-                                        if (!value) return "Select guard"
+                                        if (!value) return "Select officer"
                                         const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select guard"
+                                        return option?.label || "Select officer"
                                     }}
                                 />
                                 {errors.reported_by_id && (
@@ -730,11 +730,11 @@ export function ComplaintCreateForm({
                                             <Lock className="h-4 w-4 text-gray-500" />
                                         )}
                                         <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Visible to Guard
+                                            Visible to Officer
                                         </Label>
                                     </div>
                                     <p className="text-xs text-gray-500">
-                                        Guard can view this complaint
+                                        Officer can view this complaint
                                     </p>
                                 </div>
                                 <Switch
@@ -774,7 +774,7 @@ export function ComplaintCreateForm({
                                 <div>
                                     <span className="text-gray-500">Reported by:</span>
                                     <span className="ml-2 font-medium">
-                                        {guards.find(g => g.id === formValues.reported_by_id)?.full_name || "Guard"}
+                                        {guards.find(g => g.id === formValues.reported_by_id)?.full_name || "Officer"}
                                     </span>
                                 </div>
                             )}

@@ -45,7 +45,7 @@ export function AddGuardArmsForm({ trigger, isOpen, onOpenChange }: LiveMapDialo
         {/* Header */}
         <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6">
           <Image src="/images/logo.png" alt="" width={24} height={24} />
-          <span className="whitespace-nowrap">Add Guard Arms</span>
+          <span className="whitespace-nowrap">Add Officer Arms</span>
           <span className="text-gray-400">#GRD-0007</span>
         </div>
 

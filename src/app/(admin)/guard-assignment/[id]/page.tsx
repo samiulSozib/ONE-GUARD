@@ -121,7 +121,7 @@ export default function GuardAssignmentViewPage() {
             
             await SweetAlertService.success(
                 'Assignment Deleted',
-                'The guard assignment has been deleted successfully.',
+                'The officer assignment has been deleted successfully.',
                 { timer: 2000 }
             )
             
@@ -244,7 +244,7 @@ export default function GuardAssignmentViewPage() {
                             Assignment Not Found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                            The guard assignment youre looking for does not exist or you do not have permission to view it.
+                            The Officer assignment youre looking for does not exist or you do not have permission to view it.
                         </p>
                         <Button onClick={() => router.push('/guard-assignments')}>
                             Go to Assignments
@@ -299,7 +299,7 @@ export default function GuardAssignmentViewPage() {
                             <div>
                                 <CardTitle className="text-2xl font-bold flex items-center gap-2">
                                     <Shield className="h-6 w-6 text-primary" />
-                                    Guard Assignment #{currentAssignment.id}
+                                    Officer Assignment #{currentAssignment.id}
                                 </CardTitle>
                                 <CardDescription className="flex items-center gap-2 mt-1">
                                     <Calendar className="h-4 w-4" />
@@ -385,12 +385,12 @@ export default function GuardAssignmentViewPage() {
 
                 {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Guard Information */}
+                    {/* Officer Information */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <User className="h-5 w-5" />
-                                Guard Information
+                                Officer Information
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -406,7 +406,7 @@ export default function GuardAssignmentViewPage() {
                                 </Avatar>
                                 <div className="flex-1">
                                     <h3 className="text-lg font-semibold">
-                                        {currentAssignment.guard?.full_name || `Guard #${currentAssignment.guard_id}`}
+                                        {currentAssignment.guard?.full_name || `Officer #${currentAssignment.guard_id}`}
                                     </h3>
                                     {currentAssignment.guard?.guard_code && (
                                         <Badge variant="outline" className="mt-1">
@@ -569,7 +569,7 @@ export default function GuardAssignmentViewPage() {
                                         <p>{formatDateTime(currentAssignment.created_at)}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-gray-500">Guard ID</p>
+                                        <p className="text-sm text-gray-500">Officer ID</p>
                                         <p>#{currentAssignment.guard_id}</p>
                                     </div>
                                     <div className="space-y-1">
@@ -621,7 +621,7 @@ export default function GuardAssignmentViewPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the guard assignment
+                            This action cannot be undone. This will permanently delete the officer assignment
                             and remove all associated data.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
