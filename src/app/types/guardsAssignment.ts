@@ -4,7 +4,7 @@ export interface GuardAssignment {
   duty_id: number;
   start_date: string;
   end_date: string;
-  status?: 'assigned' | 'active' | 'completed' | 'cancelled';
+  status?: 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
   notes?: string;
   is_active?: boolean;
   created_at: string;

@@ -47,7 +47,7 @@ interface GuardAssignmentEditFormProps {
     onSuccess?: () => void
 }
 
-// Zod schema for guard assignment validation
+// Zod schema for guard assignment validation - UPDATED STATUS LIST
 const guardAssignmentSchema = z.object({
     guard_id: z.number()
         .min(1, { message: "Guard is required" }),
@@ -61,7 +61,7 @@ const guardAssignmentSchema = z.object({
     end_date: z.string()
         .min(1, { message: "End date is required" }),
 
-    status: z.enum(["assigned", "active", "completed", "cancelled"])
+    status: z.enum(["assigned", "accepted", "checked_in", "on_duty", "completed", "late", "no_show", "cancelled", "replaced"])
 }).refine((data) => {
     const start = new Date(data.start_date)
     const end = new Date(data.end_date)
@@ -73,13 +73,30 @@ const guardAssignmentSchema = z.object({
 
 type GuardAssignmentFormData = z.infer<typeof guardAssignmentSchema>
 
-// Status options
+// Status options - UPDATED WITH FULL LIST
 const statusOptions = [
     { value: "assigned", label: "Assigned" },
-    { value: "active", label: "Active" },
+    { value: "accepted", label: "Accepted" },
+    { value: "checked_in", label: "Checked In" },
+    { value: "on_duty", label: "On Duty" },
     { value: "completed", label: "Completed" },
+    { value: "late", label: "Late" },
+    { value: "no_show", label: "No Show" },
     { value: "cancelled", label: "Cancelled" },
+    { value: "replaced", label: "Replaced" },
 ]
+
+// Helper function to map old status format to new format if needed
+const mapStatusToApi = (status: GuardAssignmentFormData['status']): string => {
+    // If your API still expects the old status format, map it here
+    // For example, if API expects 'active' but we use 'on_duty'
+    const statusMap: Record<string, string> = {
+        'on_duty': 'active', // Map 'on_duty' to 'active' if API expects 'active'
+        // Add other mappings as needed
+    };
+    
+    return statusMap[status] || status;
+};
 
 export function GuardAssignmentEditForm({
     trigger,
@@ -220,13 +237,21 @@ export function GuardAssignmentEditForm({
                 setStartDate(startDateObj)
                 setEndDate(endDateObj)
 
+                // Map the status from API to form status if needed
+                let formStatus: GuardAssignmentFormData['status'] = data.status as GuardAssignmentFormData['status'];
+                
+                // If API returns 'active' but we use 'on_duty', map it
+                if (data.status === 'active') {
+                    formStatus = 'on_duty';
+                }
+
                 // Populate form with existing data
                 reset({
                     guard_id: data.guard_id || 0,
                     duty_id: data.duty_id || 0,
                     start_date: data.start_date || "",
                     end_date: data.end_date || "",
-                    status: data.status || "assigned"
+                    status: formStatus || "assigned"
                 })
 
                 // Fetch duties for this guard
@@ -267,13 +292,14 @@ export function GuardAssignmentEditForm({
 
         setIsLoading(true)
         try {
-            // Prepare data for API
+            // Prepare data for API - map status if needed
             const submitData = {
                 guard_id: data.guard_id,
                 duty_id: data.duty_id,
                 start_date: data.start_date,
                 end_date: data.end_date,
-                status: data.status
+                // If your API expects the old status format, map it here
+                status: mapStatusToApi(data.status)
             }
 
             const result = await dispatch(updateAssignment({
@@ -312,50 +338,13 @@ export function GuardAssignmentEditForm({
     }
 
     const handleDialogOpenChange = (open: boolean) => {
-        if (open) {
-            onOpenChange?.(true)
-        } else {
-            // Check if form has been modified
-            const originalData = {
-                guard_id: assignment?.guard_id || 0,
-                duty_id: assignment?.duty_id || 0,
-                start_date: assignment?.start_date || "",
-                end_date: assignment?.end_date || "",
-                status: assignment?.status || "assigned"
-            }
-
-            const currentData = {
-                guard_id: formValues.guard_id,
-                duty_id: formValues.duty_id,
-                start_date: formValues.start_date,
-                end_date: formValues.end_date,
-                status: formValues.status
-            }
-
-            const hasChanges =
-                currentData.guard_id !== originalData.guard_id ||
-                currentData.duty_id !== originalData.duty_id ||
-                currentData.start_date !== originalData.start_date ||
-                currentData.end_date !== originalData.end_date ||
-                currentData.status !== originalData.status
-
-            if (!hasChanges) {
-                onOpenChange?.(false)
-            } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
-                    if (result.isConfirmed) {
-                        reset()
-                        onOpenChange?.(false)
-                    } else {
-                        onOpenChange?.(true)
-                    }
-                })
-            }
+        onOpenChange?.(open)
+        if (!open) {
+            reset()
+            setStartDate(undefined)
+            setEndDate(undefined)
+            setGuardSearch("")
+            setDutySearch("")
         }
     }
 
@@ -559,14 +548,14 @@ export function GuardAssignmentEditForm({
                                     )}
                                 </div>
 
-                                {/* Status Dropdown */}
+                                {/* Status Dropdown - UPDATED WITH FULL LIST */}
                                 <div className="space-y-2">
                                     <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Status <span className="text-red-500">*</span>
                                     </Label>
                                     <Select
                                         value={formValues.status}
-                                        onValueChange={(value: "assigned" | "active" | "completed" | "cancelled") =>
+                                        onValueChange={(value: "assigned" | "accepted" | "checked_in" | "on_duty" | "completed" | "late" | "no_show" | "cancelled" | "replaced") =>
                                             setValue("status", value, { shouldValidate: true })
                                         }
                                         disabled={isLoading || isFetching}
@@ -599,6 +588,7 @@ export function GuardAssignmentEditForm({
                             isSubmitting={isLoading}
                             submitColor="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                             onSubmit={handleSubmit(onSubmit)}
+                            //onCancel={() => handleDialogOpenChange(false)}
                         />
                     </form>
                 )}

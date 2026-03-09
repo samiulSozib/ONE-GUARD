@@ -40,7 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "../../ui/input-group";
 import {
   Table,
   TableBody,
@@ -49,11 +49,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "../ui/checkbox";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { FloatingLabelInput } from "../ui/floating-input";
-import { Calendar as CalendarComponent } from "../ui/calender";
+import { Checkbox } from "../../ui/checkbox";
+import { Label } from "../../ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import { FloatingLabelInput } from "../../ui/floating-input";
+import { Calendar as CalendarComponent } from "../../ui/calender";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -64,7 +64,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "../../ui/select";
 
 // Redux
 import { useAppDispatch } from "@/hooks/useAppDispatch";
@@ -77,11 +77,11 @@ import {
 import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignment";
 
 // Components
-import { DeleteDialog } from "../shared/delete-dialog";
+import { DeleteDialog } from "../../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
-import { GuardAssignmentEditForm } from "./guard-assignment-edit-form";
 import Swal from 'sweetalert2';
 import { useRouter } from "next/navigation";
+import { GuardAssignmentEditForm } from "@/components/guard-assignment/guard-assignment-edit-form";
 
 // Define the status type
 type AssignmentStatus = 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
@@ -109,11 +109,12 @@ const assignmentStatusColors: Record<AssignmentStatus, string> = {
 const defaultStatusColor = "bg-gray-100 text-gray-800";
 
 interface GuardAssignmentDataTableProps {
+    guard_id:number;
   onAddClick?: () => void;
   onViewClick?: (assignment: GuardAssignment) => void;
 }
 
-export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssignmentDataTableProps) {
+export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignmentDataTableProps) {
   const dispatch = useAppDispatch();
 
   // Redux state
@@ -148,6 +149,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
       search: searchTerm || undefined,
       include_guard: true,
       include_duty: true,
+      guard_id:guard_id
     };
 
     // Add status filter

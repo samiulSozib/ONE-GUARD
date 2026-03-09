@@ -57,6 +57,8 @@ const navGroups = [
     items: [
       { title: "Security Officers", url: "/guards", icon: Shield },
       { title: "Client Accounts", url: "/clients", icon: Users },
+            { title: "Client Contracts", url: "/client-contracts", icon: MessageSquareWarning },
+
       { title: "Time Off", url: "/leave", icon: CalendarCheck },
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
@@ -83,7 +85,6 @@ const navGroups = [
   {
     label: "Reports & Issues",
     items: [
-      { title: "Client Contracts", url: "/client-contracts", icon: MessageSquareWarning },
       { title: "Client Concerns", url: "/complaint", icon: MessageSquareWarning },
       { title: "Incidents", url: "/incident", icon: AlertTriangle },
     ],

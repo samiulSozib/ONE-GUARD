@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/app/types/api.types";
 import api, { handleApiResponse } from "./api.service";
-import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardsAssignment";
+import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignment";
 import { CreateGuardAssignmentDto } from "@/app/types/guardAssignment";
 
 export const guardAssignmentService = {

@@ -151,7 +151,7 @@ export function DutyCreateForm({
     // Initial fetch on mount
     useEffect(() => {
         //dispatch(fetchSites({ page: 1, per_page: 10, is_active: true }))
-        dispatch(fetchSiteLocations({ page: 1, per_page: 10, is_active: true }))
+        //dispatch(fetchSiteLocations({ page: 1, per_page: 10, is_active: true }))
         dispatch(fetchDutyTimeTypes({ page: 1, per_page: 10, is_active: true }))
     }, [dispatch])
 
@@ -175,21 +175,16 @@ export function DutyCreateForm({
     }, [siteSearch, dispatch])
 
     // Fetch site locations when search changes
-    useEffect(() => {
-        if (locationSearch && formValues.site_id) {
-            const timer = setTimeout(() => {
-                dispatch(fetchSiteLocations({
-                    page: 1,
-                    per_page: 10,
-                    is_active: true,
-                    search: locationSearch,
-                    site_id: formValues.site_id
-                }))
-            }, 500)
-
-            return () => clearTimeout(timer)
-        }
-    }, [locationSearch, formValues.site_id, dispatch])
+useEffect(() => {
+    if (formValues.site_id) {
+        dispatch(fetchSiteLocations({
+            page: 1,
+            per_page: 10,
+            is_active: true,
+            site_id: formValues.site_id
+        }))
+    }
+}, [formValues.site_id, dispatch])
 
     // Fetch duty time types when search changes
     useEffect(() => {

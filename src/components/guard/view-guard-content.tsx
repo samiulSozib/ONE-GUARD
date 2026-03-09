@@ -17,38 +17,45 @@ import { GuardTraining } from "./tabContents/guard-training";
 import { GuardArms } from "./tabContents/guard-arms";
 import { Contact } from "./tabContents/contact";
 import PersonalInformation from "./tabContents/personal-information";
+import { Assignment } from "./tabContents/assignment";
 
 export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
   const tabs = [
-    { 
-      value: "personal", 
-      label: "Personal Information", 
-      icon: "👤", 
-      shortLabel: "Personal" 
+    {
+      value: "personal",
+      label: "Personal Information",
+      icon: "👤",
+      shortLabel: "Personal"
     },
-    { 
-      value: "availability", 
-      label: "Availability", 
-      icon: "🗓️", 
-      shortLabel: "Availability" 
+    {
+      value: "assignment",
+      label: "Assignment",
+      icon: "👤",
+      shortLabel: "assignment"
     },
-    { 
-      value: "training", 
-      label: "Guard Training", 
-      icon: "🎯", 
-      shortLabel: "Training" 
+    {
+      value: "availability",
+      label: "Availability",
+      icon: "🗓️",
+      shortLabel: "Availability"
     },
-    { 
-      value: "arms", 
-      label: "Guard Arms", 
-      icon: "🛡️", 
-      shortLabel: "Arms" 
+    {
+      value: "training",
+      label: "Guard Training",
+      icon: "🎯",
+      shortLabel: "Training"
     },
-    { 
-      value: "contract", 
-      label: "Contract", 
-      icon: "📄", 
-      shortLabel: "Contract" 
+    {
+      value: "arms",
+      label: "Guard Arms",
+      icon: "🛡️",
+      shortLabel: "Arms"
+    },
+    {
+      value: "contract",
+      label: "Contract",
+      icon: "📄",
+      shortLabel: "Contract"
     },
   ];
 
@@ -130,23 +137,27 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
           <CardContent className="p-0">
             {/* Tab Contents */}
             <TabsContent value="personal" className="m-2">
-              <PersonalInformation guard={guard}/>
+              <PersonalInformation guard={guard} />
+            </TabsContent>
+
+             <TabsContent value="assignment" className="m-2">
+              <Assignment guard_id={guard.id}/>
             </TabsContent>
 
             <TabsContent value="availability" className="m-2">
-              <Availability/>
+              <Availability />
             </TabsContent>
 
             <TabsContent value="training" className="m-2">
-              <GuardTraining/>
+              <GuardTraining />
             </TabsContent>
 
             <TabsContent value="arms" className="m-2">
-              <GuardArms/>
+              <GuardArms />
             </TabsContent>
 
             <TabsContent value="contract" className="m-2">
-              <Contact/>
+              <Contact />
             </TabsContent>
           </CardContent>
         </Card>

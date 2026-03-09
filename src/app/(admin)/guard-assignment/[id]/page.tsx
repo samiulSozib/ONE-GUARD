@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Image from 'next/image'
-import Link from 'next/link'
 import {
     ArrowLeft,
     Calendar,
@@ -15,15 +13,11 @@ import {
     Phone,
     Mail,
     Hash,
-    CheckCircle,
-    XCircle,
     AlertCircle,
     Edit,
     Trash2,
-    PlayCircle,
-    Ban,
-    CheckCheck,
-    Loader2
+    Loader2,
+    ChevronDown
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -43,6 +37,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 // Redux
 import { useAppDispatch } from '@/hooks/useAppDispatch'
@@ -51,29 +51,22 @@ import { fetchAssignment, deleteAssignment, updateAssignmentStatus } from '@/sto
 import SweetAlertService from '@/lib/sweetAlert'
 import { format } from 'date-fns'
 import { GuardAssignmentEditForm } from '@/components/guard-assignment/guard-assignment-edit-form'
+import Swal from 'sweetalert2'
+
+// Define the status type
+type AssignmentStatus = 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced'
 
 // Status configuration
-const statusConfig = {
-    assigned: {
-        label: 'Assigned',
-        color: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: AlertCircle,
-    },
-    active: {
-        label: 'Active',
-        color: 'bg-green-100 text-green-800 border-green-200',
-        icon: PlayCircle,
-    },
-    completed: {
-        label: 'Completed',
-        color: 'bg-purple-100 text-purple-800 border-purple-200',
-        icon: CheckCheck,
-    },
-    cancelled: {
-        label: 'Cancelled',
-        color: 'bg-red-100 text-red-800 border-red-200',
-        icon: Ban,
-    },
+const statusConfig: Record<AssignmentStatus, { label: string; color: string }> = {
+    assigned: { label: 'Assigned', color: 'bg-blue-100 text-blue-800' },
+    accepted: { label: 'Accepted', color: 'bg-green-100 text-green-800' },
+    checked_in: { label: 'Checked In', color: 'bg-purple-100 text-purple-800' },
+    on_duty: { label: 'On Duty', color: 'bg-emerald-100 text-emerald-800' },
+    completed: { label: 'Completed', color: 'bg-gray-100 text-gray-800' },
+    late: { label: 'Late', color: 'bg-yellow-100 text-yellow-800' },
+    no_show: { label: 'No Show', color: 'bg-red-100 text-red-800' },
+    cancelled: { label: 'Cancelled', color: 'bg-orange-100 text-orange-800' },
+    replaced: { label: 'Replaced', color: 'bg-indigo-100 text-indigo-800' }
 }
 
 export default function GuardAssignmentViewPage() {
@@ -137,31 +130,47 @@ export default function GuardAssignmentViewPage() {
         }
     }
 
-    const handleStatusUpdate = async (status: 'assigned' | 'active' | 'completed' | 'cancelled') => {
+    const handleStatusUpdate = async (newStatus: AssignmentStatus) => {
         if (!currentAssignment) return
 
-        setIsUpdating(true)
-        try {
-            await dispatch(updateAssignmentStatus({
-                id: currentAssignment.id,
-                status
-            })).unwrap()
+        const statusDisplay = statusConfig[newStatus].label
 
-            await SweetAlertService.success(
-                'Status Updated',
-                `Assignment status has been updated to ${statusConfig[status].label}.`,
-                { timer: 2000 }
-            )
+        const result = await Swal.fire({
+            title: 'Update Status',
+            text: `Mark this assignment as ${statusDisplay}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, update',
+            cancelButtonText: 'Cancel',
+            timer: 5000,
+            timerProgressBar: true,
+        });
 
-            // Reload assignment to get fresh data
-            await loadAssignment()
-        } catch (error) {
-            await SweetAlertService.error(
-                'Update Failed',
-                'There was an error updating the assignment status. Please try again.'
-            )
-        } finally {
-            setIsUpdating(false)
+        if (result.isConfirmed) {
+            setIsUpdating(true)
+            try {
+                await dispatch(updateAssignmentStatus({
+                    id: currentAssignment.id,
+                    status: newStatus
+                })).unwrap()
+
+                await SweetAlertService.success(
+                    'Status Updated',
+                    `Assignment status updated to ${statusDisplay}.`,
+                    { timer: 2000 }
+                )
+
+                await loadAssignment()
+            } catch (error) {
+                await SweetAlertService.error(
+                    'Update Failed',
+                    'There was an error updating the assignment status.'
+                )
+            } finally {
+                setIsUpdating(false)
+            }
         }
     }
 
@@ -196,11 +205,16 @@ export default function GuardAssignmentViewPage() {
         }
     }
 
-    const getStatusIcon = () => {
-        if (!currentAssignment?.status) return null
-        const config = statusConfig[currentAssignment.status as keyof typeof statusConfig]
-        const Icon = config?.icon || AlertCircle
-        return <Icon className="h-4 w-4" />
+    // Get available statuses (all except current)
+    const getAvailableStatuses = () => {
+        if (!currentAssignment?.status) return []
+        const currentStatus = currentAssignment.status as AssignmentStatus
+        return Object.entries(statusConfig)
+            .filter(([status]) => status !== currentStatus)
+            .map(([status, config]) => ({
+                status: status as AssignmentStatus,
+                ...config
+            }))
     }
 
     if (isLoading || storeLoading) {
@@ -244,7 +258,7 @@ export default function GuardAssignmentViewPage() {
                             Assignment Not Found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                            The Officer assignment youre looking for does not exist or you do not have permission to view it.
+                            The officer assignment you are looking for does not exist.
                         </p>
                         <Button onClick={() => router.push('/guard-assignments')}>
                             Go to Assignments
@@ -255,11 +269,12 @@ export default function GuardAssignmentViewPage() {
         )
     }
 
-    const StatusIcon = statusConfig[currentAssignment.status as keyof typeof statusConfig]?.icon || AlertCircle
+    const currentStatus = currentAssignment.status as AssignmentStatus
+    const availableStatuses = getAvailableStatuses()
 
     return (
         <div className="container mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl">
-            {/* Header with back button and actions */}
+            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <Button
                     variant="ghost"
@@ -270,15 +285,8 @@ export default function GuardAssignmentViewPage() {
                     Back
                 </Button>
 
-                {/* <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => setEditDialogOpen(true)}
-                        disabled={isUpdating}
-                    >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
+                <div className="flex items-center gap-2">
+                    
                     <Button
                         variant="destructive"
                         onClick={() => setDeleteDialogOpen(true)}
@@ -287,101 +295,61 @@ export default function GuardAssignmentViewPage() {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                     </Button>
-                </div> */}
+                </div>
             </div>
 
             {/* Main Content */}
             <div className="space-y-6">
-                {/* Title Card */}
+                {/* Title Card with Status */}
                 <Card>
                     <CardHeader className="pb-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <CardTitle className="text-2xl font-bold flex items-center gap-2">
                                     <Shield className="h-6 w-6 text-primary" />
-                                    Officer Assignment #{currentAssignment.id}
+                                    Assignment #{currentAssignment.id}
                                 </CardTitle>
                                 <CardDescription className="flex items-center gap-2 mt-1">
                                     <Calendar className="h-4 w-4" />
-                                    Created on {formatDateTime(currentAssignment.created_at)}
+                                    Created {formatDateTime(currentAssignment.created_at)}
                                 </CardDescription>
                             </div>
-                            <Badge
-                                variant="outline"
-                                className={`
-                                    ${statusConfig[currentAssignment.status as keyof typeof statusConfig]?.color || 'bg-gray-100'}
-                                    px-3 py-1 text-sm font-medium flex items-center gap-1 w-fit
-                                `}
-                            >
-                                <StatusIcon className="h-3.5 w-3.5" />
-                                {statusConfig[currentAssignment.status as keyof typeof statusConfig]?.label || currentAssignment.status}
-                            </Badge>
+                            
+                            {/* Status Badge with Dropdown */}
+                            <div className="flex items-center gap-2">
+                                {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="gap-2">
+                                            <span className={`
+                                                px-2 py-0.5 rounded-full text-xs font-medium
+                                                ${statusConfig[currentStatus]?.color || 'bg-gray-100'}
+                                            `}>
+                                                {statusConfig[currentStatus]?.label || currentStatus}
+                                            </span>
+                                            <ChevronDown className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                        {availableStatuses.map((status) => (
+                                            <DropdownMenuItem
+                                                key={status.status}
+                                                onClick={() => handleStatusUpdate(status.status)}
+                                                className="gap-2"
+                                            >
+                                                <span className={`
+                                                    w-2 h-2 rounded-full
+                                                    ${status.color.split(' ')[0]}
+                                                `} />
+                                                {status.label}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                         </div>
                     </CardHeader>
                 </Card>
-
-                {/* Status Update Buttons */}
-                {currentAssignment.status !== 'completed' && currentAssignment.status !== 'cancelled' && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <span className="text-sm font-medium text-gray-700">Update Status:</span>
-                                {currentAssignment.status === 'assigned' && (
-                                    <Button
-                                        size="sm"
-                                        className="bg-green-600 hover:bg-green-700"
-                                        onClick={() => handleStatusUpdate('active')}
-                                        disabled={isUpdating}
-                                    >
-                                        <PlayCircle className="mr-2 h-4 w-4" />
-                                        Start Assignment
-                                    </Button>
-                                )}
-                                {currentAssignment.status === 'active' && (
-                                    <>
-                                        <Button
-                                            size="sm"
-                                            className="bg-purple-600 hover:bg-purple-700"
-                                            onClick={() => handleStatusUpdate('completed')}
-                                            disabled={isUpdating}
-                                        >
-                                            <CheckCheck className="mr-2 h-4 w-4" />
-                                            Mark Completed
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-red-600 border-red-200 hover:bg-red-50"
-                                            onClick={() => handleStatusUpdate('cancelled')}
-                                            disabled={isUpdating}
-                                        >
-                                            <Ban className="mr-2 h-4 w-4" />
-                                            Cancel Assignment
-                                        </Button>
-                                    </>
-                                )}
-                                {currentAssignment.status === 'assigned' && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-red-600 border-red-200 hover:bg-red-50"
-                                        onClick={() => handleStatusUpdate('cancelled')}
-                                        disabled={isUpdating}
-                                    >
-                                        <Ban className="mr-2 h-4 w-4" />
-                                        Cancel Assignment
-                                    </Button>
-                                )}
-                                {isUpdating && (
-                                    <div className="flex items-center text-sm text-gray-500">
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Updating...
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -396,10 +364,6 @@ export default function GuardAssignmentViewPage() {
                         <CardContent className="space-y-4">
                             <div className="flex items-start gap-4">
                                 <Avatar className="h-16 w-16 border-2 border-gray-200">
-                                    <AvatarImage 
-                                        src={currentAssignment.guard?.profile_image} 
-                                        alt={currentAssignment.guard?.full_name}
-                                    />
                                     <AvatarFallback className="bg-primary/10">
                                         {currentAssignment.guard?.full_name?.charAt(0) || 'G'}
                                     </AvatarFallback>
@@ -432,16 +396,6 @@ export default function GuardAssignmentViewPage() {
                                         <span className="truncate">{currentAssignment.guard.email}</span>
                                     </div>
                                 )}
-                                {currentAssignment.guard?.city && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <MapPin className="h-4 w-4 text-gray-500" />
-                                        <span>
-                                            {[currentAssignment.guard.city, currentAssignment.guard.country]
-                                                .filter(Boolean)
-                                                .join(', ')}
-                                        </span>
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -459,20 +413,6 @@ export default function GuardAssignmentViewPage() {
                                 <h3 className="text-lg font-semibold">
                                     {currentAssignment.duty?.title || `Duty #${currentAssignment.duty_id}`}
                                 </h3>
-                                {currentAssignment.duty?.duty_type && (
-                                    <Badge 
-                                        variant="outline"
-                                        className={`
-                                            mt-1
-                                            ${currentAssignment.duty.duty_type === 'day' 
-                                                ? 'bg-sky-100 text-sky-800 border-sky-200' 
-                                                : 'bg-indigo-100 text-indigo-800 border-indigo-200'
-                                            }
-                                        `}
-                                    >
-                                        {currentAssignment.duty.duty_type === 'day' ? 'Day Shift' : 'Night Shift'}
-                                    </Badge>
-                                )}
                             </div>
 
                             <Separator />
@@ -496,26 +436,12 @@ export default function GuardAssignmentViewPage() {
                                         </span>
                                     </div>
                                 )}
-                                {currentAssignment.duty?.required_hours && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Clock className="h-4 w-4 text-gray-500" />
-                                        <span className="text-gray-600">Required Hours:</span>
-                                        <span className="font-medium">{currentAssignment.duty.required_hours} hours</span>
-                                    </div>
-                                )}
-                                {currentAssignment.duty?.site_id && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <MapPin className="h-4 w-4 text-gray-500" />
-                                        <span className="text-gray-600">Site ID:</span>
-                                        <span className="font-medium">#{currentAssignment.duty.site_id}</span>
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Assignment Details */}
+                {/* Assignment Period */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -524,105 +450,31 @@ export default function GuardAssignmentViewPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div className="space-y-1">
                                 <p className="text-sm text-gray-500">Start Date</p>
-                                <p className="font-medium flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                    {formatDate(currentAssignment.start_date)}
-                                </p>
+                                <p className="font-medium">{formatDate(currentAssignment.start_date)}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm text-gray-500">End Date</p>
-                                <p className="font-medium flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                    {formatDate(currentAssignment.end_date)}
-                                </p>
+                                <p className="font-medium">{formatDate(currentAssignment.end_date)}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm text-gray-500">Duration</p>
-                                <p className="font-medium flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-gray-400" />
-                                    {calculateDuration()}
-                                </p>
+                                <p className="font-medium">{calculateDuration()}</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* Additional Information Tabs */}
-                <Tabs defaultValue="details" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="details">Additional Details</TabsTrigger>
-                        <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="details">
-                        <Card>
-                            <CardContent className="pt-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <p className="text-sm text-gray-500">Assignment ID</p>
-                                        <p className="font-mono text-sm">#{currentAssignment.id}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm text-gray-500">Created At</p>
-                                        <p>{formatDateTime(currentAssignment.created_at)}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm text-gray-500">Officer ID</p>
-                                        <p>#{currentAssignment.guard_id}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm text-gray-500">Duty ID</p>
-                                        <p>#{currentAssignment.duty_id}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="timeline">
-                        <Card>
-                            <CardContent className="pt-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-3 h-3 rounded-full bg-green-500" />
-                                            <div className="w-0.5 h-12 bg-gray-200" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Assignment Created</p>
-                                            <p className="text-sm text-gray-500">
-                                                {formatDateTime(currentAssignment.created_at)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-3 h-3 rounded-full bg-blue-500" />
-                                            <div className="w-0.5 h-12 bg-gray-200" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">Status Changed to {statusConfig[currentAssignment.status as keyof typeof statusConfig]?.label}</p>
-                                            <p className="text-sm text-gray-500">
-                                                {formatDateTime(currentAssignment.created_at)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
             </div>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Dialogs */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete Assignment?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the officer assignment
-                            and remove all associated data.
+                            This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -652,9 +504,7 @@ export default function GuardAssignmentViewPage() {
                     assignment={currentAssignment}
                     isOpen={editDialogOpen}
                     onOpenChange={setEditDialogOpen}
-                    onSuccess={async () => {
-                        await loadAssignment()
-                    }}
+                    onSuccess={loadAssignment}
                 />
             )}
         </div>

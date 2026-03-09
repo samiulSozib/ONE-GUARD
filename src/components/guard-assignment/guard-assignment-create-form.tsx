@@ -46,10 +46,10 @@ interface GuardAssignmentCreateFormProps {
     onSuccess?: () => void
 }
 
-// Zod schema for guard assignment validation
+// Zod schema for guard assignment validation - Updated status list
 const guardAssignmentSchema = z.object({
     guard_id: z.number()
-        .min(1, { message: "Guard is required" }),
+        .min(1, { message: "Officer is required" }),
 
     duty_id: z.number()
         .min(1, { message: "Duty is required" }),
@@ -60,7 +60,17 @@ const guardAssignmentSchema = z.object({
     end_date: z.string()
         .min(1, { message: "End date is required" }),
 
-    status: z.enum(["assigned", "active", "completed", "cancelled"])
+    status: z.enum([
+        "assigned",
+        "accepted",
+        "checked_in",
+        "on_duty",
+        "completed",
+        "late",
+        "no_show",
+        "cancelled",
+        "replaced"
+    ])
 }).refine((data) => {
     const start = new Date(data.start_date)
     const end = new Date(data.end_date)
@@ -72,13 +82,31 @@ const guardAssignmentSchema = z.object({
 
 type GuardAssignmentFormData = z.infer<typeof guardAssignmentSchema>
 
-// Status options
+// Status options - Using the provided list
 const statusOptions = [
     { value: "assigned", label: "Assigned" },
-    { value: "active", label: "Active" },
+    { value: "accepted", label: "Accepted" },
+    { value: "checked_in", label: "Checked In" },
+    { value: "on_duty", label: "On Duty" },
     { value: "completed", label: "Completed" },
+    { value: "late", label: "Late" },
+    { value: "no_show", label: "No Show" },
     { value: "cancelled", label: "Cancelled" },
+    { value: "replaced", label: "Replaced" },
 ]
+
+// Status color mapping for visual reference
+const statusColors: Record<string, string> = {
+    assigned: "bg-blue-100 text-blue-800 border-blue-200",
+    accepted: "bg-green-100 text-green-800 border-green-200",
+    checked_in: "bg-purple-100 text-purple-800 border-purple-200",
+    on_duty: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    completed: "bg-gray-100 text-gray-800 border-gray-200",
+    late: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    no_show: "bg-red-100 text-red-800 border-red-200",
+    cancelled: "bg-orange-100 text-orange-800 border-orange-200",
+    replaced: "bg-indigo-100 text-indigo-800 border-indigo-200",
+}
 
 export function GuardAssignmentCreateForm({
     trigger,
@@ -114,7 +142,7 @@ export function GuardAssignmentCreateForm({
             duty_id: 0,
             start_date: "",
             end_date: "",
-            status: "assigned"
+            status: "assigned" // Default to assigned
         },
         mode: "onBlur"
     })
@@ -125,7 +153,7 @@ export function GuardAssignmentCreateForm({
     useEffect(() => {
         if (isOpen) {
             dispatch(fetchGuards({ page: 1, per_page: 100 }))
-            dispatch(fetchDuties({ page: 1, per_page: 100 }))
+            dispatch(fetchDuties({ page: 1, per_page: 100, status: 'approved' }))
         }
     }, [isOpen, dispatch])
 
@@ -135,7 +163,8 @@ export function GuardAssignmentCreateForm({
             const params: DutyParams = {
                 page: 1,
                 per_page: 100,
-                guard_id: formValues.guard_id // Using guard_id as params
+                guard_id: formValues.guard_id,
+                status: 'approved'
             }
             dispatch(fetchDuties(params))
         }
@@ -148,7 +177,8 @@ export function GuardAssignmentCreateForm({
                 dispatch(fetchGuards({
                     page: 1,
                     per_page: 10,
-                    search: guardSearch
+                    search: guardSearch,
+                    is_active: true
                 }))
             }
         }, 300)
@@ -164,16 +194,22 @@ export function GuardAssignmentCreateForm({
                     status: 'approved',
                     search: dutySearch.trim()
                 }
+                // Add guard_id to params if selected
+                if (formValues.guard_id && formValues.guard_id > 0) {
+                    params.guard_id = formValues.guard_id
+                }
                 dispatch(fetchDuties(params))
             }
         }, 300)
         return () => clearTimeout(timer)
-    }, [dutySearch, dispatch])
+    }, [dutySearch, formValues.guard_id, dispatch])
 
     // Update start_date field when date changes
     useEffect(() => {
         if (startDate) {
             setValue('start_date', format(startDate, 'yyyy-MM-dd'), { shouldValidate: true })
+        } else {
+            setValue('start_date', '', { shouldValidate: true })
         }
     }, [startDate, setValue])
 
@@ -181,6 +217,8 @@ export function GuardAssignmentCreateForm({
     useEffect(() => {
         if (endDate) {
             setValue('end_date', format(endDate, 'yyyy-MM-dd'), { shouldValidate: true })
+        } else {
+            setValue('end_date', '', { shouldValidate: true })
         }
     }, [endDate, setValue])
 
@@ -192,7 +230,7 @@ export function GuardAssignmentCreateForm({
 
     const formatDutyDisplay = (duty: Partial<Duty>) => {
         if (!duty) return ""
-        return `${duty.title || 'Untitled Duty'} (${duty.duty_type || 'N/A'})`
+        return `${duty.title || 'Untitled Duty'} - ${duty.duty_type || 'N/A'} (${duty.site?.site_name || 'No Site'})`
     }
 
     const formatDateDisplay = (date: Date | null) => {
@@ -252,14 +290,43 @@ export function GuardAssignmentCreateForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
-            // Reset form when dialog closes
-            reset()
-            setStartDate(null)
-            setEndDate(null)
-            setGuardSearch("")
-            setDutySearch("")
+            // Check if form has unsaved changes
+            const hasChanges = formValues.guard_id !== 0 ||
+                formValues.duty_id !== 0 ||
+                startDate !== null ||
+                endDate !== null ||
+                formValues.status !== "assigned"
+
+            if (hasChanges) {
+                SweetAlertService.confirm(
+                    'Discard Changes?',
+                    'You have unsaved changes. Are you sure you want to close?',
+                    'Yes, discard',
+                    'No, keep'
+                ).then((result) => {
+                    if (result.isConfirmed) {
+                        reset()
+                        setStartDate(null)
+                        setEndDate(null)
+                        setGuardSearch("")
+                        setDutySearch("")
+                        onOpenChange?.(false)
+                    } else {
+                        // Keep dialog open
+                        onOpenChange?.(true)
+                    }
+                })
+            } else {
+                reset()
+                setStartDate(null)
+                setEndDate(null)
+                setGuardSearch("")
+                setDutySearch("")
+                onOpenChange?.(false)
+            }
+        } else {
+            onOpenChange?.(true)
         }
-        onOpenChange?.(open)
     }
 
     return (
@@ -300,13 +367,7 @@ export function GuardAssignmentCreateForm({
                                         ...guard
                                     }))}
                                     onSearch={(search) => {
-                                        console.log(search)
                                         setGuardSearch(search)
-                                        // dispatch(fetchGuards({
-                                        //     page: 1,
-                                        //     per_page: 10,
-                                        //     search: search
-                                        // }))
                                     }}
                                     placeholder="Select guard"
                                     disabled={isLoading || guardsLoading}
@@ -343,16 +404,6 @@ export function GuardAssignmentCreateForm({
                                     }))}
                                     onSearch={(search) => {
                                         setDutySearch(search)
-                                        const params: DutyParams = {
-                                            page: 1,
-                                            per_page: 10,
-                                            status: 'approved',
-                                            search: search
-                                        }
-                                        if (formValues.guard_id && formValues.guard_id > 0) {
-                                            params.guard_id = formValues.guard_id
-                                        }
-                                        dispatch(fetchDuties(params))
                                     }}
                                     placeholder={formValues.guard_id && formValues.guard_id > 0 ? "Select duty" : "Select guard first"}
                                     disabled={isLoading || dutiesLoading || !formValues.guard_id || formValues.guard_id === 0}
@@ -364,7 +415,7 @@ export function GuardAssignmentCreateForm({
                                                 ? "No duties found for this guard"
                                                 : "No duties available for this guard"
                                     }
-                                    searchPlaceholder="Search duties..."
+                                    searchPlaceholder="Search duties by title or site..."
                                     icon={Briefcase}
                                     iconPosition="left"
                                     displayValue={(value, options) => {
@@ -382,7 +433,7 @@ export function GuardAssignmentCreateForm({
                                 )}
                                 <p className="text-xs text-gray-500 mt-1">
                                     {formValues.guard_id && formValues.guard_id > 0
-                                        ? "Showing duties assigned to selected guard"
+                                        ? "Showing approved duties for the selected guard"
                                         : "Select a guard to see available duties"}
                                 </p>
                             </div>
@@ -462,7 +513,7 @@ export function GuardAssignmentCreateForm({
                                 </Label>
                                 <Select
                                     value={formValues.status}
-                                    onValueChange={(value: "assigned" | "active" | "completed" | "cancelled") =>
+                                    onValueChange={(value: "assigned" | "accepted" | "checked_in" | "on_duty" | "completed" | "late" | "no_show" | "cancelled" | "replaced") =>
                                         setValue("status", value, { shouldValidate: true })
                                     }
                                 >
@@ -471,10 +522,24 @@ export function GuardAssignmentCreateForm({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
-                                            <SelectLabel>Status</SelectLabel>
+                                            <SelectLabel>Assignment Status</SelectLabel>
                                             {statusOptions.map((status) => (
                                                 <SelectItem key={status.value} value={status.value}>
-                                                    {status.label}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`
+                                                            w-2 h-2 rounded-full
+                                                            ${status.value === 'assigned' ? 'bg-blue-500' : ''}
+                                                            ${status.value === 'accepted' ? 'bg-green-500' : ''}
+                                                            ${status.value === 'checked_in' ? 'bg-purple-500' : ''}
+                                                            ${status.value === 'on_duty' ? 'bg-emerald-500' : ''}
+                                                            ${status.value === 'completed' ? 'bg-gray-500' : ''}
+                                                            ${status.value === 'late' ? 'bg-yellow-500' : ''}
+                                                            ${status.value === 'no_show' ? 'bg-red-500' : ''}
+                                                            ${status.value === 'cancelled' ? 'bg-orange-500' : ''}
+                                                            ${status.value === 'replaced' ? 'bg-indigo-500' : ''}
+                                                        `} />
+                                                        {status.label}
+                                                    </div>
                                                 </SelectItem>
                                             ))}
                                         </SelectGroup>
@@ -494,6 +559,7 @@ export function GuardAssignmentCreateForm({
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                         onSubmit={handleSubmit(onSubmit)}
+                        //onCancel={() => handleDialogOpenChange(false)}
                     />
                 </form>
             </DialogContent>

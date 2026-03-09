@@ -3,16 +3,15 @@ import { Guard } from "./guard";
 
 export interface GuardAssignment {
   id: number;
-  guard_id:number;
-  duty_id:number;
-  start_date:string;
-  end_date:string;
-  status?: 'assigned' | 'active' | 'completed' | 'cancelled';
+  guard_id: number;
+  duty_id: number;
+  start_date: string;
+  end_date: string;
+  status?: 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
 
-  guard?:Partial<Guard>;
-  duty?:Partial<Duty>;
-  created_at?:string
-  
+  guard?: Partial<Guard>;
+  duty?: Partial<Duty>;
+  created_at?: string;
 }
 
 

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card } from '../ui/card'
 import { ButtonGroup } from '../ui/button-group'
 import { Button } from '../ui/button'
@@ -8,6 +8,8 @@ import { GuardLiveMap } from './guard-live-map-dialog'
 import { GuardCreateForm } from './guard-create-form'
 
 const GuardTopCard = () => {
+    const [isLiveMapOpen, setIsLiveMapOpen] = useState(false);
+
     return (
         <Card className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-2 lg:p-4'>
             {/* Button Group Section */}
@@ -33,8 +35,11 @@ const GuardTopCard = () => {
             {/* Action Buttons Section */}
             <div className='flex flex-row gap-2 w-full md:w-auto'>
                 <GuardLiveMap
+                    isOpen={isLiveMapOpen}
+                    onOpenChange={setIsLiveMapOpen}
                     trigger={
                         <Button
+                            onClick={() => setIsLiveMapOpen(true)}
                             className='flex-1 xs:flex-initial justify-center text-xs sm:text-sm bg-[#B5A28A] hover:bg-blue-700 text-white'
                             variant='default'
                         >
@@ -53,7 +58,6 @@ const GuardTopCard = () => {
                             <span className="">Create Security Officer</span>
                         </Button>
                     } />
-
             </div>
         </Card>
     )
