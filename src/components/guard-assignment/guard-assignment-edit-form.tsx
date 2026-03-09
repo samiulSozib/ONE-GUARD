@@ -241,7 +241,7 @@ export function GuardAssignmentEditForm({
                 let formStatus: GuardAssignmentFormData['status'] = data.status as GuardAssignmentFormData['status'];
                 
                 // If API returns 'active' but we use 'on_duty', map it
-                if (data.status === 'active') {
+                if (data.status === 'on_duty') {
                     formStatus = 'on_duty';
                 }
 
