@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import { Star, MapPin, Battery, Wifi, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ViewGuardTopCardProps } from "@/app/types/guard";
 import {
@@ -59,6 +59,48 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
     },
   ];
 
+  // Get status color and text
+  const getStatusDisplay = () => {
+    if (guard.online_status === 'online') {
+      return { 
+        color: 'bg-green-100 text-green-700', 
+        text: '● Online',
+        pulse: true
+      };
+    } else if (guard.online_status === 'offline') {
+      return { 
+        color: 'bg-gray-100 text-gray-700', 
+        text: '● Offline',
+        pulse: false
+      };
+    } else {
+      return { 
+        color: 'bg-yellow-100 text-yellow-700', 
+        text: '● Unknown',
+        pulse: false
+      };
+    }
+  };
+
+  const status = getStatusDisplay();
+
+  // Format last location time
+  const formatLastLocationTime = () => {
+    if (!guard.last_location?.recorded_at) return null;
+    const date = new Date(guard.last_location.recorded_at);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Format distance
+  const formatDistance = () => {
+    if (!guard.distance_to_duty_meters) return null;
+    const distance = parseFloat(guard.distance_to_duty_meters);
+    if (distance >= 1000) {
+      return `${(distance / 1000).toFixed(2)} km`;
+    }
+    return `${Math.round(distance)} m`;
+  };
+
   return (
     <div className="">
       <Tabs defaultValue="personal" className="w-full">
@@ -91,7 +133,7 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
                 </div>
               </div>
 
-              {/* Right Section: Rating and Status - Positioned top-right */}
+              {/* Right Section: Rating and Status */}
               <div className="absolute top-4 right-4 sm:right-6 flex flex-col items-end gap-2">
                 <div className="flex items-center gap-1">
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -99,10 +141,94 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
                   ))}
                   <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
                 </div>
-                <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs sm:text-sm">
-                  ● On Duty
+                <Badge variant="secondary" className={`${status.color} text-xs sm:text-sm`}>
+                  {status.text}
                 </Badge>
               </div>
+            </div>
+          </div>
+
+          {/* Location Status Bar */}
+          <div className="px-4 sm:px-6 py-3 bg-gray-50 dark:bg-gray-800/50 border-b flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Online Status with Dot */}
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${guard.online_status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <span className="text-xs font-medium">
+                  {guard.online_status === 'online' ? 'Live' : 'Last seen'}
+                </span>
+                {guard.last_ping_at && (
+                  <span className="text-xs text-gray-500">
+                    {new Date(guard.last_ping_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+
+              {/* Location Info */}
+              {guard.last_location && (
+                <>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-gray-500" />
+                    <span className="text-xs">
+                      Lat: {parseFloat(guard.last_location.latitude).toFixed(6)}, 
+                      Lng: {parseFloat(guard.last_location.longitude).toFixed(6)}
+                    </span>
+                  </div>
+                  
+                  {guard.last_location.accuracy && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">
+                        ±{parseFloat(guard.last_location.accuracy).toFixed(0)}m
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-gray-500" />
+                    <span className="text-xs text-gray-500">
+                      {formatLastLocationTime()}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* Battery Info */}
+              {guard.last_location?.battery_level !== undefined && (
+                <div className="flex items-center gap-1">
+                  <Battery className="h-3 w-3 text-gray-500" />
+                  <span className="text-xs">
+                    {guard.last_location.battery_level}%
+                    {guard.last_location.is_charging && ' ⚡'}
+                  </span>
+                </div>
+              )}
+
+              {/* Network Info */}
+              {guard.last_location?.battery_level !== undefined && (
+                <div className="flex items-center gap-1">
+                  <Wifi className="h-3 w-3 text-gray-500" />
+                  <span className="text-xs">
+                    {guard.last_location.is_charging !== undefined ? 'Mobile' : 'WiFi'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Duty Location Status */}
+            <div className="flex items-center gap-2">
+              {guard.is_at_duty_location !== undefined && (
+                <Badge 
+                  variant={guard.is_at_duty_location ? "default" : "destructive"}
+                  className="text-xs"
+                >
+                  {guard.is_at_duty_location ? '✓ At Duty Location' : '⚠ Away from Duty'}
+                </Badge>
+              )}
+              {guard.distance_to_duty_meters && (
+                <span className="text-xs text-gray-500">
+                  {formatDistance()} away
+                </span>
+              )}
             </div>
           </div>
 

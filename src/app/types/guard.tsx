@@ -130,7 +130,26 @@ export interface Guard {
     last_name?:string;
     role?:string;
     is_active?:string
-  }
+  };
+  // ✅ NEW STATUS FIELDS
+  online_status?: 'online' | 'offline';
+  last_ping_at?: string;
+  last_activity_at?: string;
+  last_check_in_at?: string | null;
+
+  // ✅ NEW LOCATION OBJECT
+  last_location?: {
+    latitude: string;
+    longitude: string;
+    accuracy?: string;
+    speed?: string;
+    battery_level?: number;
+    is_charging?: boolean;
+    recorded_at?: string;
+  };
+
+  is_at_duty_location?: boolean;
+  distance_to_duty_meters?: string;
 }
 
 export interface GuardContact {
@@ -161,7 +180,8 @@ export interface GuardParams {
   include_type?: boolean;
   include_assignments?: boolean;
   include_attendances?: boolean;
-  is_active?:boolean
+  is_active?:boolean;
+  with_live?:number
 }
 
 export interface GuardState {

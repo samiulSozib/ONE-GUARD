@@ -85,6 +85,7 @@ export function GuardDataTable() {
         const params: GuardParams = {
             page: pagination.current_page || 1,
             per_page: 10,
+            with_live: 1
         };
 
         // Add search term (combine all search fields)
@@ -195,15 +196,15 @@ export function GuardDataTable() {
                     //     page: pagination.current_page,
                     //     per_page: 10,
                     // }));
-                }else{
+                } else {
                     await SweetAlertService.error(
-                    'Update Failed',
-                    'There was an error updating the guard status. Please try again.',
-                    {
-                        timer: 2000,
-                        showConfirmButton: true,
-                    }
-                );
+                        'Update Failed',
+                        'There was an error updating the guard status. Please try again.',
+                        {
+                            timer: 2000,
+                            showConfirmButton: true,
+                        }
+                    );
                 }
 
 
@@ -523,6 +524,8 @@ export function GuardDataTable() {
                                     <TableHead>Driver&apos;s License</TableHead>                                    <TableHead>Issuing Source</TableHead>
                                     <TableHead>State</TableHead>
                                     <TableHead>Country</TableHead>
+                                    <TableHead>Online Status</TableHead>
+                                    <TableHead>Last Location</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -627,6 +630,24 @@ export function GuardDataTable() {
                                             {/* Country */}
                                             <TableCell className="text-gray-700 dark:text-gray-300">
                                                 {guard.country || "N/A"}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <span
+                                                    className={`px-2 py-1 rounded-full text-xs font-medium ${guard.online_status === "online"
+                                                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                                            : guard.online_status === "offline"
+                                                                ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                                                                : "bg-gray-100 text-gray-500"
+                                                        }`}
+                                                >
+                                                    {guard.online_status || "N/A"}
+                                                </span>
+                                            </TableCell>
+
+                                            {/* last location */}
+                                            <TableCell className="text-gray-700 dark:text-gray-300">
+                                                {guard.last_location?.latitude || "N/A"} {guard.last_location?.longitude || "N/A"}
                                             </TableCell>
 
                                             {/* Status */}

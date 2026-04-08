@@ -18,6 +18,7 @@ import leaveReducer from './slices/leaveSlice'
 import incidentReducer from './slices/incidentSlice'
 import expenseReviewReducer from './slices/expenseReviewSlice'
 import clientContractReducer from './slices/clientContractSlice'
+import shiftInstructionReducer from './slices/shiftInstruction'
 
 export const store = configureStore({
   reducer: {
@@ -39,7 +40,8 @@ export const store = configureStore({
     leave:leaveReducer,
     incident:incidentReducer,
     expenseReview:expenseReviewReducer,
-    clientContract:clientContractReducer
+    clientContract:clientContractReducer,
+    shiftInstruction:shiftInstructionReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

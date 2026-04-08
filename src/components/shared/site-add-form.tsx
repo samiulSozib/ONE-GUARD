@@ -17,7 +17,7 @@ const SiteAddForm = () => {
                 </div>
 
                 <div className="col-span-1">
-                    <label htmlFor="" className="text-xs text-gray-600">Site Instraction</label>
+                    <label htmlFor="" className="text-xs text-gray-600">Site Instruction</label>
                     <Input className="bg-white" />
                 </div>
 

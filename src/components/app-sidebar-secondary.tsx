@@ -97,6 +97,7 @@ const navGroups = [
 
       { title: "Client Concerns", url: "/complaint", icon: MessageSquareWarning },
       { title: "Incidents", url: "/incident", icon: AlertTriangle },
+      { title: "Shift Instruction", url: "/shift-instruction", icon: AlertTriangle },
     ],
   },
 ]
