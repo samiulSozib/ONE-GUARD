@@ -3,11 +3,12 @@ import {
     CardContent,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StarIcon, ChevronRight, ChevronDown, MessageCircle, AlertTriangle, AlertCircle, MapPin, Building, Calendar, Clock, Phone, Mail, User } from "lucide-react"
+import { StarIcon, ChevronRight, ChevronDown, MessageCircle, AlertTriangle, AlertCircle, MapPin, Building, Clock, Phone, Mail } from "lucide-react"
 import Image from "next/image"
 import { Button } from "../ui/button"
 import { Alert, AlertDescription } from "../ui/alert"
 import { useState } from "react"
+import { IconCar } from "@tabler/icons-react"
 
 interface GuardLiveCardProps {
     guard: {
@@ -15,7 +16,7 @@ interface GuardLiveCardProps {
         name: string
         avatar: string
         rating: number
-        status: 'on-duty' | 'off-duty' | 'break'
+        status: string  // Changed from union type to string
         displayStatus: string
         mission: string
         site: string
@@ -59,21 +60,25 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
     const [showAlert, setShowAlert] = useState(false)
     const [alertMessage, setAlertMessage] = useState("")
 
-    const statusColors = {
-        'on-duty': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-300', dot: 'bg-green-600' },
-        'off-duty': { bg: 'bg-gray-100 dark:bg-gray-900/30', text: 'text-gray-800 dark:text-gray-300', dot: 'bg-gray-600' },
-        'break': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', dot: 'bg-yellow-600' }
+    const getStatusColors = (status: string) => {
+        switch (status) {
+            case 'on-duty':
+                return { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-300', dot: 'bg-green-600' };
+            case 'off-duty':
+                return { bg: 'bg-gray-100 dark:bg-gray-900/30', text: 'text-gray-800 dark:text-gray-300', dot: 'bg-gray-600' };
+            case 'break':
+                return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', dot: 'bg-yellow-600' };
+            default:
+                return { bg: 'bg-gray-100 dark:bg-gray-900/30', text: 'text-gray-800 dark:text-gray-300', dot: 'bg-gray-600' };
+        }
     }
 
-    const colors = statusColors[guard.status]
-
-    // Get the primary location if available
+    const colors = getStatusColors(guard.status)
     const primaryLocation = guard.siteDetails?.locations?.[0]
 
     return (
         <Card className="w-full border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200 hover:shadow-md">
             <CardContent className="p-4">
-                {/* Alert Display */}
                 {showAlert && (
                     <Alert className="mb-3 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
                         <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -83,7 +88,6 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                     </Alert>
                 )}
 
-                {/* Header Section */}
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 overflow-hidden">
@@ -112,13 +116,21 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                         <div className={`flex items-center gap-1.5 ${colors.bg} ${colors.text} rounded-full px-2 py-1`}>
                             <div className={`w-2 h-2 rounded-full ${colors.dot}`}></div>
                             <span className="text-xs font-medium">{guard.displayStatus}</span>
+                            {guard.displayStatus === 'Online' && (
+                                <div className="animate-pulse">
+                                    <IconCar className="w-4 h-4 text-green-500 animate-spin" />
+                                </div>
+                            )}
+                            {guard.displayStatus === 'Offline' && (
+                                <div className="">
+                                    <IconCar className="w-4 h-4 text-gray-500" />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Mission Information */}
                 <div className="space-y-3">
-                    {/* Mission and Site */}
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <Building className="w-4 h-4 text-blue-600" />
@@ -129,7 +141,6 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                         </Badge>
                     </div>
 
-                    {/* Location */}
                     <div className="flex items-start gap-2">
                         <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
                         <div>
@@ -142,7 +153,6 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                         </div>
                     </div>
 
-                    {/* Time Information */}
                     <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4 text-gray-500" />
@@ -167,10 +177,8 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                         </Badge>
                     </div>
 
-                    {/* Expanded Details */}
                     {isExpanded && (
                         <div className="space-y-4 mt-4 pt-4 border-t dark:border-gray-700">
-                            {/* Contact Information */}
                             <div className="space-y-2">
                                 <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Contact Information</h4>
                                 <div className="grid grid-cols-2 gap-2">
@@ -189,7 +197,6 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                                 </div>
                             </div>
 
-                            {/* Site Details */}
                             {guard.siteDetails && (
                                 <div className="space-y-2">
                                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Site Details</h4>
@@ -208,32 +215,6 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                                 </div>
                             )}
 
-                            {/* All Locations */}
-                            {guard.siteDetails?.locations && guard.siteDetails.locations.length > 0 && (
-                                <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">All Locations</h4>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                                        {guard.siteDetails.locations.map((loc, idx) => (
-                                            <div key={idx} className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                                                <p className="text-sm font-medium">{loc.title}</p>
-                                                {loc.description && (
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">{loc.description}</p>
-                                                )}
-                                                <div className="flex gap-2 mt-1">
-                                                    <Badge variant="outline" className="text-xs">
-                                                        Lat: {loc.latitude.toFixed(6)}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        Long: {loc.longitude.toFixed(6)}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Notes */}
                             {guard.notes && guard.notes.length > 0 && (
                                 <div className="space-y-2">
                                     {guard.notes.map((note, index) => (
@@ -245,15 +226,12 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                                 </div>
                             )}
 
-                            {/* Action Buttons */}
                             <div className="flex gap-3 pt-2">
-                                <Button 
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                                >
+                                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
                                     <MessageCircle className="w-4 h-4" />
                                     Message
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={onSendAlert}
                                     className="flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
                                 >
@@ -264,7 +242,6 @@ export function GuardLiveCard({ guard, isExpanded, onViewDetails, onSendAlert }:
                         </div>
                     )}
 
-                    {/* View Details Toggle */}
                     <div className="flex justify-end pt-2">
                         <button
                             onClick={onViewDetails}

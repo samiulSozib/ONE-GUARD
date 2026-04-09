@@ -8,58 +8,24 @@ import {
 import { useEffect, useState } from "react";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import { fetchGuards } from "@/store/slices/guardSlice";
-import { fetchClients } from "@/store/slices/clientSlice";
-import { fetchDuties } from "@/store/slices/dutySlice";
-import { fetchIncidents } from "@/store/slices/incidentSlice";
-import { fetchExpenses } from "@/store/slices/expenseSlice";
+import { fetchDashboard } from "@/store/slices/dashboardSlice";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function HomeInfo() {
     const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: dashboard, isLoading, error } = useAppSelector((state) => state.dashboard);
 
-    // Get data from Redux stores
-    const { guards, pagination: guardPagination, isLoading: guardsLoading } = useAppSelector((state) => state.guard);
-    const { clients, pagination: clientPagination, isLoading: clientsLoading } = useAppSelector((state) => state.client);
-    const { duties, pagination: dutyPagination, isLoading: dutiesLoading } = useAppSelector((state) => state.duty);
-    const { incidents, pagination: incidentPagination, isLoading: incidentsLoading } = useAppSelector((state) => state.incident);
-    const { expenses, pagination: expensePagination, isLoading: expensesLoading } = useAppSelector((state) => state.expense);
-
-    // Fetch data on component mount
+    // Fetch dashboard data on component mount
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            await Promise.all([
-                dispatch(fetchGuards({ page: 1, per_page: 1 })),
-                dispatch(fetchClients({ page: 1, per_page: 1 })),
-                dispatch(fetchDuties({ page: 1, per_page: 1 })),
-                dispatch(fetchIncidents({ page: 1, per_page: 1 })),
-                dispatch(fetchExpenses({ page: 1, per_page: 1 }))
-            ]);
-            setIsLoading(false);
-        };
-
-        fetchData();
+        dispatch(fetchDashboard());
     }, [dispatch]);
 
-    // Calculate metrics
-    const totalGuards = guardPagination?.total || 0;
-    const totalClients = clientPagination?.total || 0;
-    const ongoingShifts = duties?.filter(duty => duty.status === 'in_progress' || duty.status === 'active')?.length || 0;
-    
-    // Calculate profit and loss from expenses (example logic - adjust based on your data structure)
-    const totalExpenses = expensePagination?.total || 0;
-    const profit = Math.floor(totalExpenses * 0.65); // Example: 65% of expenses are profit
-    const loss = Math.floor(totalExpenses * 0.35); // Example: 35% of expenses are loss
-    
-    const totalIncidents = incidentPagination?.total || 0;
-
-    // Cards data with real values
+    // Cards data with real values from dashboard API
     const cards = [
         {
-            title: totalGuards.toLocaleString(),
+            title: dashboard?.overview?.total_guards?.toLocaleString() || "0",
             label: "Total Security Officers",
+            subLabel: `${dashboard?.overview?.online_guards || 0} online, ${dashboard?.overview?.offline_guards || 0} offline`,
             color: "#EFE6E8",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05">
@@ -68,8 +34,9 @@ export function HomeInfo() {
             </svg>)
         },
         {
-            title: totalClients.toLocaleString(),
+            title: dashboard?.clients?.active?.toLocaleString() || "0",
             label: "Active Clients",
+            subLabel: `${dashboard?.clients?.total || 0} total clients`,
             color: "#FFF7CD",
             icon: (<svg width="124" height="112" viewBox="0 0 124 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05">
@@ -83,8 +50,9 @@ export function HomeInfo() {
             </svg>)
         },
         {
-            title: ongoingShifts.toLocaleString(),
-            label: "Active Shifts",
+            title: dashboard?.overview?.on_duty?.toLocaleString() || "0",
+            label: "On Duty Guards",
+            subLabel: `${dashboard?.overview?.on_break || 0} on break, ${dashboard?.overview?.late_checkins || 0} late check-ins`,
             color: "#F8F6F3",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05" clipPath="url(#clip0_3056_23479)">
@@ -98,8 +66,9 @@ export function HomeInfo() {
             </svg>)
         },
         {
-            title: profit.toLocaleString(),
-            label: "Projected Profit",
+            title: dashboard?.overview?.upcoming_shifts_24h?.toLocaleString() || "0",
+            label: "Upcoming Shifts",
+            subLabel: "Next 24 hours",
             color: "#E9FCD4",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.12">
@@ -108,8 +77,9 @@ export function HomeInfo() {
             </svg>)
         },
         {
-            title: loss.toLocaleString(),
-            label: "Projected Loss",
+            title: dashboard?.incidents?.open?.toLocaleString() || "0",
+            label: "Open Incidents",
+            subLabel: `${dashboard?.incidents?.total || 0} total, ${dashboard?.incidents?.this_month || 0} this month`,
             color: "#FFE7D9",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.12">
@@ -118,8 +88,9 @@ export function HomeInfo() {
             </svg>)
         },
         {
-            title: totalIncidents.toLocaleString(),
-            label: "Total Incidents",
+            title: dashboard?.verifications?.pending_guards?.toLocaleString() || "0",
+            label: "Pending Verifications",
+            subLabel: `${dashboard?.verifications?.pending_documents || 0} documents pending`,
             color: "#D0F2FF",
             icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g opacity="0.05">
@@ -131,7 +102,7 @@ export function HomeInfo() {
     ];
 
     // Loading state
-    if (isLoading || guardsLoading || clientsLoading || dutiesLoading || incidentsLoading || expensesLoading) {
+    if (isLoading) {
         return (
             <div className="grid grid-cols-2 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
                 {[1, 2, 3, 4, 5, 6].map((index) => (
@@ -143,6 +114,7 @@ export function HomeInfo() {
                                 </CardHeader>
                                 <CardFooter className="p-0 flex-col items-start gap-1.5 text-sm mt-2">
                                     <Skeleton className="h-4 w-20" />
+                                    <Skeleton className="h-3 w-16 mt-1" />
                                 </CardFooter>
                             </div>
                             <div className="hidden md:flex justify-end items-center">
@@ -151,6 +123,21 @@ export function HomeInfo() {
                         </div>
                     </Card>
                 ))}
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="text-center py-8">
+                <p className="text-red-500">Error loading dashboard data: {error}</p>
+                <button
+                    onClick={() => dispatch(fetchDashboard())}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -174,6 +161,9 @@ export function HomeInfo() {
                             <CardFooter className="p-0 flex-col items-start gap-1.5 text-sm mt-2">
                                 <div className="line-clamp-1 flex gap-2 font-medium dark:text-black">
                                     {card.label}
+                                </div>
+                                <div className="line-clamp-1 text-xs text-gray-600 dark:text-gray-500">
+                                    {card.subLabel}
                                 </div>
                             </CardFooter>
                         </div>

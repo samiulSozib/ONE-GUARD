@@ -19,6 +19,8 @@ import incidentReducer from './slices/incidentSlice'
 import expenseReviewReducer from './slices/expenseReviewSlice'
 import clientContractReducer from './slices/clientContractSlice'
 import shiftInstructionReducer from './slices/shiftInstruction'
+import dashboardReducer from './slices/dashboardSlice'
+import liveTrackingReducer from './slices/liveTrackingSlice'
 
 export const store = configureStore({
   reducer: {
@@ -41,7 +43,9 @@ export const store = configureStore({
     incident:incidentReducer,
     expenseReview:expenseReviewReducer,
     clientContract:clientContractReducer,
-    shiftInstruction:shiftInstructionReducer
+    shiftInstruction:shiftInstructionReducer,
+    dashboard:dashboardReducer,
+    liveTracking:liveTrackingReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

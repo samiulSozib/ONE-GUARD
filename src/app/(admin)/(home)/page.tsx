@@ -2,9 +2,9 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { HomeInfo } from "@/components/home/home-info";
-import { ClientGurdRequestOverview } from "@/components/home/home-client-guard-request-overview";
 import { OnGoingShifts } from "@/components/home/home-ongoing-shifts";
 import { ClientReviewCard } from "@/components/home/home-client-review";
+import { ClientGuardRequestOverview } from "@/components/home/home-client-guard-request-overview";
 
 export default function Page() {
   return (
@@ -24,7 +24,7 @@ export default function Page() {
 
             {/* Data Table Card */}
             <div className="flex-1">
-              <ClientGurdRequestOverview />
+              <ClientGuardRequestOverview />
             </div>
           </div>
 
