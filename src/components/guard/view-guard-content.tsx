@@ -62,20 +62,20 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
   // Get status color and text
   const getStatusDisplay = () => {
     if (guard.online_status === 'online') {
-      return { 
-        color: 'bg-green-100 text-green-700', 
+      return {
+        color: 'bg-green-100 text-green-700',
         text: '● Online',
         pulse: true
       };
     } else if (guard.online_status === 'offline') {
-      return { 
-        color: 'bg-gray-100 text-gray-700', 
+      return {
+        color: 'bg-gray-100 text-gray-700',
         text: '● Offline',
         pulse: false
       };
     } else {
-      return { 
-        color: 'bg-yellow-100 text-yellow-700', 
+      return {
+        color: 'bg-yellow-100 text-yellow-700',
         text: '● Unknown',
         pulse: false
       };
@@ -121,12 +121,41 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
               <div className="flex items-end gap-1 w-full">
                 <div className="relative -bottom-6 h-30 w-30 rounded-full border-4 border-white overflow-hidden flex-shrink-0">
                   <Image
-                    src="/images/rectangle.png"
+                    src={guard.profile_image || "/images/rectangle.png"}
                     alt="Guard"
                     fill
                     className="object-cover"
                   />
+
+                  {/* Online Status Indicator */}
+                  {guard.online_status === "online" && (
+                    <span className="absolute bottom-1 right-1 h-3.5 w-3.5">
+                      {/* Outer expanding rings */}
+                      <span
+                        className="absolute inline-flex h-full w-full animate-ping rounded-full border-2 border-green-400 bg-transparent"
+                        style={{ animationDuration: '2s' }}
+                      />
+                      <span
+                        className="absolute inline-flex h-full w-full animate-ping rounded-full border-2 border-green-400 bg-transparent"
+                        style={{ animationDuration: '2s', animationDelay: '0.7s' }}
+                      />
+                      <span
+                        className="absolute inline-flex h-full w-full animate-ping rounded-full border-2 border-green-300 bg-transparent"
+                        style={{ animationDuration: '2s', animationDelay: '1.4s' }}
+                      />
+                      {/* Inner pulsing glow */}
+                      <span className="absolute inline-flex h-full w-full animate-pulse rounded-full bg-green-400 opacity-50" />
+                      {/* Core dot */}
+                      <span className="relative inline-flex h-full w-full rounded-full bg-green-500 ring-2 ring-white shadow-md" />
+                    </span>
+                  )}
+
+                  {/* Offline Status Indicator */}
+                  {guard.online_status === "offline" && (
+                    <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-gray-400 ring-2 ring-white" />
+                  )}
                 </div>
+
                 <div className="flex-1 min-w-0 ml-24 sm:ml-0 sm:pl-4 text-white mb-1">
                   <h2 className="font-bold text-lg sm:text-xl truncate">{guard.full_name}</h2>
                   <p className="text-sm opacity-80">{guard.guard_code}</p>
@@ -170,11 +199,11 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
                   <div className="flex items-center gap-1">
                     <MapPin className="h-3 w-3 text-gray-500" />
                     <span className="text-xs">
-                      Lat: {parseFloat(guard.last_location.latitude).toFixed(6)}, 
+                      Lat: {parseFloat(guard.last_location.latitude).toFixed(6)},
                       Lng: {parseFloat(guard.last_location.longitude).toFixed(6)}
                     </span>
                   </div>
-                  
+
                   {guard.last_location.accuracy && (
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-gray-500">
@@ -217,7 +246,7 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
             {/* Duty Location Status */}
             <div className="flex items-center gap-2">
               {guard.is_at_duty_location !== undefined && (
-                <Badge 
+                <Badge
                   variant={guard.is_at_duty_location ? "default" : "destructive"}
                   className="text-xs"
                 >
@@ -266,8 +295,8 @@ export default function ViewGuardContent({ guard }: ViewGuardTopCardProps) {
               <PersonalInformation guard={guard} />
             </TabsContent>
 
-             <TabsContent value="assignment" className="m-2">
-              <Assignment guard_id={guard.id}/>
+            <TabsContent value="assignment" className="m-2">
+              <Assignment guard_id={guard.id} />
             </TabsContent>
 
             <TabsContent value="availability" className="m-2">

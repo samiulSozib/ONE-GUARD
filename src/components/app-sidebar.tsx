@@ -19,6 +19,7 @@ import {
   CalendarCheck,
   BarChart3,
   AlertTriangle,
+  LocateIcon,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -63,6 +64,8 @@ const navGroups = [
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
       { title: "Contacts", url: "/contacts", icon: Phone },
+            { title: "Location Tracking", url: "/location-tracking", icon: LocateIcon },
+
     ],
   },
   {

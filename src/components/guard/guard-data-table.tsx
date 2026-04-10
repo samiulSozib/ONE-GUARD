@@ -45,7 +45,7 @@ import { fetchGuards, deleteGuard, toggleGuardStatus } from "@/store/slices/guar
 import SweetAlertService from "@/lib/sweetAlert";
 import { GuardUpdateForm } from "./guard-update-form";
 import Swal from 'sweetalert2';
-import { IconCar } from "@tabler/icons-react";
+import { IconCar, IconCodeCircle } from "@tabler/icons-react";
 import {
     Dialog,
     DialogContent,
@@ -99,7 +99,7 @@ function LocationMapModal({
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
     const [addressError, setAddressError] = useState<string | null>(null);
 
-    const hasValidLocation = latitude && longitude && 
+    const hasValidLocation = latitude && longitude &&
         Number(latitude) !== 0 && Number(longitude) !== 0;
 
     // Reverse geocoding using OpenStreetMap Nominatim (FREE)
@@ -109,32 +109,32 @@ function LocationMapModal({
         const fetchAddress = async () => {
             setIsLoadingAddress(true);
             setAddressError(null);
-            
+
             try {
                 // Nominatim API - No API key required!
                 // Note: Rate limit is 1 request per second
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`
                 );
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (data && data.address) {
                     const addressComponents = data.address;
-                    
+
                     // Extract city, state, country from response
-                    const city = addressComponents.city || 
-                                addressComponents.town || 
-                                addressComponents.village || 
-                                'Not available';
-                    
+                    const city = addressComponents.city ||
+                        addressComponents.town ||
+                        addressComponents.village ||
+                        'Not available';
+
                     const state = addressComponents.state || 'Not available';
                     const country = addressComponents.country || 'Not available';
-                    
+
                     setAddress({
                         city: city,
                         state: state,
@@ -151,7 +151,7 @@ function LocationMapModal({
                 setIsLoadingAddress(false);
             }
         };
-        
+
         fetchAddress();
     }, [isOpen, latitude, longitude, hasValidLocation]);
 
@@ -187,7 +187,7 @@ function LocationMapModal({
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Current Location
                                 </p>
-                                
+
                                 {!hasValidLocation ? (
                                     <p className="text-sm text-gray-500 mt-1">
                                         No location data available for this guard
@@ -238,7 +238,7 @@ function LocationMapModal({
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         {address.fullAddress && (
                                             <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -247,7 +247,7 @@ function LocationMapModal({
                                                 </p>
                                             </div>
                                         )}
-                                        
+
                                         <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                                             <p className="text-xs text-gray-500 dark:text-gray-400">
                                                 <span className="font-medium">Coordinates:</span><br />
@@ -766,6 +766,8 @@ export function GuardDataTable() {
                                             <span className="sr-only">Select</span>
                                         </TableHead>
                                         <TableHead>Officer Name</TableHead>
+                                        <TableHead>Online Status</TableHead>
+                                        <TableHead>Last Location</TableHead>
                                         <TableHead>Employee ID</TableHead>
                                         <TableHead>Role</TableHead>
                                         <TableHead>Guard Card No</TableHead>
@@ -774,8 +776,7 @@ export function GuardDataTable() {
                                         <TableHead>Issuing Source</TableHead>
                                         <TableHead>State</TableHead>
                                         <TableHead>Country</TableHead>
-                                        <TableHead>Online Status</TableHead>
-                                        <TableHead>Last Location</TableHead>
+                                        
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -811,21 +812,52 @@ export function GuardDataTable() {
                                                 {/* Guard Name */}
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                                                            {guard.profile_image ? (
-                                                                <Image
-                                                                    src={guard.profile_image}
-                                                                    alt={guard.full_name || 'Guard'}
-                                                                    width={40}
-                                                                    height={40}
-                                                                    className="object-cover"
-                                                                />
-                                                            ) : (
-                                                                <span className="font-bold text-gray-700">
-                                                                    {guard.full_name?.charAt(0).toUpperCase()}
+                                                        <div className="relative">
+                                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                                                                {guard.profile_image ? (
+                                                                    <Image
+                                                                        src={guard.profile_image}
+                                                                        alt={guard.full_name || 'Guard'}
+                                                                        width={40}
+                                                                        height={40}
+                                                                        className="object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <span className="font-bold text-gray-700">
+                                                                        {guard.full_name?.charAt(0).toUpperCase()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Online Status Indicator */}
+                                                            {guard.online_status === "online" && (
+                                                                <span className="absolute bottom-0 right-0 h-3 w-3">
+                                                                    {/* Outer expanding rings */}
+                                                                    <span
+                                                                        className="absolute inline-flex h-full w-full animate-ping rounded-full border-2 border-green-400 bg-transparent"
+                                                                        style={{ animationDuration: '2s' }}
+                                                                    />
+                                                                    <span
+                                                                        className="absolute inline-flex h-full w-full animate-ping rounded-full border-2 border-green-400 bg-transparent"
+                                                                        style={{ animationDuration: '2s', animationDelay: '0.7s' }}
+                                                                    />
+                                                                    <span
+                                                                        className="absolute inline-flex h-full w-full animate-ping rounded-full border-2 border-green-300 bg-transparent"
+                                                                        style={{ animationDuration: '2s', animationDelay: '1.4s' }}
+                                                                    />
+                                                                    {/* Inner pulsing glow */}
+                                                                    <span className="absolute inline-flex h-full w-full animate-pulse rounded-full bg-green-400 opacity-50" />
+                                                                    {/* Core dot */}
+                                                                    <span className="relative inline-flex h-full w-full rounded-full bg-green-500 ring-2 ring-white shadow-md" />
                                                                 </span>
                                                             )}
+
+                                                            {/* Offline Status Indicator */}
+                                                            {guard.online_status === "offline" && (
+                                                                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-gray-400 ring-2 ring-white" />
+                                                            )}
                                                         </div>
+
                                                         <div>
                                                             <div className="font-medium text-gray-900 dark:text-white">
                                                                 {guard.full_name}
@@ -835,6 +867,50 @@ export function GuardDataTable() {
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </TableCell>
+
+                                                {/* Status Cell - Simplified since we have indicator in avatar */}
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <span
+                                                            className={`px-2 py-1 rounded-full text-xs font-medium ${guard.online_status === "online"
+                                                                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                                                    : guard.online_status === "offline"
+                                                                        ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                                                                        : "bg-gray-100 text-gray-500"
+                                                                }`}
+                                                        >
+                                                            {guard.online_status
+                                                                ? guard.online_status.charAt(0).toUpperCase() + guard.online_status.slice(1)
+                                                                : "N/A"}
+                                                        </span>
+
+                                                        {guard.online_status === "online" && (
+                                                            <div className="animate-pulse">
+                                                                <IconCodeCircle className="w-4 h-4 text-green-500 animate-spin" />
+                                                            </div>
+                                                        )}
+
+                                                        {guard.online_status === "offline" && (
+                                                            <div>
+                                                                <IconCodeCircle className="w-4 h-4 text-gray-500" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+
+                                                  {/* Last Location - Map Icon */}
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => handleOpenLocationModal(e, guard)}
+                                                        disabled={!guard.last_location?.latitude || !guard.last_location?.longitude}
+                                                        title={guard.last_location?.latitude && guard.last_location?.longitude ? "View on map" : "No location available"}
+                                                    >
+                                                        <MapPin className={`h-5 w-5 ${guard.last_location?.latitude && guard.last_location?.longitude ? 'text-blue-600 hover:text-blue-700' : 'text-gray-300'}`} />
+                                                    </Button>
                                                 </TableCell>
 
                                                 {/* ID Number */}
@@ -882,49 +958,9 @@ export function GuardDataTable() {
                                                     {guard.country || "N/A"}
                                                 </TableCell>
 
-                                                {/* Online Status */}
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <span
-                                                            className={`px-2 py-1 rounded-full text-xs font-medium ${guard.online_status === "online"
-                                                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                                                : guard.online_status === "offline"
-                                                                    ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                                                                    : "bg-gray-100 text-gray-500"
-                                                                }`}
-                                                        >
-                                                            {guard.online_status
-                                                                ? guard.online_status.charAt(0).toUpperCase() + guard.online_status.slice(1)
-                                                                : "N/A"}
-                                                        </span>
+                                               
 
-                                                        {guard.online_status === "online" && (
-                                                            <div className="animate-pulse">
-                                                                <IconCar className="w-4 h-4 text-green-500 animate-spin" />
-                                                            </div>
-                                                        )}
-
-                                                        {guard.online_status === "offline" && (
-                                                            <div>
-                                                                <IconCar className="w-4 h-4 text-gray-500" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-
-                                                {/* Last Location - Map Icon */}
-                                                <TableCell onClick={(e) => e.stopPropagation()}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0"
-                                                        onClick={(e) => handleOpenLocationModal(e, guard)}
-                                                        disabled={!guard.last_location?.latitude || !guard.last_location?.longitude}
-                                                        title={guard.last_location?.latitude && guard.last_location?.longitude ? "View on map" : "No location available"}
-                                                    >
-                                                        <MapPin className={`h-5 w-5 ${guard.last_location?.latitude && guard.last_location?.longitude ? 'text-blue-600 hover:text-blue-700' : 'text-gray-300'}`} />
-                                                    </Button>
-                                                </TableCell>
+                                              
 
                                                 {/* Status */}
                                                 <TableCell>
