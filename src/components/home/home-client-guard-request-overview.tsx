@@ -62,7 +62,7 @@ export function ClientGuardRequestOverview() {
     }, [dispatch]);
 
     useEffect(()=>{
-        console.log(dashboard?.recent_clients)
+        console.log(dashboard?.ongoing_shifts)
     },[dispatch,dashboard])
 
     // Filter clients based on search and status

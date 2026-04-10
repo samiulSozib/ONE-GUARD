@@ -54,13 +54,11 @@ export interface RecentClient {
 }
 
 export interface OngoingShift {
-  id: number;
-  shift_title: string;
-  site_name: string;
-  guard_name: string;
-  start_time: string;
-  end_time: string;
-  status: string;
+  guard_name:string|null,
+  mission:string|null,
+  status:string|null,
+  status_color:string|null,
+  assignment_id:number
 }
 
 export interface DashboardData {
