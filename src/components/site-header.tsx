@@ -22,6 +22,7 @@ import { logout } from "@/store/slices/authSlice"
 import SweetAlertService from "@/lib/sweetAlert"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
+import { SoundToggle } from "./ui/sound-toggle"
 
 export function SiteHeader() {
   const router = useRouter()
@@ -122,6 +123,7 @@ export function SiteHeader() {
             </Button>
 
             <div className="hidden sm:flex items-center gap-1">
+              <SoundToggle/>
               {/* <NotificationPopover/> */}
 
               {/* <Button 

@@ -3,17 +3,17 @@
 export interface GuardLocation {
   latitude: string;
   longitude: string;
-  accuracy: string | null;
+  accuracy: string|number | null;
   speed: string | null;
   is_moving: boolean;
   updated_at: string;
   updated_ago: string;
   duty_location_match: boolean;
-  distance_from_duty_meters: string | null;
+  distance_from_duty_meters: string | null|number;
 }
 
 export interface DeviceInfo {
-  battery_level: number;
+  battery_level: number|string|null;
   is_charging: boolean;
   network_type: 'wifi' | 'cellular' | 'ethernet' | 'unknown';
   app_version: string;
@@ -34,7 +34,7 @@ export interface LiveGuard {
   phone: string;
   profile_image: string | null;
   guard_type: string | null;
-  online_status: 'online' | 'offline' | 'pending';
+  online_status: 'online' | 'offline' | 'pending'|'away'|'busy';
   status_color: 'success' | 'secondary' | 'warning' | 'danger';
   last_ping_at: string | null;
   last_activity_at: string | null;
