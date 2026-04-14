@@ -39,16 +39,16 @@ export interface StatusChangeEvent {
 
 const getEchoInstance = (): Echo<any> | null => {
   if (typeof window === 'undefined') return null;
-  
+
   // Convert string ports to numbers
-  const wsPort = process.env.NEXT_PUBLIC_REVERB_PORT 
-    ? parseInt(process.env.NEXT_PUBLIC_REVERB_PORT, 10) 
+  const wsPort = process.env.NEXT_PUBLIC_REVERB_PORT
+    ? parseInt(process.env.NEXT_PUBLIC_REVERB_PORT, 10)
     : 8080;
-  
+
   return new Echo({
     broadcaster: 'reverb',
     key: process.env.NEXT_PUBLIC_REVERB_APP_KEY || 'lg0oii6bejbkeai38awc',
-    wsHost: process.env.NEXT_PUBLIC_REVERB_HOST || 'localhost',
+    wsHost: process.env.NEXT_PUBLIC_REVERB_HOST || 'ogs.api.v1.1guardsecurity.com',
     wsPort: wsPort,
     wssPort: wsPort,
     wsScheme: process.env.NEXT_PUBLIC_REVERB_SCHEME || 'http',
