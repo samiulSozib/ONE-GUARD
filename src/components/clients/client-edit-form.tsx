@@ -326,7 +326,7 @@ export function ClientUpdateForm({
                                     const parsed = JSON.parse(client.media_categories)
                                     mediaCategories = Array.isArray(parsed) ? parsed : []
                                 } catch {
-                                    mediaCategories = client.media_categories.split(',').map(c => c.trim())
+                                    //mediaCategories = client.media_categories.split(',').map(c => c.trim())
                                 }
                             }
                         }
