@@ -25,7 +25,7 @@ export interface Guard {
   license_expiry_date?: string;
   issuing_source?: string;
   name?:string;
-  
+
   // Profile data
   profile_data?: {
     place_of_birth?: string;
@@ -107,17 +107,17 @@ export interface Guard {
     }>
   };
 
-    
-  
+
+
   // Document types for upload
   document_types?: string[];
   documents?:[]
-  
+
   // Status
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  
+
   // Relationships
   guard_type?: GuardType;
   contacts?: GuardContact[];
@@ -236,4 +236,3 @@ export interface GuardProfileData {
     emergency_contact_relation?: string
     notes?: string
 }
-

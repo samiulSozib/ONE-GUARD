@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
   FileText,
   Loader2,
   X,
+  Crosshair,
 } from "lucide-react"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
@@ -42,6 +43,7 @@ interface Location {
   latitude: number
   longitude: number
   is_active: boolean
+  useCurrentLocation?: boolean
 }
 
 interface CreateSiteFormData {
@@ -54,6 +56,7 @@ interface CreateSiteFormData {
   status: 'planned' | 'active' | 'paused' | 'completed'
   site_instruction?: string
   locations: Location[]
+  useCurrentLocation?: boolean
 }
 
 interface CreateSiteFormProps {
@@ -90,6 +93,7 @@ const defaultLocation: Location = {
   latitude: 0,
   longitude: 0,
   is_active: true,
+  useCurrentLocation: false,
 }
 
 export function CreateSiteForm({
@@ -101,6 +105,7 @@ export function CreateSiteForm({
 }: CreateSiteFormProps) {
   const dispatch = useAppDispatch()
   const [isLoading, setIsLoading] = useState(false)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [activeTab, setActiveTab] = useState("basic")
   const [internalOpen, setInternalOpen] = useState(false)
 
@@ -125,6 +130,7 @@ export function CreateSiteForm({
     status: "planned",
     site_instruction: "",
     locations: [],
+    useCurrentLocation: false,
   })
 
   const [locations, setLocations] = useState<Location[]>([])
@@ -139,11 +145,11 @@ export function CreateSiteForm({
   // Load contracts for this client
   useEffect(() => {
     if (clientId && open) {
-      dispatch(fetchContracts({ 
-        page: 1, 
+      dispatch(fetchContracts({
+        page: 1,
         per_page: 10,
         client_id: clientId,
-        search: contractSearch 
+        search: contractSearch
       }))
     }
   }, [dispatch, clientId, contractSearch, open])
@@ -152,11 +158,11 @@ export function CreateSiteForm({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (clientId && open) {
-        dispatch(fetchContracts({ 
-          page: 1, 
+        dispatch(fetchContracts({
+          page: 1,
           per_page: 10,
           client_id: clientId,
-          search: contractSearch.trim() || undefined 
+          search: contractSearch.trim() || undefined
         }))
       }
     }, 300)
@@ -181,6 +187,7 @@ export function CreateSiteForm({
       status: "planned",
       site_instruction: "",
       locations: [],
+      useCurrentLocation: false,
     })
     setLocations([])
     setValidationErrors({})
@@ -188,36 +195,120 @@ export function CreateSiteForm({
     setContractSearch("")
   }
 
+  // Get current location using browser geolocation
+  const getCurrentLocation = useCallback((callback: (lat: number, lng: number) => void) => {
+    if (!navigator.geolocation) {
+      SweetAlertService.error('Not Supported', 'Geolocation is not supported by your browser')
+      return
+    }
+
+    setIsGettingLocation(true)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        callback(lat, lng)
+        SweetAlertService.success(
+          'Location Found',
+          `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`,
+          { timer: 2000, showConfirmButton: false }
+        )
+        setIsGettingLocation(false)
+      },
+      (error) => {
+        console.error('Geolocation error:', error)
+        let errorMessage = 'Unable to get your location'
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Please allow location access to use this feature'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable'
+            break
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out'
+            break
+        }
+        SweetAlertService.error('Location Error', errorMessage)
+        setIsGettingLocation(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    )
+  }, [])
+
+  // Handle use current location checkbox for main site
+  const handleUseCurrentLocationChange = useCallback(async (checked: boolean) => {
+    setFormData(prev => ({ ...prev, useCurrentLocation: checked }))
+
+    if (checked) {
+      getCurrentLocation((lat, lng) => {
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+          useCurrentLocation: true
+        }))
+      })
+    } else {
+      setFormData(prev => ({ ...prev, latitude: undefined, longitude: undefined }))
+    }
+  }, [getCurrentLocation])
+
+  // Handle use current location checkbox for a specific location
+  const handleLocationUseCurrentLocation = useCallback(async (index: number, checked: boolean) => {
+    const updatedLocations = [...locations]
+    updatedLocations[index] = { ...updatedLocations[index], useCurrentLocation: checked }
+
+    if (checked) {
+      getCurrentLocation((lat, lng) => {
+        updatedLocations[index] = {
+          ...updatedLocations[index],
+          latitude: lat,
+          longitude: lng,
+          useCurrentLocation: true
+        }
+        setLocations(updatedLocations)
+
+        // Clear validation errors for coordinates
+        if (validationErrors[`location_${index}_latitude`]) {
+          const newErrors = { ...validationErrors }
+          delete newErrors[`location_${index}_latitude`]
+          delete newErrors[`location_${index}_longitude`]
+          setValidationErrors(newErrors)
+        }
+      })
+    } else {
+      updatedLocations[index] = {
+        ...updatedLocations[index],
+        latitude: 0,
+        longitude: 0,
+        useCurrentLocation: false
+      }
+      setLocations(updatedLocations)
+    }
+  }, [locations, getCurrentLocation, validationErrors])
+
   // Handle cancel/close
   const handleCancel = () => {
     if (isLoading) return
-    
+
     // Check if form has data
-    const hasData = formData.site_name || 
-                   formData.address || 
+    const hasData = formData.site_name ||
+                   formData.address ||
                    formData.guards_required !== 1 ||
                    formData.latitude ||
                    formData.longitude ||
                    formData.site_instruction ||
                    locations.length > 0 ||
                    formData.client_contract_id
+                   setOpen(false)
+
     
-    if (hasData) {
-      SweetAlertService.confirm(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to close?',
-        'Yes, discard',
-        'No, keep'
-      ).then((result) => {
-        if (result.isConfirmed) {
-          resetForm()
-          setOpen(false)
-        }
-      })
-    } else {
-      resetForm()
-      setOpen(false)
-    }
   }
 
   // Validation
@@ -241,10 +332,10 @@ export function CreateSiteForm({
       if (!location.title || location.title.trim() === "") {
         errors[`location_${index}_title`] = `Location ${index + 1} title is required`
       }
-      if (!location.latitude) {
+      if (!location.latitude && !location.useCurrentLocation) {
         errors[`location_${index}_latitude`] = `Location ${index + 1} latitude is required`
       }
-      if (!location.longitude) {
+      if (!location.longitude && !location.useCurrentLocation) {
         errors[`location_${index}_longitude`] = `Location ${index + 1} longitude is required`
       }
     })
@@ -374,9 +465,9 @@ export function CreateSiteForm({
         {trigger}
       </DialogTrigger>
 
-      <DialogContent 
-        className="sm:max-w-[1000px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] p-0 overflow-hidden" 
-        onEscapeKeyDown={handleCancel} 
+      <DialogContent
+        className="sm:max-w-[1000px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] p-0 overflow-hidden"
+        onEscapeKeyDown={handleCancel}
         onInteractOutside={(e) => {
           e.preventDefault()
           handleCancel()
@@ -477,6 +568,22 @@ export function CreateSiteForm({
                     )}
                   </div>
 
+                  {/* Use Current Location Checkbox */}
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <input
+                      type="checkbox"
+                      id="useCurrentLocation"
+                      checked={formData.useCurrentLocation || false}
+                      onChange={(e) => handleUseCurrentLocationChange(e.target.checked)}
+                      className="rounded w-4 h-4 text-blue-600"
+                      disabled={isLoading || isGettingLocation}
+                    />
+                    <label htmlFor="useCurrentLocation" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                      <Crosshair className="h-4 w-4" />
+                      {isGettingLocation ? 'Getting location...' : 'Use my current location for this site'}
+                    </label>
+                  </div>
+
                   {/* Coordinates */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -487,7 +594,7 @@ export function CreateSiteForm({
                         value={formData.latitude || ""}
                         onChange={(e) => handleFieldChange('latitude', e.target.value ? parseFloat(e.target.value) : undefined)}
                         placeholder="e.g., 40.7128"
-                        disabled={isLoading}
+                        disabled={isLoading || formData.useCurrentLocation}
                       />
                     </div>
                     <div className="space-y-2">
@@ -498,7 +605,7 @@ export function CreateSiteForm({
                         value={formData.longitude || ""}
                         onChange={(e) => handleFieldChange('longitude', e.target.value ? parseFloat(e.target.value) : undefined)}
                         placeholder="e.g., -74.0060"
-                        disabled={isLoading}
+                        disabled={isLoading || formData.useCurrentLocation}
                       />
                     </div>
                   </div>
@@ -639,6 +746,22 @@ export function CreateSiteForm({
                             />
                           </div>
 
+                          {/* Use Current Location Checkbox for Location */}
+                          <div className="flex items-center gap-2 p-2 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800">
+                            <input
+                              type="checkbox"
+                              id={`location-${index}-useCurrent`}
+                              checked={location.useCurrentLocation || false}
+                              onChange={(e) => handleLocationUseCurrentLocation(index, e.target.checked)}
+                              className="rounded w-3 h-3 text-blue-600"
+                              disabled={isLoading || isGettingLocation}
+                            />
+                            <label htmlFor={`location-${index}-useCurrent`} className="text-xs font-medium cursor-pointer flex items-center gap-1">
+                              <Crosshair className="h-3 w-3" />
+                              Use current location for this location
+                            </label>
+                          </div>
+
                           {/* Coordinates */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div className="space-y-2">
@@ -652,7 +775,7 @@ export function CreateSiteForm({
                                 onChange={(e) => updateLocation(index, 'latitude', parseFloat(e.target.value) || 0)}
                                 placeholder="40.7128"
                                 className={validationErrors[`location_${index}_latitude`] ? "border-red-500" : ""}
-                                disabled={isLoading}
+                                disabled={isLoading || location.useCurrentLocation}
                               />
                               {validationErrors[`location_${index}_latitude`] && (
                                 <p className="text-xs text-red-500">{validationErrors[`location_${index}_latitude`]}</p>
@@ -669,7 +792,7 @@ export function CreateSiteForm({
                                 onChange={(e) => updateLocation(index, 'longitude', parseFloat(e.target.value) || 0)}
                                 placeholder="-74.0060"
                                 className={validationErrors[`location_${index}_longitude`] ? "border-red-500" : ""}
-                                disabled={isLoading}
+                                disabled={isLoading || location.useCurrentLocation}
                               />
                               {validationErrors[`location_${index}_longitude`] && (
                                 <p className="text-xs text-red-500">{validationErrors[`location_${index}_longitude`]}</p>

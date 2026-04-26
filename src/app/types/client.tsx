@@ -64,7 +64,7 @@ export interface Client {
   full_name: string;
   email: string;
   phone: string | null;
-  
+
   // Optional fields (may be null in API)
   company_name?: string | null;
   tax_id?: string | null;
@@ -81,19 +81,19 @@ export interface Client {
   contact_person?: string | null;
   contact_person_phone?: string | null;
   notes?: string | null;
-  
+
   // Profile image
   profile_image?: string | null;
   profile_image_data?: string | null;
-  
+
   // Status
   is_active: boolean;
-  
+
   // Timestamps
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
-  
+
   // Relationships (loaded based on include params)
   user?: User;
   currency?: null ; // Currency type if needed
@@ -101,13 +101,16 @@ export interface Client {
   contacts?: ClientContact[];
   documents?: ClientDocument[];
   media?: Media[];
-  
+
   // Counts (often included in list responses)
   sites_count?: number;
   documents_count?: number;
   contacts_count?: number;
   media_count?: number;
-  name?:string
+  name?:string,
+  client_document_types?: string[];
+  media_categories?: string[];
+
 }
 
 // ==================== Create/Update Payload Types ====================
@@ -134,7 +137,7 @@ export interface SiteCreatePayload {
   latitude: string | number;
   longitude: string | number;
   status?: 'running' | 'planned' | 'active' | 'inactive'; // Adjust based on your valid statuses
-  
+
   // Optional nested data
   locations?: LocationCreatePayload[];
   site_document_types?: string[]; // Document types to be uploaded for this site
@@ -164,7 +167,7 @@ export interface ClientCreatePayload {
   phone: string;
   password: string;
   client_code?: string; // Optional if auto-generated
-  
+
   // Optional client fields
   company_name?: string;
   tax_id?: string;
@@ -182,7 +185,7 @@ export interface ClientCreatePayload {
   license_number?: string;
   notes?: string;
   is_active?: boolean;
-  
+
   // Nested data for relations (will be sent as JSON strings in form-data)
   sites?: SiteCreatePayload[];
   contacts?: ClientContactCreatePayload[];
@@ -209,7 +212,7 @@ export interface ClientParams {
   status?: 'active' | 'inactive' | 'all';
   country?: string;
   city?: string;
-  
+
   // Include relationships
   include_sites?: boolean;
   include_contacts?: boolean;
@@ -267,7 +270,7 @@ export interface ClientFormValues {
   phone: string;
   password?: string;
   client_code?: string;
-  
+
   // Company Info
   company_name?: string;
   tax_id?: string;
@@ -275,7 +278,7 @@ export interface ClientFormValues {
   industry?: string;
   license_number?: string;
   website?: string;
-  
+
   // Contact Info
   country?: string;
   city?: string;
@@ -283,13 +286,13 @@ export interface ClientFormValues {
   zip_code?: string;
   contact_person?: string;
   contact_person_phone?: string;
-  
+
   // Additional Info
   registration_date?: string;
   currency_id?: number | null;
   notes?: string;
   is_active: boolean;
-  
+
   // Nested data
   sites?: SiteCreatePayload[];
   contacts?: ClientContactCreatePayload[];

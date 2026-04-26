@@ -1,26 +1,26 @@
 'use client'
+import { DutyTimeType } from "@/app/types/dutyTimeType"
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { ReactNode, useState } from 'react'
-import Image from "next/image"
-import { FloatingLabelInput } from "../ui/floating-input"
-import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { Plus, Clock } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { createDutyTimeType } from "@/store/slices/dutyTimeTypesSlice"
-import { DutyTimeType } from "@/app/types/dutyTimeType"
+import SweetAlertService from "@/lib/sweetAlert"
 import { cn } from "@/lib/utils"
+import { createDutyTimeType } from "@/store/slices/dutyTimeTypesSlice"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Clock } from "lucide-react"
+import Image from "next/image"
+import { ReactNode, useState } from 'react'
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
+import { FloatingLabelInput } from "../ui/floating-input"
+import { FloatingLabelTextarea } from "../ui/floating-textarea"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 
 interface DutyTimeTypeCreateFormProps {
     trigger: ReactNode
@@ -87,7 +87,7 @@ export function DutyTimeTypeCreateForm({
     // Generate time options
     const timeOptions = Array.from({ length: 48 }, (_, i) => {
         const hour = Math.floor(i / 2)
-        const minute = (i % 2) * 30
+        const minute = (i % 2) * 15
         return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
     })
 
