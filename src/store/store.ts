@@ -21,6 +21,8 @@ import clientContractReducer from './slices/clientContractSlice'
 import shiftInstructionReducer from './slices/shiftInstruction'
 import dashboardReducer from './slices/dashboardSlice'
 import liveTrackingReducer from './slices/liveTrackingSlice'
+import jobCategoriesReducer from './slices/jobCategoriesSlice';
+import jobReducer from './slices/jobSlice';
 
 export const store = configureStore({
   reducer: {
@@ -45,7 +47,9 @@ export const store = configureStore({
     clientContract:clientContractReducer,
     shiftInstruction:shiftInstructionReducer,
     dashboard:dashboardReducer,
-    liveTracking:liveTrackingReducer
+    liveTracking:liveTrackingReducer,
+    jobCategories: jobCategoriesReducer,
+    jobs: jobReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

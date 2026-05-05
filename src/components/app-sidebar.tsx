@@ -93,7 +93,17 @@ const navGroups = [
       { title: "Shift Instruction", url: "/shift-instruction", icon: AlertTriangle },
 
     ],
+    
   },
+  {
+      label: "Jobs",
+      items: [
+  
+        { title: "Job Categories", url: "/job-categories", icon: MessageSquareWarning },
+        { title: "Jobs", url: "/jobs", icon: AlertTriangle },
+        { title: "Job Applications", url: "/job-applications", icon: AlertTriangle },
+      ],
+    },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
