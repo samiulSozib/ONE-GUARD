@@ -107,7 +107,7 @@ export const downloadResume = createAsyncThunk(
     async (id: number, { rejectWithValue }) => {
         try {
             const response = await jobApplicationService.downloadResume(id);
-            
+
             // Create a blob URL and trigger download
             const blob = new Blob([response], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
@@ -118,7 +118,7 @@ export const downloadResume = createAsyncThunk(
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-            
+
             return response;
         } catch (error: unknown) {
             const message =
@@ -319,7 +319,7 @@ const jobApplicationSlice = createSlice({
             .addCase(updateApplicationStatus.fulfilled, (state, action) => {
                 state.isSubmitting = false;
                 const updatedItem = action.payload.item;
-                
+
                 // Update in items list
                 const index = state.items.findIndex(
                     (app) => app.id === updatedItem.id
@@ -327,12 +327,12 @@ const jobApplicationSlice = createSlice({
                 if (index !== -1) {
                     state.items[index] = updatedItem;
                 }
-                
+
                 // Update current item if it's the same
                 if (state.currentItem?.id === updatedItem.id) {
                     state.currentItem = updatedItem;
                 }
-                
+
                 // Update in applicationsByJob list
                 const jobIndex = state.applicationsByJob.findIndex(
                     (app) => app.id === updatedItem.id
@@ -340,7 +340,7 @@ const jobApplicationSlice = createSlice({
                 if (jobIndex !== -1) {
                     state.applicationsByJob[jobIndex] = updatedItem;
                 }
-                
+
                 // Update statistics if needed
                 if (state.statistics) {
                     const oldStatus = state.items.find(app => app.id === updatedItem.id)?.status;
@@ -352,7 +352,7 @@ const jobApplicationSlice = createSlice({
                         else if (oldStatus === 'interviewed') state.statistics.interviewed--;
                         else if (oldStatus === 'hired') state.statistics.hired--;
                         else if (oldStatus === 'rejected') state.statistics.rejected--;
-                        
+
                         // Increment new status count
                         if (updatedItem.status === 'pending') state.statistics.pending++;
                         else if (updatedItem.status === 'reviewed') state.statistics.reviewed++;
@@ -362,7 +362,7 @@ const jobApplicationSlice = createSlice({
                         else if (updatedItem.status === 'rejected') state.statistics.rejected++;
                     }
                 }
-                
+
                 state.successMessage = action.payload.message || "Status updated successfully";
             })
             .addCase(updateApplicationStatus.rejected, (state, action) => {
@@ -419,7 +419,7 @@ const jobApplicationSlice = createSlice({
             })
             .addCase(deleteJobApplication.fulfilled, (state, action) => {
                 state.isSubmitting = false;
-                
+
                 // Get the deleted application to update statistics
                 const deletedApp = state.items.find(app => app.id === action.payload);
                 if (deletedApp && state.statistics) {
@@ -431,7 +431,7 @@ const jobApplicationSlice = createSlice({
                     else if (deletedApp.status === 'rejected') state.statistics.rejected--;
                     state.statistics.total_applications--;
                 }
-                
+
                 state.items = state.items.filter(
                     (app) => app.id !== action.payload
                 );

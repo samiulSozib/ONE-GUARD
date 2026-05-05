@@ -10,6 +10,7 @@ import {
     AddNoteDto,
     ConvertToGuardDto,
     ApplicationNote,
+    Interview,
 } from "@/app/types/job-applications";
 
 /* =========================================================
@@ -57,12 +58,12 @@ export const jobApplicationService = {
 
     /* ---------- Download resume ---------- */
     downloadResume: (id: number) =>
-        handleApiResponse(
-            api.get<Blob>(
-                `/admin/job-applications/${id}/download-resume`,
-                { responseType: 'blob' }
-            )
-        ),
+        api.get<Blob>(
+            `/admin/job-applications/${id}/download-resume`,
+            { responseType: 'blob' }
+        ).then(response => response.data), // Return just the blob data
+
+        
 
     /* ---------- Add note to application ---------- */
     addNote: (id: number, data: AddNoteDto) =>
