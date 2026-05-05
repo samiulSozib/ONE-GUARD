@@ -23,6 +23,7 @@ import dashboardReducer from './slices/dashboardSlice'
 import liveTrackingReducer from './slices/liveTrackingSlice'
 import jobCategoriesReducer from './slices/jobCategoriesSlice';
 import jobReducer from './slices/jobSlice';
+import jobApplicationReducer from './slices/jobApplicationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -50,6 +51,7 @@ export const store = configureStore({
     liveTracking:liveTrackingReducer,
     jobCategories: jobCategoriesReducer,
     jobs: jobReducer,
+    jobApplications: jobApplicationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
