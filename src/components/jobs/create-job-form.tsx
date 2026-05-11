@@ -132,7 +132,6 @@ export function JobCreateForm({
                     page: 1,
                     per_page: 10,
                     search: categorySearch.trim(),
-                    is_active: true
                 }))
             }
         }, 300)
@@ -290,7 +289,6 @@ export function JobCreateForm({
                                         page: 1,
                                         per_page: 10,
                                         search: search,
-                                        is_active: true
                                     }))
                                 }}
                                 placeholder="Select category"
