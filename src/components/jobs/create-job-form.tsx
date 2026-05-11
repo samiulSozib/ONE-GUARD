@@ -121,7 +121,7 @@ export function JobCreateForm({
 
     // Fetch categories on mount
     useEffect(() => {
-        dispatch(fetchJobCategories({ page: 1, per_page: 100, is_active: true }))
+        dispatch(fetchJobCategories({ page: 1, per_page: 100 }))
     }, [dispatch])
 
     // Fetch categories when search changes
