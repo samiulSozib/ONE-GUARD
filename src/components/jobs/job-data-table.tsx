@@ -116,6 +116,7 @@ export function JobDataTable({ onAddClick }: JobDataTableProps) {
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  
 
   // Fetch categories for filters
   useEffect(() => {

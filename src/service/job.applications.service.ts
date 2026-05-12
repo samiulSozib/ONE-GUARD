@@ -77,7 +77,9 @@ export const jobApplicationService = {
     /* ---------- Update application status ---------- */
     updateStatus: (id: number, data: UpdateApplicationStatusDto) =>
         handleApiResponse(
-            api.post<ApiResponse<{ message: string; item: JobApplication }>>(
+            api.post<ApiResponse<{ message: string; 
+            old_status: string; 
+            new_status: string; }>>(
                 `/admin/job-applications/${id}/update-status`,
                 data
             )
@@ -109,3 +111,4 @@ export const jobApplicationService = {
             )
         ),
 };
+
