@@ -118,7 +118,7 @@ const statusOptions = [
   { value: "shortlisted", label: "Shortlisted" },
   { value: "interviewed", label: "Interviewed" },
   { value: "hired", label: "Hired" },
-  { value: "rejected", label: "Rejected" },
+  { value: "rejected", label: "No Considered" },
 ];
 
 interface JobApplicationDataTableProps {
