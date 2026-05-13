@@ -12,12 +12,12 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { 
-    CalendarIcon, 
-    DollarSign, 
-    Tag, 
-    Users, 
-    Briefcase, 
+import {
+    CalendarIcon,
+    DollarSign,
+    Tag,
+    Users,
+    Briefcase,
     MapPin
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
@@ -36,13 +36,8 @@ import SweetAlertService from "@/lib/sweetAlert"
 import { format, parseISO } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
-import dynamic from 'next/dynamic'
+import TiptapEditor from "../ui/tiptap-editor"
 
-// Dynamically import TinyMCE to avoid SSR issues
-const Editor = dynamic(
-    () => import('@tinymce/tinymce-react').then((mod) => mod.Editor),
-    { ssr: false }
-)
 
 // Employment types
 const employmentTypes = [
@@ -119,10 +114,9 @@ export function JobEditForm({
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
     const [isFetching, setIsFetching] = useState(false)
-    const [mounted, setMounted] = useState(false)
 
     // Redux states for dropdown data
-    const { items: categories, isLoading: categoriesLoading } = 
+    const { items: categories, isLoading: categoriesLoading } =
         useAppSelector((state) => state.jobCategories)
 
     // Search states
@@ -131,10 +125,6 @@ export function JobEditForm({
     // Date state
     const [deadlineDate, setDeadlineDate] = useState<Date | undefined>(undefined)
 
-    // Mount state for client-side only rendering
-    useEffect(() => {
-        setMounted(true)
-    }, [])
 
     // Fetch categories on mount
     useEffect(() => {
@@ -305,7 +295,7 @@ export function JobEditForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
-            const hasChanges = 
+            const hasChanges =
                 formValues.title !== (job?.title || "") ||
                 formValues.location !== (job?.location || "")
 
@@ -332,40 +322,7 @@ export function JobEditForm({
         }
     }
 
-    // TinyMCE configuration
-    const tinymceConfig = {
-        height: 300,
-        menubar: false,
-        plugins: [
-            'lists',
-        ],
-        toolbar: 'bold italic | forecolor backcolor | bullist numlist',
-        content_style: 'body { font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; }',
-        branding: false,
-        promotion: false,
-        color_cols: 5,
-        color_map: [
-            '#000000', 'Black',
-            '#FF0000', 'Red',
-            '#00FF00', 'Green',
-            '#0000FF', 'Blue',
-            '#FFFF00', 'Yellow',
-            '#FF00FF', 'Magenta',
-            '#00FFFF', 'Cyan',
-            '#800000', 'Maroon',
-            '#808000', 'Olive',
-            '#008000', 'Dark Green',
-            '#800080', 'Purple',
-            '#008080', 'Teal',
-            '#000080', 'Navy',
-            '#FFA500', 'Orange',
-            '#A52A2A', 'Brown',
-            '#808080', 'Gray',
-            '#C0C0C0', 'Silver',
-            '#FFC0CB', 'Pink',
-            '#FFA07A', 'Light Salmon',
-        ],
-    }
+
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
@@ -452,8 +409,8 @@ export function JobEditForm({
                             {/* Location */}
                             <div className="relative space-t-2">
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Location
-                            </Label>
+                                    Location
+                                </Label>
                                 <FloatingLabelInput
                                     label="Location *"
                                     {...register("location")}
@@ -461,7 +418,7 @@ export function JobEditForm({
                                     disabled={isLoading}
                                 />
                             </div>
-                            
+
                         </div>
 
                         {/* Employment & Payment Type Row */}
@@ -477,7 +434,7 @@ export function JobEditForm({
                                         setValue("employment_type", value.toString(), { shouldValidate: true })
                                     }}
                                     options={employmentTypes}
-                                    onSearch={() => {}}
+                                    onSearch={() => { }}
                                     placeholder="Select employment type"
                                     disabled={isLoading}
                                     emptyMessage="No employment types available"
@@ -501,7 +458,7 @@ export function JobEditForm({
                                         setValue("payment_type", value.toString(), { shouldValidate: true })
                                     }}
                                     options={paymentTypes}
-                                    onSearch={() => {}}
+                                    onSearch={() => { }}
                                     placeholder="Select payment type"
                                     disabled={isLoading}
                                     emptyMessage="No payment types available"
@@ -547,8 +504,8 @@ export function JobEditForm({
                             {/* Vacancies */}
                             <div className="relative space-y-2">
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Number of Vacancies *
-                            </Label>
+                                    Number of Vacancies *
+                                </Label>
                                 <FloatingLabelInput
                                     label="Number of Vacancies *"
                                     type="number"
@@ -594,58 +551,41 @@ export function JobEditForm({
                         </div>
 
                         {/* Description with TinyMCE */}
+                        {/* Description */}
                         <div className="w-full">
                             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                                 Job Description
                             </Label>
-                            {mounted && (
-                                <Editor
-                                    apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                                    init={tinymceConfig}
-                                    value={watch("description") || ""}
-                                    onEditorChange={(content) => {
-                                        setValue("description", content, { shouldValidate: true })
-                                    }}
-                                    disabled={isLoading}
-                                />
-                            )}
-                            {!mounted && (
-                                <textarea
-                                    rows={4}
-                                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm"
-                                    placeholder="Loading editor..."
-                                    disabled
-                                />
-                            )}
+
+                            <TiptapEditor
+                                content={watch("description") || ""}
+                                onChange={(content) => {
+                                    setValue("description", content, {
+                                        shouldValidate: true,
+                                    })
+                                }}
+                                editable={!isLoading}
+                                placeholder="Write job description..."
+                            />
                         </div>
 
                         {/* Requirements with TinyMCE */}
+                        {/* Requirements */}
                         <div className="w-full">
                             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                                 Requirements
                             </Label>
-                            {mounted && (
-                                <Editor
-                                    apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                                    init={{
-                                        ...tinymceConfig,
-                                        height: 250,
-                                    }}
-                                    value={watch("requirements") || ""}
-                                    onEditorChange={(content) => {
-                                        setValue("requirements", content, { shouldValidate: true })
-                                    }}
-                                    disabled={isLoading}
-                                />
-                            )}
-                            {!mounted && (
-                                <textarea
-                                    rows={4}
-                                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm"
-                                    placeholder="Loading editor..."
-                                    disabled
-                                />
-                            )}
+
+                            <TiptapEditor
+                                content={watch("requirements") || ""}
+                                onChange={(content) => {
+                                    setValue("requirements", content, {
+                                        shouldValidate: true,
+                                    })
+                                }}
+                                editable={!isLoading}
+                                placeholder="Write requirements..."
+                            />
                         </div>
 
                         {/* Footer Actions */}

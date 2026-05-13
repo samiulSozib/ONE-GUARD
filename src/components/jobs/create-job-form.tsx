@@ -12,12 +12,12 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { 
-    CalendarIcon, 
-    DollarSign, 
-    Tag, 
-    Users, 
-    Briefcase, 
+import {
+    CalendarIcon,
+    DollarSign,
+    Tag,
+    Users,
+    Briefcase,
     MapPin
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
@@ -36,13 +36,8 @@ import SweetAlertService from "@/lib/sweetAlert"
 import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
-import dynamic from "next/dynamic"
+import TiptapEditor from "../ui/tiptap-editor"
 
-// Dynamically import TinyMCE to avoid SSR issues
-const Editor = dynamic(
-    () => import('@tinymce/tinymce-react').then((mod) => mod.Editor),
-    { ssr: false }
-)
 
 // Employment types
 const employmentTypes = [
@@ -118,7 +113,7 @@ export function JobCreateForm({
     const [mounted, setMounted] = useState(false)
 
     // Redux states for dropdown data
-    const { items: categories, isLoading: categoriesLoading } = 
+    const { items: categories, isLoading: categoriesLoading } =
         useAppSelector((state) => state.jobCategories)
 
     // Search states
@@ -254,42 +249,7 @@ export function JobCreateForm({
         }
     }
 
-    // TinyMCE configuration for version 6.x (recommended)
-    const tinymceConfig = {
-        height: 300,
-        menubar: false,
-        plugins: [
-            'lists',        // For lists
-        ],
-        toolbar: 'bold italic | forecolor backcolor | bullist numlist',
-        content_style: 'body { font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; }',
-        branding: false,
-        promotion: false,
-        // Color options for TinyMCE 6+
-        color_cols: 5,
-        color_map: [
-            '#000000', 'Black',
-            '#FF0000', 'Red',
-            '#00FF00', 'Green',
-            '#0000FF', 'Blue',
-            '#FFFF00', 'Yellow',
-            '#FF00FF', 'Magenta',
-            '#00FFFF', 'Cyan',
-            '#800000', 'Maroon',
-            '#808000', 'Olive',
-            '#008000', 'Dark Green',
-            '#800080', 'Purple',
-            '#008080', 'Teal',
-            '#000080', 'Navy',
-            '#FFA500', 'Orange',
-            '#A52A2A', 'Brown',
-            '#808080', 'Gray',
-            '#C0C0C0', 'Silver',
-            '#FFC0CB', 'Pink',
-            '#FFA07A', 'Light Salmon',
-        ],
-    }
-
+   
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
@@ -354,7 +314,7 @@ export function JobCreateForm({
 
                         {/* Location */}
                         <div className="relative space-y-2">
-                             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Location
                             </Label>
                             <FloatingLabelInput
@@ -379,7 +339,7 @@ export function JobCreateForm({
                                     setValue("employment_type", value.toString(), { shouldValidate: true })
                                 }}
                                 options={employmentTypes}
-                                onSearch={() => {}}
+                                onSearch={() => { }}
                                 placeholder="Select employment type"
                                 disabled={isLoading}
                                 emptyMessage="No employment types available"
@@ -403,7 +363,7 @@ export function JobCreateForm({
                                     setValue("payment_type", value.toString(), { shouldValidate: true })
                                 }}
                                 options={paymentTypes}
-                                onSearch={() => {}}
+                                onSearch={() => { }}
                                 placeholder="Select payment type"
                                 disabled={isLoading}
                                 emptyMessage="No payment types available"
@@ -502,14 +462,13 @@ export function JobCreateForm({
                             Job Description
                         </Label>
                         {mounted && (
-                            <Editor
-                                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                                init={tinymceConfig}
-                                value={watch("description") || ""}
-                                onEditorChange={(content) => {
+                            <TiptapEditor
+                                content={watch("description") || ""}
+                                onChange={(content) => {
                                     setValue("description", content, { shouldValidate: true })
                                 }}
-                                disabled={isLoading}
+                                editable={!isLoading}
+                                placeholder="Write job description..."
                             />
                         )}
                         {!mounted && (
@@ -528,17 +487,13 @@ export function JobCreateForm({
                             Requirements
                         </Label>
                         {mounted && (
-                            <Editor
-                                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                                init={{
-                                    ...tinymceConfig,
-                                    height: 250,
-                                }}
-                                value={watch("requirements") || ""}
-                                onEditorChange={(content) => {
+                            <TiptapEditor
+                                content={watch("requirements") || ""}
+                                onChange={(content) => {
                                     setValue("requirements", content, { shouldValidate: true })
                                 }}
-                                disabled={isLoading}
+                                editable={!isLoading}
+                                placeholder="Write job requirements..."
                             />
                         )}
                         {!mounted && (
