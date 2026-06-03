@@ -1845,110 +1845,227 @@ export function GuardUpdateForm({
     }, [])
 
     // Load guard data when dialog opens
-    useEffect(() => {
-        const loadGuardData = async () => {
-            if (isOpen && guardId && !hasLoadedData) {
-                setIsLoading(true)
-                try {
-                    const result = await dispatch(fetchGuard({ id: guardId }))
-                    if (fetchGuard.fulfilled.match(result)) {
-                        const guardData = result.payload
+    // useEffect(() => {
+    //     const loadGuardData = async () => {
+    //         if (isOpen && guardId && !hasLoadedData) {
+    //             setIsLoading(true)
+    //             try {
+    //                 const result = await dispatch(fetchGuard({ id: guardId }))
+    //                 if (fetchGuard.fulfilled.match(result)) {
+    //                     const guardData = result.payload
 
-                        // Populate form data
-                        setFormData({
-                            guard_code: guardData.guard_code || "",
-                            full_name: guardData.full_name || "",
-                            phone: guardData.phone || "",
-                            employee_company_card_number: guardData.employee_company_card_number || "",
-                            gender: guardData.gender || "male",
-                            country: guardData.country || "United States",
-                            city: guardData.city || "",
-                            state: guardData.state || "",
-                            address: guardData.address || "",
-                            zip_code: guardData.zip_code || "",
-                            joining_date: guardData.joining_date ? guardData.joining_date.split('T')[0] : "",
-                            email: guardData.email || "",
-                            password: "", // Password is never sent back from API
-                            driver_license: guardData.driver_license || "",
-                            date_of_birth: guardData.date_of_birth ? guardData.date_of_birth.split('T')[0] : "",
-                            license_expiry_date: guardData.license_expiry_date ? guardData.license_expiry_date.split('T')[0] : "",
-                            issuing_source: guardData.issuing_source || "",
-                            guard_type_id: guardData.guard_type_id || undefined,
-                            contract_id: guardData.contract_id || undefined,
-                            is_active: guardData.is_active ?? true,
-                            profile_data: {
-                                marital_status: guardData.profile_data?.marital_status || "single",
-                                has_work_permit: guardData.profile_data?.has_work_permit === true,
-                                has_security_training: guardData.profile_data?.has_security_training === true,
-                                languages: guardData.profile_data?.languages || [],
-                                place_of_birth: guardData.profile_data?.place_of_birth || "",
-                                country_of_origin: guardData.profile_data?.country_of_origin || "",
-                                current_country: guardData.profile_data?.current_country || "",
-                                current_city: guardData.profile_data?.current_city || "",
-                                current_address: guardData.profile_data?.current_address || "",
-                                current_state: guardData.profile_data?.current_state || "",
-                                current_zip_code: guardData.profile_data?.current_zip_code || "",
-                                citizenship: guardData.profile_data?.citizenship || "",
-                                visa_countries: guardData.profile_data?.visa_countries || [],
-                                visa_expiry_date: guardData.profile_data?.visa_expiry_date ? guardData.profile_data.visa_expiry_date.split('T')[0] : "",
-                                father_name: guardData.profile_data?.father_name || "",
-                                mother_name: guardData.profile_data?.mother_name || "",
-                                national_id_number: guardData.profile_data?.national_id_number || "",
-                                height: guardData.profile_data?.height || "",
-                                weight: guardData.profile_data?.weight || "",
-                                blood_group: guardData.profile_data?.blood_group || "",
-                                experience_years: guardData.profile_data?.experience_years || 0,
-                                skills: guardData.profile_data?.skills || "",
-                                highest_education_level: guardData.profile_data?.highest_education_level || "",
-                                education_field: guardData.profile_data?.education_field || "",
-                                institution_name: guardData.profile_data?.institution_name || "",
-                                graduation_year: guardData.profile_data?.graduation_year || undefined,
-                                emergency_contact_name: guardData.profile_data?.emergency_contact_name || "",
-                                emergency_contact_phone: guardData.profile_data?.emergency_contact_phone || "",
-                                emergency_contact_relation: guardData.profile_data?.emergency_contact_relation || "",
-                                notes: guardData.profile_data?.notes || "",
-                            }
-                        })
+    //                     // Populate form data
+    //                     setFormData({
+    //                         guard_code: guardData.guard_code || "",
+    //                         full_name: guardData.full_name || "",
+    //                         phone: guardData.phone || "",
+    //                         employee_company_card_number: guardData.employee_company_card_number || "",
+    //                         gender: guardData.gender || "male",
+    //                         country: guardData.country || "United States",
+    //                         city: guardData.city || "",
+    //                         state: guardData.state || "",
+    //                         address: guardData.address || "",
+    //                         zip_code: guardData.zip_code || "",
+    //                         joining_date: guardData.joining_date ? guardData.joining_date.split('T')[0] : "",
+    //                         email: guardData.email || "",
+    //                         password: "", // Password is never sent back from API
+    //                         driver_license: guardData.driver_license || "",
+    //                         date_of_birth: guardData.date_of_birth ? guardData.date_of_birth.split('T')[0] : "",
+    //                         license_expiry_date: guardData.license_expiry_date ? guardData.license_expiry_date.split('T')[0] : "",
+    //                         issuing_source: guardData.issuing_source || "",
+    //                         guard_type_id: guardData.guard_type_id || undefined,
+    //                         contract_id: guardData.contract_id || undefined,
+    //                         is_active: guardData.is_active ?? true,
+    //                         profile_data: {
+    //                             marital_status: guardData.profile_data?.marital_status || "single",
+    //                             has_work_permit: guardData.profile_data?.has_work_permit === true,
+    //                             has_security_training: guardData.profile_data?.has_security_training === true,
+    //                             languages: guardData.profile_data?.languages || [],
+    //                             place_of_birth: guardData.profile_data?.place_of_birth || "",
+    //                             country_of_origin: guardData.profile_data?.country_of_origin || "",
+    //                             current_country: guardData.profile_data?.current_country || "",
+    //                             current_city: guardData.profile_data?.current_city || "",
+    //                             current_address: guardData.profile_data?.current_address || "",
+    //                             current_state: guardData.profile_data?.current_state || "",
+    //                             current_zip_code: guardData.profile_data?.current_zip_code || "",
+    //                             citizenship: guardData.profile_data?.citizenship || "",
+    //                             visa_countries: guardData.profile_data?.visa_countries || [],
+    //                             visa_expiry_date: guardData.profile_data?.visa_expiry_date ? guardData.profile_data.visa_expiry_date.split('T')[0] : "",
+    //                             father_name: guardData.profile_data?.father_name || "",
+    //                             mother_name: guardData.profile_data?.mother_name || "",
+    //                             national_id_number: guardData.profile_data?.national_id_number || "",
+    //                             height: guardData.profile_data?.height || "",
+    //                             weight: guardData.profile_data?.weight || "",
+    //                             blood_group: guardData.profile_data?.blood_group || "",
+    //                             experience_years: guardData.profile_data?.experience_years || 0,
+    //                             skills: guardData.profile_data?.skills || "",
+    //                             highest_education_level: guardData.profile_data?.highest_education_level || "",
+    //                             education_field: guardData.profile_data?.education_field || "",
+    //                             institution_name: guardData.profile_data?.institution_name || "",
+    //                             graduation_year: guardData.profile_data?.graduation_year || undefined,
+    //                             emergency_contact_name: guardData.profile_data?.emergency_contact_name || "",
+    //                             emergency_contact_phone: guardData.profile_data?.emergency_contact_phone || "",
+    //                             emergency_contact_relation: guardData.profile_data?.emergency_contact_relation || "",
+    //                             notes: guardData.profile_data?.notes || "",
+    //                         }
+    //                     })
 
-                        // Set languages state
-                        if (guardData.profile_data?.languages && guardData.profile_data.languages.length > 0) {
-                            setLanguages(guardData.profile_data.languages)
-                        }
+    //                     // Set languages state
+    //                     if (guardData.profile_data?.languages && guardData.profile_data.languages.length > 0) {
+    //                         setLanguages(guardData.profile_data.languages)
+    //                     }
 
-                        // Set visa countries state
-                        if (guardData.profile_data?.visa_countries && guardData.profile_data.visa_countries.length > 0) {
-                            setVisaCountries(guardData.profile_data.visa_countries)
-                        }
+    //                     // Set visa countries state
+    //                     if (guardData.profile_data?.visa_countries && guardData.profile_data.visa_countries.length > 0) {
+    //                         setVisaCountries(guardData.profile_data.visa_countries)
+    //                     }
 
-                        // Set existing profile image (from root level)
-                        if (guardData.profile_image) {
-                            setExistingProfileImage(guardData.profile_image)
-                        }
+    //                     // Set existing profile image (from root level)
+    //                     if (guardData.profile_image) {
+    //                         setExistingProfileImage(guardData.profile_image)
+    //                     }
 
-                        // Set existing documents (from root level documents array)
-                        if (guardData.documents && guardData.documents.length > 0) {
-                            setExistingDocuments(guardData.documents)
+    //                     // Set existing documents (from root level documents array)
+    //                     if (guardData.documents && guardData.documents.length > 0) {
+    //                         setExistingDocuments(guardData.documents)
                             
-                            // Auto-select document types based on existing documents
-                            const existingDocTypes = guardData.documents.map((doc: ExistingDocument) => doc.document_type)
-                            setSelectedDocumentTypes(existingDocTypes)
-                        }
+    //                         // Auto-select document types based on existing documents
+    //                         const existingDocTypes = guardData.documents.map((doc: ExistingDocument) => doc.document_type)
+    //                         setSelectedDocumentTypes(existingDocTypes)
+    //                     }
 
-                        setHasLoadedData(true)
-                    } else {
-                        SweetAlertService.error("Error", "Failed to load guard data")
+    //                     setHasLoadedData(true)
+    //                 } else {
+    //                     SweetAlertService.error("Error", "Failed to load guard data")
+    //                 }
+    //             } catch (error) {
+    //                 console.error("Error loading guard data:", error)
+    //                 SweetAlertService.error("Error", "Failed to load guard data")
+    //             } finally {
+    //                 setIsLoading(false)
+    //             }
+    //         }
+    //     }
+
+    //     loadGuardData()
+    // }, [isOpen, guardId, dispatch, hasLoadedData])
+
+    // Load guard data when dialog opens
+useEffect(() => {
+    const loadGuardData = async () => {
+        if (isOpen && guardId && !hasLoadedData) {
+            setIsLoading(true)
+            try {
+                const result = await dispatch(fetchGuard({ id: guardId }))
+                if (fetchGuard.fulfilled.match(result)) {
+                    const guardData = result.payload
+
+                    // Populate form data
+                    setFormData({
+                        guard_code: guardData.guard_code || "",
+                        full_name: guardData.full_name || "",
+                        phone: guardData.phone || "",
+                        employee_company_card_number: guardData.employee_company_card_number || "",
+                        gender: guardData.gender || "male",
+                        country: guardData.country || "United States",
+                        city: guardData.city || "",
+                        state: guardData.state || "",
+                        address: guardData.address || "",
+                        zip_code: guardData.zip_code || "",
+                        joining_date: guardData.joining_date ? guardData.joining_date.split('T')[0] : "",
+                        email: guardData.email || "",
+                        password: "", // Password is never sent back from API
+                        driver_license: guardData.driver_license || "",
+                        date_of_birth: guardData.date_of_birth ? guardData.date_of_birth.split('T')[0] : "",
+                        license_expiry_date: guardData.license_expiry_date ? guardData.license_expiry_date.split('T')[0] : "",
+                        issuing_source: guardData.issuing_source || "",
+                        guard_type_id: guardData.guard_type_id || undefined,
+                        contract_id: guardData.contract_id || undefined,
+                        is_active: guardData.is_active ?? true,
+                        profile_data: {
+                            marital_status: guardData.profile_data?.marital_status || "single",
+                            has_work_permit: guardData.profile_data?.has_work_permit === true,
+                            has_security_training: guardData.profile_data?.has_security_training === true,
+                            languages: guardData.profile_data?.languages || [],
+                            place_of_birth: guardData.profile_data?.place_of_birth || "",
+                            country_of_origin: guardData.profile_data?.country_of_origin || "",
+                            current_country: guardData.profile_data?.current_country || "",
+                            current_city: guardData.profile_data?.current_city || "",
+                            current_address: guardData.profile_data?.current_address || "",
+                            current_state: guardData.profile_data?.current_state || "",
+                            current_zip_code: guardData.profile_data?.current_zip_code || "",
+                            citizenship: guardData.profile_data?.citizenship || "",
+                            visa_countries: guardData.profile_data?.visa_countries || [],
+                            visa_expiry_date: guardData.profile_data?.visa_expiry_date ? guardData.profile_data.visa_expiry_date.split('T')[0] : "",
+                            father_name: guardData.profile_data?.father_name || "",
+                            mother_name: guardData.profile_data?.mother_name || "",
+                            national_id_number: guardData.profile_data?.national_id_number || "",
+                            height: guardData.profile_data?.height || "",
+                            weight: guardData.profile_data?.weight || "",
+                            blood_group: guardData.profile_data?.blood_group || "",
+                            experience_years: guardData.profile_data?.experience_years || 0,
+                            skills: guardData.profile_data?.skills || "",
+                            highest_education_level: guardData.profile_data?.highest_education_level || "",
+                            education_field: guardData.profile_data?.education_field || "",
+                            institution_name: guardData.profile_data?.institution_name || "",
+                            graduation_year: guardData.profile_data?.graduation_year || undefined,
+                            emergency_contact_name: guardData.profile_data?.emergency_contact_name || "",
+                            emergency_contact_phone: guardData.profile_data?.emergency_contact_phone || "",
+                            emergency_contact_relation: guardData.profile_data?.emergency_contact_relation || "",
+                            notes: guardData.profile_data?.notes || "",
+                        }
+                    })
+
+                    // Set languages state
+                    if (guardData.profile_data?.languages && guardData.profile_data.languages.length > 0) {
+                        setLanguages(guardData.profile_data.languages)
                     }
-                } catch (error) {
-                    console.error("Error loading guard data:", error)
+
+                    // Set visa countries state
+                    if (guardData.profile_data?.visa_countries && guardData.profile_data.visa_countries.length > 0) {
+                        setVisaCountries(guardData.profile_data.visa_countries)
+                    }
+
+                    // Set existing profile image (from root level)
+                    if (guardData.profile_image) {
+                        setExistingProfileImage(guardData.profile_image)
+                    }
+
+                    // Set existing documents (from root level documents array)
+                    if (guardData.documents && guardData.documents.length > 0) {
+                        // Map GuardDocument to ExistingDocument
+                        const mappedDocuments: ExistingDocument[] = guardData.documents.map((doc: any) => ({
+                            id: doc.id,
+                            document_type: doc.document_type,
+                            file_path: doc.file_path,
+                            file_name: doc.file_name,
+                            created_at: doc.created_at,
+                            updated_at: doc.updated_at
+                        }));
+                        setExistingDocuments(mappedDocuments);
+                        
+                        // Auto-select document types based on existing documents (filter out null/undefined)
+                        const existingDocTypes = guardData.documents
+                            .map((doc: any) => doc.document_type)
+                            .filter((type: string | null | undefined): type is string => !!type);
+                        setSelectedDocumentTypes(existingDocTypes);
+                    }
+
+                    setHasLoadedData(true)
+                } else {
                     SweetAlertService.error("Error", "Failed to load guard data")
-                } finally {
-                    setIsLoading(false)
                 }
+            } catch (error) {
+                console.error("Error loading guard data:", error)
+                SweetAlertService.error("Error", "Failed to load guard data")
+            } finally {
+                setIsLoading(false)
             }
         }
+    }
 
-        loadGuardData()
-    }, [isOpen, guardId, dispatch, hasLoadedData])
+    loadGuardData()
+}, [isOpen, guardId, dispatch, hasLoadedData])
 
     // Reset form when dialog closes
     const handleDialogClose = useCallback((open: boolean) => {
