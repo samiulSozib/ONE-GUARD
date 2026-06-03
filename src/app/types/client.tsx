@@ -96,7 +96,7 @@ export interface Client {
 
   // Relationships (loaded based on include params)
   user?: User;
-  currency?: null ; // Currency type if needed
+  currency?: null; // Currency type if needed
   sites?: Site[];
   contacts?: ClientContact[];
   documents?: ClientDocument[];
@@ -107,7 +107,7 @@ export interface Client {
   documents_count?: number;
   contacts_count?: number;
   media_count?: number;
-  name?:string,
+  name?: string,
   client_document_types?: string[];
   media_categories?: string[];
 
@@ -219,7 +219,7 @@ export interface ClientParams {
   include_documents?: boolean;
   include_user?: boolean;
   include_media?: boolean;
-  is_active?:boolean
+  is_active?: boolean
 }
 
 // ==================== State Management ====================

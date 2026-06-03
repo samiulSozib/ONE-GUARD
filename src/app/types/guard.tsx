@@ -2,6 +2,256 @@ import { DutyAttendance } from "./dutyAttendance";
 import { GuardAssignment } from "./guardsAssignment";
 import { GuardType } from "./lookup";
 
+// export interface Guard {
+//   id: number;
+//   guard_code: string;
+//   full_name: string;
+//   email: string;
+//   phone: string;
+//   password?: string; // For create/update only
+//   employee_company_card_number?: string;
+//   driver_license?: string;
+//   profile_image?: string;
+//   zip_code?: string;
+//   joining_date: string;
+//   contract_id?: number;
+//   date_of_birth?: string;
+//   gender: 'male' | 'female' | 'other';
+//   country?: string;
+//   city?: string;
+//   state?:string;
+//   address?: string;
+//   guard_type_id?: number;
+//   license_expiry_date?: string;
+//   issuing_source?: string;
+//   name?:string;
+
+//   // Profile data
+//   profile_data?: {
+//     place_of_birth?: string;
+//     country_of_origin?: string;
+//     current_country?: string;
+//     current_city?: string;
+//     current_address?: string;
+//     current_state?:string;
+//     current_zip_code?:string;
+//     citizenship?: string;
+//     visa_countries?: string[];
+//     visa_expiry_date?: string;
+//     has_work_permit?: boolean;
+//     father_name?: string;
+//     mother_name?: string;
+//     national_id_number?: string;
+//     marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
+//     height?: string;
+//     weight?: string;
+//     blood_group?: string;
+//     experience_years?: number;
+//     skills?: string;
+//     languages?: string[];
+//     highest_education_level?: string;
+//     education_field?: string;
+//     institution_name?: string;
+//     graduation_year?: number;
+//     has_security_training?: boolean;
+//     emergency_contact_name?: string;
+//     emergency_contact_phone?: string;
+//     emergency_contact_relation?: string;
+//     notes?: string;
+//     document_types?: string[]
+//     documents?: Array<{
+//         id: number
+//         name: string
+//         url: string
+//         type: string
+//         file_name?: string|null,
+//         file_path?: string|null,
+//         document_type?: string|null,
+//         created_at?: string;
+//         updated_at?: string;
+//     }>
+//   };
+
+//   profile?: {
+//     place_of_birth?: string;
+//     country_of_origin?: string;
+//     current_country?: string;
+//     current_city?: string;
+//     current_address?: string;
+//     current_state?:string;
+//     current_zip_code?:string;
+//     citizenship?: string;
+//     visa_countries?: string[];
+//     visa_expiry_date?: string;
+//     has_work_permit?: boolean;
+//     father_name?: string;
+//     mother_name?: string;
+//     national_id_number?: string;
+//     marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
+//     height?: string;
+//     weight?: string;
+//     blood_group?: string;
+//     experience_years?: number;
+//     skills?: string;
+//     languages?: string[];
+//     highest_education_level?: string;
+//     education_field?: string;
+//     institution_name?: string;
+//     graduation_year?: number;
+//     has_security_training?: boolean;
+//     emergency_contact_name?: string;
+//     emergency_contact_phone?: string;
+//     emergency_contact_relation?: string;
+//     notes?: string;
+//     document_types?: string[]
+//     documents?: Array<{
+//         id: number
+//         name: string
+//         url: string
+//         type: string
+//         file_name?: string|null,
+//         file_path?: string|null,
+//         document_type?: string|null,
+//         created_at?: string;
+//         updated_at?: string;
+//     }>
+//   };
+
+
+
+//   // Document types for upload
+//   document_types?: string[];
+//   documents?:[]
+
+//   // Status
+//   is_active: boolean;
+//   created_at: string;
+//   updated_at: string;
+
+//   // Relationships
+//   guard_type?: GuardType;
+//   contacts?: GuardContact[];
+//   assignments?: GuardAssignment[];
+//   attendances?: DutyAttendance[];
+
+//   user?:{
+//     id:number;
+//     first_name?:string;
+//     last_name?:string;
+//     role?:string;
+//     is_active?:string
+//   };
+//   // ✅ NEW STATUS FIELDS
+//   online_status?: 'online' | 'offline';
+//   last_ping_at?: string;
+//   last_activity_at?: string;
+//   last_check_in_at?: string | null;
+
+//   // ✅ NEW LOCATION OBJECT
+//   last_location?: {
+//     latitude: string;
+//     longitude: string;
+//     accuracy?: string;
+//     speed?: string;
+//     battery_level?: number;
+//     is_charging?: boolean;
+//     recorded_at?: string;
+//   };
+
+//   is_at_duty_location?: boolean;
+//   distance_to_duty_meters?: string;
+// }
+
+// export interface GuardContact {
+//   id: number;
+//   guard_id: number;
+//   name: string;
+//   phone: string;
+//   email?: string;
+//   relation: string;
+//   is_primary: boolean;
+//   is_emergency: boolean;
+//   notes?: string;
+//   is_active: boolean;
+//   created_at: string;
+//   updated_at: string;
+// }
+
+// export interface GuardParams {
+//   page?: number;
+//   per_page?: number;
+//   search?: string;
+//   sort_by?: string;
+//   sort_order?: 'asc' | 'desc';
+//   status?: 'active' | 'inactive' | 'all';
+//   guard_type_id?: number;
+//   country?: string;
+//   city?: string;
+//   include_type?: boolean;
+//   include_assignments?: boolean;
+//   include_attendances?: boolean;
+//   is_active?:boolean;
+//   with_live?:number
+// }
+
+// export interface GuardState {
+//   guards: Guard[];
+//   currentGuard: Guard | null;
+//   pagination: {
+//     current_page: number;
+//     last_page: number;
+//     total: number;
+//     per_page: number;
+//   };
+//   isLoading: boolean;
+//   error: string | null;
+// }
+
+
+// export interface ViewGuardTopCardProps{
+//   guard:Guard
+// }
+
+
+
+// export interface GuardProfileData {
+//     marital_status?: string
+//     has_work_permit?: boolean|0|1
+//     has_security_training?: boolean|0|1
+//     languages?: string[]
+//     place_of_birth?: string
+//     country_of_origin?: string
+//     current_country?: string
+//     current_city?: string
+//     current_address?: string
+//     current_state?:string;
+//     current_zip_code?:string;
+//     citizenship?: string
+//     visa_countries?: string[]
+//     visa_expiry_date?: string
+//     father_name?: string
+//     mother_name?: string
+//     national_id_number?: string
+//     height?: string
+//     weight?: string
+//     blood_group?: string
+//     experience_years?: number
+//     skills?: string
+//     highest_education_level?: string
+//     education_field?: string
+//     institution_name?: string
+//     graduation_year?: number | null
+//     emergency_contact_name?: string
+//     emergency_contact_phone?: string
+//     emergency_contact_relation?: string
+//     notes?: string
+// }
+
+
+// // Password reset types
+// export interface PasswordResetParams {
+//   new_password: string;
+// }
 export interface Guard {
   id: number;
   guard_code: string;
@@ -19,12 +269,12 @@ export interface Guard {
   gender: 'male' | 'female' | 'other';
   country?: string;
   city?: string;
-  state?:string;
+  state?: string;
   address?: string;
   guard_type_id?: number;
   license_expiry_date?: string;
   issuing_source?: string;
-  name?:string;
+  name?: string;
 
   // Profile data
   profile_data?: {
@@ -33,8 +283,8 @@ export interface Guard {
     current_country?: string;
     current_city?: string;
     current_address?: string;
-    current_state?:string;
-    current_zip_code?:string;
+    current_state?: string;
+    current_zip_code?: string;
     citizenship?: string;
     visa_countries?: string[];
     visa_expiry_date?: string;
@@ -58,13 +308,8 @@ export interface Guard {
     emergency_contact_phone?: string;
     emergency_contact_relation?: string;
     notes?: string;
-    document_types?: string[]
-    documents?: Array<{
-        id: number
-        name: string
-        url: string
-        type: string
-    }>
+    document_types?: string[];
+    documents?: GuardDocument[]; // Changed to use GuardDocument type
   };
 
   profile?: {
@@ -73,8 +318,8 @@ export interface Guard {
     current_country?: string;
     current_city?: string;
     current_address?: string;
-    current_state?:string;
-    current_zip_code?:string;
+    current_state?: string;
+    current_zip_code?: string;
     citizenship?: string;
     visa_countries?: string[];
     visa_expiry_date?: string;
@@ -98,20 +343,13 @@ export interface Guard {
     emergency_contact_phone?: string;
     emergency_contact_relation?: string;
     notes?: string;
-    document_types?: string[]
-    documents?: Array<{
-        id: number
-        name: string
-        url: string
-        type: string
-    }>
+    document_types?: string[];
+    documents?: GuardDocument[]; // Changed to use GuardDocument type
   };
-
-
 
   // Document types for upload
   document_types?: string[];
-  documents?:[]
+  documents?: GuardDocument[]; // Changed to use GuardDocument type
 
   // Status
   is_active: boolean;
@@ -124,13 +362,14 @@ export interface Guard {
   assignments?: GuardAssignment[];
   attendances?: DutyAttendance[];
 
-  user?:{
-    id:number;
-    first_name?:string;
-    last_name?:string;
-    role?:string;
-    is_active?:string
+  user?: {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+    is_active?: string;
   };
+  
   // ✅ NEW STATUS FIELDS
   online_status?: 'online' | 'offline';
   last_ping_at?: string;
@@ -150,6 +389,19 @@ export interface Guard {
 
   is_at_duty_location?: boolean;
   distance_to_duty_meters?: string;
+}
+
+// Add this interface for documents
+export interface GuardDocument {
+  id: number;
+  name?: string;
+  url?: string;
+  type?: string;
+  file_name?: string | null;
+  file_path?: string | null;
+  document_type?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface GuardContact {
@@ -180,8 +432,8 @@ export interface GuardParams {
   include_type?: boolean;
   include_assignments?: boolean;
   include_attendances?: boolean;
-  is_active?:boolean;
-  with_live?:number
+  is_active?: boolean;
+  with_live?: number;
 }
 
 export interface GuardState {
@@ -197,46 +449,42 @@ export interface GuardState {
   error: string | null;
 }
 
-
-export interface ViewGuardTopCardProps{
-  guard:Guard
+export interface ViewGuardTopCardProps {
+  guard: Guard;
 }
-
-
 
 export interface GuardProfileData {
-    marital_status?: string
-    has_work_permit?: boolean|0|1
-    has_security_training?: boolean|0|1
-    languages?: string[]
-    place_of_birth?: string
-    country_of_origin?: string
-    current_country?: string
-    current_city?: string
-    current_address?: string
-    current_state?:string;
-    current_zip_code?:string;
-    citizenship?: string
-    visa_countries?: string[]
-    visa_expiry_date?: string
-    father_name?: string
-    mother_name?: string
-    national_id_number?: string
-    height?: string
-    weight?: string
-    blood_group?: string
-    experience_years?: number
-    skills?: string
-    highest_education_level?: string
-    education_field?: string
-    institution_name?: string
-    graduation_year?: number | null
-    emergency_contact_name?: string
-    emergency_contact_phone?: string
-    emergency_contact_relation?: string
-    notes?: string
+  marital_status?: string;
+  has_work_permit?: boolean | 0 | 1;
+  has_security_training?: boolean | 0 | 1;
+  languages?: string[];
+  place_of_birth?: string;
+  country_of_origin?: string;
+  current_country?: string;
+  current_city?: string;
+  current_address?: string;
+  current_state?: string;
+  current_zip_code?: string;
+  citizenship?: string;
+  visa_countries?: string[];
+  visa_expiry_date?: string;
+  father_name?: string;
+  mother_name?: string;
+  national_id_number?: string;
+  height?: string;
+  weight?: string;
+  blood_group?: string;
+  experience_years?: number;
+  skills?: string;
+  highest_education_level?: string;
+  education_field?: string;
+  institution_name?: string;
+  graduation_year?: number | null;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relation?: string;
+  notes?: string;
 }
-
 
 // Password reset types
 export interface PasswordResetParams {

@@ -1630,6 +1630,7 @@
 //         </Dialog>
 //     )
 // }
+
 'use client'
 import {
     Dialog,
@@ -1642,7 +1643,7 @@ import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelSelect } from "../ui/floating-select"
 import { Textarea } from "../ui/textarea"
-import { Plus, UploadCloud, X, User, Briefcase, FileText, Copy, Loader2 } from "lucide-react"
+import { Plus, UploadCloud, X, User, Briefcase, FileText, Copy, Loader2, Trash2 } from "lucide-react"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
 import { updateGuard, fetchGuards, fetchGuard } from "@/store/slices/guardSlice"
@@ -1664,6 +1665,15 @@ interface GuardUpdateFormProps {
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
     onSuccess?: () => void
+}
+
+interface ExistingDocument {
+    id: number
+    document_type: string
+    file_path: string
+    file_name: string
+    created_at?: string
+    updated_at?: string
 }
 
 interface FormDataType {
@@ -1735,8 +1745,10 @@ export function GuardUpdateForm({
     const [isLoading, setIsLoading] = useState(false)
     const [profileImage, setProfileImage] = useState<File | null>(null)
     const [existingProfileImage, setExistingProfileImage] = useState<string>("")
+    const [existingProfileImageId, setExistingProfileImageId] = useState<number | null>(null)
     const [documents, setDocuments] = useState<File[]>([])
-    const [existingDocuments, setExistingDocuments] = useState<Array<{id: number, name: string, url: string}>>([])
+    const [existingDocuments, setExistingDocuments] = useState<ExistingDocument[]>([])
+    const [documentsToDelete, setDocumentsToDelete] = useState<number[]>([])
     const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<string[]>([])
     const [languages, setLanguages] = useState<string[]>([])
     const [currentLanguage, setCurrentLanguage] = useState("")
@@ -1842,9 +1854,6 @@ export function GuardUpdateForm({
                     if (fetchGuard.fulfilled.match(result)) {
                         const guardData = result.payload
 
-                        // Get profile (either from 'profile' or 'profile_data')
-                        const profile = guardData.profile || guardData.profile_data || {}
-
                         // Populate form data
                         setFormData({
                             guard_code: guardData.guard_code || "",
@@ -1868,69 +1877,61 @@ export function GuardUpdateForm({
                             contract_id: guardData.contract_id || undefined,
                             is_active: guardData.is_active ?? true,
                             profile_data: {
-                                marital_status: profile.marital_status || "single",
-                                has_work_permit: profile.has_work_permit === true ,
-                                has_security_training: profile.has_security_training === true ,
-                                languages: profile.languages || [],
-                                place_of_birth: profile.place_of_birth || "",
-                                country_of_origin: profile.country_of_origin || "",
-                                current_country: profile.current_country || "",
-                                current_city: profile.current_city || "",
-                                current_address: profile.current_address || "",
-                                current_state: profile.current_state || "",
-                                current_zip_code: profile.current_zip_code || "",
-                                citizenship: profile.citizenship || "",
-                                visa_countries: profile.visa_countries || [],
-                                visa_expiry_date: profile.visa_expiry_date ? profile.visa_expiry_date.split('T')[0] : "",
-                                father_name: profile.father_name || "",
-                                mother_name: profile.mother_name || "",
-                                national_id_number: profile.national_id_number || "",
-                                height: profile.height || "",
-                                weight: profile.weight || "",
-                                blood_group: profile.blood_group || "",
-                                experience_years: profile.experience_years || 0,
-                                skills: profile.skills || "",
-                                highest_education_level: profile.highest_education_level || "",
-                                education_field: profile.education_field || "",
-                                institution_name: profile.institution_name || "",
-                                graduation_year: profile.graduation_year || undefined,
-                                emergency_contact_name: profile.emergency_contact_name || "",
-                                emergency_contact_phone: profile.emergency_contact_phone || "",
-                                emergency_contact_relation: profile.emergency_contact_relation || "",
-                                notes: profile.notes || "",
+                                marital_status: guardData.profile_data?.marital_status || "single",
+                                has_work_permit: guardData.profile_data?.has_work_permit === true,
+                                has_security_training: guardData.profile_data?.has_security_training === true,
+                                languages: guardData.profile_data?.languages || [],
+                                place_of_birth: guardData.profile_data?.place_of_birth || "",
+                                country_of_origin: guardData.profile_data?.country_of_origin || "",
+                                current_country: guardData.profile_data?.current_country || "",
+                                current_city: guardData.profile_data?.current_city || "",
+                                current_address: guardData.profile_data?.current_address || "",
+                                current_state: guardData.profile_data?.current_state || "",
+                                current_zip_code: guardData.profile_data?.current_zip_code || "",
+                                citizenship: guardData.profile_data?.citizenship || "",
+                                visa_countries: guardData.profile_data?.visa_countries || [],
+                                visa_expiry_date: guardData.profile_data?.visa_expiry_date ? guardData.profile_data.visa_expiry_date.split('T')[0] : "",
+                                father_name: guardData.profile_data?.father_name || "",
+                                mother_name: guardData.profile_data?.mother_name || "",
+                                national_id_number: guardData.profile_data?.national_id_number || "",
+                                height: guardData.profile_data?.height || "",
+                                weight: guardData.profile_data?.weight || "",
+                                blood_group: guardData.profile_data?.blood_group || "",
+                                experience_years: guardData.profile_data?.experience_years || 0,
+                                skills: guardData.profile_data?.skills || "",
+                                highest_education_level: guardData.profile_data?.highest_education_level || "",
+                                education_field: guardData.profile_data?.education_field || "",
+                                institution_name: guardData.profile_data?.institution_name || "",
+                                graduation_year: guardData.profile_data?.graduation_year || undefined,
+                                emergency_contact_name: guardData.profile_data?.emergency_contact_name || "",
+                                emergency_contact_phone: guardData.profile_data?.emergency_contact_phone || "",
+                                emergency_contact_relation: guardData.profile_data?.emergency_contact_relation || "",
+                                notes: guardData.profile_data?.notes || "",
                             }
                         })
 
                         // Set languages state
-                        if (profile.languages && profile.languages.length > 0) {
-                            setLanguages(profile.languages)
+                        if (guardData.profile_data?.languages && guardData.profile_data.languages.length > 0) {
+                            setLanguages(guardData.profile_data.languages)
                         }
 
                         // Set visa countries state
-                        if (profile.visa_countries && profile.visa_countries.length > 0) {
-                            setVisaCountries(profile.visa_countries)
+                        if (guardData.profile_data?.visa_countries && guardData.profile_data.visa_countries.length > 0) {
+                            setVisaCountries(guardData.profile_data.visa_countries)
                         }
 
-                        // Set document types
-                        if (guardData.document_types && guardData.document_types.length > 0) {
-                            setSelectedDocumentTypes(guardData.document_types)
+                        // Set existing profile image (from root level)
+                        if (guardData.profile_image) {
+                            setExistingProfileImage(guardData.profile_image)
                         }
 
-                        // Set existing profile image
-                        // if (guardData.profile_image) {
-                        //     const imageUrl = guardData.profile_image.startsWith('http')
-                        //         ? guardData.profile_image
-                        //         : `${process.env.NEXT_PUBLIC_API_URL || ''}${guardData.profile_image}`
-                        //     setExistingProfileImage(imageUrl)
-                        // }
-
-                        // Set existing documents from profile.documents
-                        if (profile.documents && profile.documents.length > 0) {
-                            setExistingDocuments(profile.documents.map((doc: any) => ({
-                                id: doc.id,
-                                name: doc.file_name || doc.name,
-                                url: doc.file_path
-                            })))
+                        // Set existing documents (from root level documents array)
+                        if (guardData.documents && guardData.documents.length > 0) {
+                            setExistingDocuments(guardData.documents)
+                            
+                            // Auto-select document types based on existing documents
+                            const existingDocTypes = guardData.documents.map((doc: ExistingDocument) => doc.document_type)
+                            setSelectedDocumentTypes(existingDocTypes)
                         }
 
                         setHasLoadedData(true)
@@ -2015,8 +2016,10 @@ export function GuardUpdateForm({
         })
         setProfileImage(null)
         setExistingProfileImage("")
+        setExistingProfileImageId(null)
         setDocuments([])
         setExistingDocuments([])
+        setDocumentsToDelete([])
         setSelectedDocumentTypes([])
         setLanguages([])
         setVisaCountries([])
@@ -2044,40 +2047,37 @@ export function GuardUpdateForm({
         }
     }, [])
 
-    const handleDocumentUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || [])
-        const validFiles = files.filter(file => {
-            const validTypes = [
-                'application/pdf',
-                'image/jpeg',
-                'image/jpg',
-                'image/png',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ]
-            return validTypes.includes(file.type) && file.size <= 10 * 1024 * 1024
-        })
-
-        if (validFiles.length !== files.length) {
-            SweetAlertService.warning("Some files were skipped", "Only PDF, JPG, PNG, and DOC files up to 10MB are allowed")
+    const removeExistingDocument = useCallback((docId: number) => {
+        setDocumentsToDelete(prev => [...prev, docId])
+        setExistingDocuments(prev => prev.filter(doc => doc.id !== docId))
+        // Also remove from selected document types if no other document of that type exists
+        const docToRemove = existingDocuments.find(doc => doc.id === docId)
+        if (docToRemove) {
+            const hasOtherDocsOfSameType = existingDocuments.some(
+                doc => doc.id !== docId && doc.document_type === docToRemove.document_type
+            )
+            if (!hasOtherDocsOfSameType) {
+                setSelectedDocumentTypes(prev => prev.filter(type => type !== docToRemove.document_type))
+            }
         }
+    }, [existingDocuments])
 
-        setDocuments(prev => [...prev, ...validFiles])
-    }, [])
-
-    const removeDocument = useCallback((index: number, isExisting: boolean = false, existingId?: number) => {
-        if (isExisting && existingId) {
-            setExistingDocuments(prev => prev.filter(doc => doc.id !== existingId))
-        } else {
-            setDocuments(prev => prev.filter((_, i) => i !== index))
-        }
+    // Handle document upload with type association
+    const handleDocumentUploadForType = useCallback((docTypeId: string, file: File) => {
+        // Create a new File with document type prefix in name for identification
+        const documentWithType = new File(
+            [file],
+            `${docTypeId}-${file.name}`,
+            { type: file.type }
+        )
+        setDocuments(prev => [...prev, documentWithType])
     }, [])
 
     // Handle document type selection
-    const handleDocumentTypeChange = useCallback((docType: string) => {
-        const newSelectedTypes = selectedDocumentTypes.includes(docType)
-            ? selectedDocumentTypes.filter(type => type !== docType)
-            : [...selectedDocumentTypes, docType]
+    const handleDocumentTypeChange = useCallback((docTypeId: string) => {
+        const newSelectedTypes = selectedDocumentTypes.includes(docTypeId)
+            ? selectedDocumentTypes.filter(type => type !== docTypeId)
+            : [...selectedDocumentTypes, docTypeId]
 
         setSelectedDocumentTypes(newSelectedTypes)
     }, [selectedDocumentTypes])
@@ -2133,7 +2133,7 @@ export function GuardUpdateForm({
             if (value !== undefined && value !== null && value !== '' &&
                 !(Array.isArray(value) && value.length === 0)) {
                 if (key === 'has_work_permit' || key === 'has_security_training') {
-                     (profileData as any)[key] = value ? 1 : 0
+                    (profileData as any)[key] = value ? 1 : 0
                 } else {
                     (profileData as any)[key] = value
                 }
@@ -2144,112 +2144,277 @@ export function GuardUpdateForm({
     }
 
     // Submit handler
-    const onSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsSubmitting(true)
+    // const onSubmit = async (e: React.FormEvent) => {
+    //     e.preventDefault()
+    //     setIsSubmitting(true)
 
-        try {
-            const submitFormData = new FormData()
+    //     try {
+    //         const submitFormData = new FormData()
 
-            // Add method override for Laravel
-            submitFormData.append('_method', 'PUT')
+    //         // Add method override for Laravel
+    //         submitFormData.append('_method', 'POST')
 
-            // Required fields
-            const requiredFields: Record<string, string> = {
-                guard_code: formData.guard_code,
-                full_name: formData.full_name,
-                phone: formData.phone,
-                employee_company_card_number: formData.employee_company_card_number,
-                gender: formData.gender,
-                country: formData.country,
-                city: formData.city,
-                state: formData.state,
-                address: formData.address,
-                zip_code: formData.zip_code,
-                joining_date: formData.joining_date,
-                is_active: formData.is_active ? '1' : '0'
-            }
+    //         // Required fields
+    //         const requiredFields: Record<string, string> = {
+    //             guard_code: formData.guard_code,
+    //             full_name: formData.full_name,
+    //             phone: formData.phone,
+    //             employee_company_card_number: formData.employee_company_card_number,
+    //             gender: formData.gender,
+    //             country: formData.country,
+    //             city: formData.city,
+    //             state: formData.state,
+    //             address: formData.address,
+    //             zip_code: formData.zip_code,
+    //             joining_date: formData.joining_date,
+    //             is_active: formData.is_active ? '1' : '0'
+    //         }
 
-            Object.entries(requiredFields).forEach(([key, value]) => {
-                if (value) submitFormData.append(key, value)
-            })
+    //         Object.entries(requiredFields).forEach(([key, value]) => {
+    //             if (value) submitFormData.append(key, value)
+    //         })
 
-            // Optional fields (only include if changed or provided)
-            if (formData.email) submitFormData.append('email', formData.email)
-            if (formData.password && formData.password.trim() !== '') submitFormData.append('password', formData.password)
-            if (formData.driver_license) submitFormData.append('driver_license', formData.driver_license)
-            if (formData.date_of_birth) submitFormData.append('date_of_birth', formData.date_of_birth)
-            if (formData.license_expiry_date) submitFormData.append('license_expiry_date', formData.license_expiry_date)
-            if (formData.issuing_source) submitFormData.append('issuing_source', formData.issuing_source)
+    //         // Optional fields
+    //         if (formData.email) submitFormData.append('email', formData.email)
+    //         if (formData.password && formData.password.trim() !== '') submitFormData.append('password', formData.password)
+    //         if (formData.driver_license) submitFormData.append('driver_license', formData.driver_license)
+    //         if (formData.date_of_birth) submitFormData.append('date_of_birth', formData.date_of_birth)
+    //         if (formData.license_expiry_date) submitFormData.append('license_expiry_date', formData.license_expiry_date)
+    //         if (formData.issuing_source) submitFormData.append('issuing_source', formData.issuing_source)
 
-            // Numeric fields
-            if (formData.guard_type_id) {
-                submitFormData.append('guard_type_id', formData.guard_type_id.toString())
-            }
-            if (formData.contract_id) {
-                submitFormData.append('contract_id', formData.contract_id.toString())
-            }
+    //         // Numeric fields
+    //         if (formData.guard_type_id) {
+    //             submitFormData.append('guard_type_id', formData.guard_type_id.toString())
+    //         }
+    //         if (formData.contract_id) {
+    //             submitFormData.append('contract_id', formData.contract_id.toString())
+    //         }
 
-            // Profile data
-            const profileData = prepareProfileData(formData.profile_data)
-            if (Object.keys(profileData).length > 0) {
-                submitFormData.append('profile_data', JSON.stringify(profileData))
-            }
+    //         // Profile data
+    //         const profileData = prepareProfileData(formData.profile_data)
+    //         if (Object.keys(profileData).length > 0) {
+    //             submitFormData.append('profile_data', JSON.stringify(profileData))
+    //         }
 
-            // Document types
-            if (selectedDocumentTypes.length > 0) {
-                submitFormData.append('document_types', JSON.stringify(selectedDocumentTypes))
-            }
+    //         // Document types to add
+    //         if (selectedDocumentTypes.length > 0) {
+    //             submitFormData.append('document_types', JSON.stringify(selectedDocumentTypes))
+    //         }
 
-            // Files
-            if (profileImage) {
-                submitFormData.append('profile_image', profileImage)
-            } else if (existingProfileImage && !profileImage) {
-                // Keep existing image - don't send anything
-                submitFormData.append('keep_profile_image', '1')
-            }
+    //         // Documents to delete
+    //         if (documentsToDelete.length > 0) {
+    //             submitFormData.append('delete_documents', JSON.stringify(documentsToDelete))
+    //         }
 
-            // New documents
-            if (documents.length > 0) {
-                documents.forEach((doc) => {
-                    submitFormData.append('documents[]', doc)
-                })
-            }
+    //         // Profile image
+    //         if (profileImage) {
+    //             submitFormData.append('profile_image', profileImage)
+    //         } else if (existingProfileImage && !profileImage) {
+    //             // Keep existing image
+    //             submitFormData.append('keep_profile_image', '1')
+    //         } else if (!existingProfileImage && !profileImage) {
+    //             submitFormData.append('remove_profile_image', '1')
+    //         }
 
-            // Dispatch update action
-            const result = await dispatch(updateGuard({ id: guardId, data: submitFormData }))
+    //         // New documents
+    //         if (documents.length > 0) {
+    //             documents.forEach((doc) => {
+    //                 submitFormData.append('documents[]', doc)
+    //             })
+    //         }
 
-            if (updateGuard.fulfilled.match(result)) {
-                await SweetAlertService.success(
-                    'Guard Updated Successfully',
-                    `${formData.full_name} has been updated.`,
-                    { timer: 2000, showConfirmButton: false }
-                )
+    //         // Dispatch update action
+    //         const result = await dispatch(updateGuard({ id: guardId, data: submitFormData }))
 
-                resetForm()
-                onSuccess?.()
-                handleDialogClose(false)
+    //         if (updateGuard.fulfilled.match(result)) {
+    //             await SweetAlertService.success(
+    //                 'Guard Updated Successfully',
+    //                 `${formData.full_name} has been updated.`,
+    //                 { timer: 2000, showConfirmButton: false }
+    //             )
 
-                await dispatch(fetchGuards({
-                    page: 1,
-                    per_page: 10,
-                    sort_by: 'updated_at',
-                    sort_order: 'desc'
-                }))
-            } else {
-                const errorMessage = (result.payload as string) || 'Failed to update guard'
-                throw new Error(errorMessage)
-            }
-        } catch (error) {
-            await SweetAlertService.error(
-                'Update Failed',
-                error instanceof Error ? error.message : 'There was an error updating the guard. Please try again.'
-            )
-            console.error('Error updating guard:', error)
-        } finally {
-            setIsSubmitting(false)
+    //             resetForm()
+    //             onSuccess?.()
+    //             handleDialogClose(false)
+
+    //             await dispatch(fetchGuards({
+    //                 page: 1,
+    //                 per_page: 10,
+    //                 sort_by: 'updated_at',
+    //                 sort_order: 'desc'
+    //             }))
+    //         } else {
+    //             const errorMessage = (result.payload as string) || 'Failed to update guard'
+    //             throw new Error(errorMessage)
+    //         }
+    //     } catch (error) {
+    //         await SweetAlertService.error(
+    //             'Update Failed',
+    //             error instanceof Error ? error.message : 'There was an error updating the guard. Please try again.'
+    //         )
+    //         console.error('Error updating guard:', error)
+    //     } finally {
+    //         setIsSubmitting(false)
+    //     }
+    // }
+
+    // Submit handler - FIXED VERSION
+// Submit handler - FIXED FOR ARRAY FORMAT
+const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+        const submitFormData = new FormData()
+
+        // Add method override for Laravel
+        submitFormData.append('_method', 'POST')
+
+        // Required fields
+        const requiredFields: Record<string, string> = {
+            guard_code: formData.guard_code,
+            full_name: formData.full_name,
+            phone: formData.phone || '',
+            employee_company_card_number: formData.employee_company_card_number || '',
+            gender: formData.gender,
+            country: formData.country,
+            city: formData.city || '',
+            state: formData.state || '',
+            address: formData.address || '',
+            zip_code: formData.zip_code || '',
+            joining_date: formData.joining_date || '',
+            is_active: formData.is_active ? '1' : '0'
         }
+
+        Object.entries(requiredFields).forEach(([key, value]) => {
+            if (value) submitFormData.append(key, value)
+        })
+
+        // Optional fields
+        if (formData.email) submitFormData.append('email', formData.email)
+        if (formData.password && formData.password.trim() !== '') submitFormData.append('password', formData.password)
+        if (formData.driver_license) submitFormData.append('driver_license', formData.driver_license)
+        if (formData.date_of_birth) submitFormData.append('date_of_birth', formData.date_of_birth)
+        if (formData.license_expiry_date) submitFormData.append('license_expiry_date', formData.license_expiry_date)
+        if (formData.issuing_source) submitFormData.append('issuing_source', formData.issuing_source)
+
+        // Numeric fields
+        if (formData.guard_type_id) {
+            submitFormData.append('guard_type_id', formData.guard_type_id.toString())
+        }
+        if (formData.contract_id) {
+            submitFormData.append('contract_id', formData.contract_id.toString())
+        }
+
+        // Profile data
+        const profileData = prepareProfileData(formData.profile_data)
+        if (Object.keys(profileData).length > 0) {
+            submitFormData.append('profile_data', JSON.stringify(profileData))
+        }
+
+        // Documents to delete
+        if (documentsToDelete.length > 0) {
+            submitFormData.append('delete_documents', JSON.stringify(documentsToDelete))
+        }
+
+        // Profile image handling
+        if (profileImage) {
+            submitFormData.append('profile_image', profileImage)
+        } else if (!existingProfileImage && !profileImage) {
+            submitFormData.append('remove_profile_image', '1')
+        }
+
+        // 🔥 FIX: Send documents as arrays with indices matching Postman format
+        // Create an array of documents with their types
+        const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
+        
+        // Process new documents
+        documents.forEach((doc) => {
+            // Extract document type from filename (format: "document_type-filename.ext")
+            const firstHyphenIndex = doc.name.indexOf('-')
+            let documentType = ''
+            let originalFileName = doc.name
+            
+            if (firstHyphenIndex > 0) {
+                documentType = doc.name.substring(0, firstHyphenIndex)
+                originalFileName = doc.name.substring(firstHyphenIndex + 1)
+            } else {
+                // Try to find matching document type from selected types
+                for (const docType of selectedDocumentTypes) {
+                    if (doc.name.toLowerCase().includes(docType.toLowerCase())) {
+                        documentType = docType
+                        originalFileName = doc.name
+                        break
+                    }
+                }
+            }
+            
+            if (documentType) {
+                // Create a clean file without the type prefix
+                const cleanFile = new File([doc], originalFileName, { type: doc.type })
+                documentsToSend.push({ type: documentType, file: cleanFile, originalName: originalFileName })
+            }
+        })
+        
+        // Also include existing documents that are being kept? 
+        // Usually only new documents are sent, existing ones remain on server
+        
+        // Send documents as arrays with indices (matching Postman format)
+        documentsToSend.forEach((doc, index) => {
+            // Add document type for this index
+            submitFormData.append(`document_types[${index}]`, doc.type)
+            // Add document file for this index
+            submitFormData.append(`documents[${index}]`, doc.file)
+        })
+        
+        // If you need to also send document_types as a JSON array (as in your previous code)
+        if (selectedDocumentTypes.length > 0) {
+            // Send as JSON string for other processing if needed
+            submitFormData.append('document_types_json', JSON.stringify(selectedDocumentTypes))
+        }
+
+        // Debug log
+        console.log('Sending documents:', documentsToSend.map((d, i) => ({
+            index: i,
+            type: d.type,
+            fileName: d.file.name,
+            fileSize: d.file.size
+        })))
+
+        // Dispatch update action
+        const result = await dispatch(updateGuard({ id: guardId, data: submitFormData }))
+
+        if (updateGuard.fulfilled.match(result)) {
+            await SweetAlertService.success(
+                'Guard Updated Successfully',
+                `${formData.full_name} has been updated.`,
+                { timer: 2000, showConfirmButton: false }
+            )
+
+            resetForm()
+            onSuccess?.()
+            handleDialogClose(false)
+
+            await dispatch(fetchGuards({
+                page: 1,
+                per_page: 10,
+                sort_by: 'updated_at',
+                sort_order: 'desc'
+            }))
+        } else {
+            const errorMessage = (result.payload as string) || 'Failed to update guard'
+            throw new Error(errorMessage)
+        }
+    } catch (error) {
+        await SweetAlertService.error(
+            'Update Failed',
+            error instanceof Error ? error.message : 'There was an error updating the guard. Please try again.'
+        )
+        console.error('Error updating guard:', error)
+    } finally {
+        setIsSubmitting(false)
     }
+}
 
     const nextStep = useCallback(() => {
         setStep(step + 1)
@@ -2874,12 +3039,8 @@ export function GuardUpdateForm({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                     {DOCUMENT_TYPES.map((docType) => {
                                         const isSelected = selectedDocumentTypes.includes(docType.id);
-                                        const hasExistingDoc = existingDocuments.some(doc =>
-                                            doc.name.includes(docType.id) || doc.name.includes(docType.name)
-                                        );
-                                        const newDocumentIndex = documents.findIndex(doc =>
-                                            doc.name.includes(docType.id) || doc.name.includes(docType.name)
-                                        );
+                                        const hasExistingDoc = existingDocuments.some(doc => doc.document_type === docType.id);
+                                        const newDocumentIndex = documents.findIndex(doc => doc.name.startsWith(`${docType.id}-`));
 
                                         return (
                                             <div
@@ -2913,14 +3074,26 @@ export function GuardUpdateForm({
                                                         {/* Existing Document */}
                                                         {hasExistingDoc && newDocumentIndex === -1 && (
                                                             <div className="mb-3">
-                                                                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200">
-                                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                                        <FileText size={16} className="text-green-500 flex-shrink-0" />
-                                                                        <span className="text-sm text-green-700 dark:text-green-300 truncate">
-                                                                            Existing document uploaded
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
+                                                                {existingDocuments
+                                                                    .filter(doc => doc.document_type === docType.id)
+                                                                    .map((existingDoc) => (
+                                                                        <div key={existingDoc.id} className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 mb-2">
+                                                                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                                                <FileText size={16} className="text-green-500 flex-shrink-0" />
+                                                                                <span className="text-sm text-green-700 dark:text-green-300 truncate" title={existingDoc.file_name}>
+                                                                                    {existingDoc.file_name}
+                                                                                </span>
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => removeExistingDocument(existingDoc.id)}
+                                                                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-full transition-all flex-shrink-0 ml-2"
+                                                                                title="Delete document"
+                                                                            >
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
                                                             </div>
                                                         )}
 
@@ -2933,13 +3106,7 @@ export function GuardUpdateForm({
                                                                     onChange={(e) => {
                                                                         const file = e.target.files?.[0];
                                                                         if (file) {
-                                                                            // Create a new File with document type in name
-                                                                            const documentWithType = new File(
-                                                                                [file],
-                                                                                `${docType.id}-${file.name}`,
-                                                                                { type: file.type }
-                                                                            );
-                                                                            setDocuments(prev => [...prev, documentWithType]);
+                                                                            handleDocumentUploadForType(docType.id, file);
                                                                             e.target.value = '';
                                                                         }
                                                                     }}
@@ -2964,12 +3131,14 @@ export function GuardUpdateForm({
                                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                                     <FileText size={16} className="text-blue-500 flex-shrink-0" />
                                                                     <span className="text-sm truncate max-w-[150px] sm:max-w-[180px]" title={documents[newDocumentIndex].name}>
-                                                                        {documents[newDocumentIndex].name}
+                                                                        {documents[newDocumentIndex].name.replace(`${docType.id}-`, '')}
                                                                     </span>
                                                                 </div>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => removeDocument(newDocumentIndex, false)}
+                                                                    onClick={() => {
+                                                                        setDocuments(prev => prev.filter((_, i) => i !== newDocumentIndex));
+                                                                    }}
                                                                     className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-full transition-all flex-shrink-0"
                                                                 >
                                                                     <X size={16} />
@@ -3011,6 +3180,7 @@ export function GuardUpdateForm({
                                                                 width={128}
                                                                 height={128}
                                                                 className="rounded-full object-cover w-full h-full"
+                                                                unoptimized={!!existingProfileImage}
                                                             />
                                                             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                                                 <Plus className="w-8 h-8 text-white" />
@@ -3133,18 +3303,25 @@ export function GuardUpdateForm({
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {/* Existing Documents */}
-                                        {existingDocuments.map((doc, index) => (
+                                        {existingDocuments.map((doc) => (
                                             <div
                                                 key={`existing-${doc.id}`}
                                                 className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 flex items-center justify-between group hover:shadow-md transition-all border border-green-200"
                                             >
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     <FileText size={16} className="text-green-500 flex-shrink-0" />
-                                                    <span className="text-sm truncate text-green-700 dark:text-green-300" title={doc.name}>
-                                                        {doc.name.length > 30 ? doc.name.substring(0, 30) + '...' : doc.name}
+                                                    <span className="text-sm truncate text-green-700 dark:text-green-300" title={doc.file_name}>
+                                                        {doc.file_name.length > 30 ? doc.file_name.substring(0, 30) + '...' : doc.file_name}
                                                     </span>
                                                     <span className="text-xs text-green-600 dark:text-green-400 ml-1">(existing)</span>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeExistingDocument(doc.id)}
+                                                    className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full ml-2"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
                                             </div>
                                         ))}
 
@@ -3163,8 +3340,10 @@ export function GuardUpdateForm({
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeDocument(index, false)}
-                                                    className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full"
+                                                    onClick={() => {
+                                                        setDocuments(prev => prev.filter((_, i) => i !== index));
+                                                    }}
+                                                    className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full ml-2"
                                                 >
                                                     <X size={14} />
                                                 </button>

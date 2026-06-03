@@ -650,129 +650,317 @@ export function ClientUpdateForm({
     }, [formData])
 
     // Submit handler
-    const onSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setShowAllErrors(true)
+    // const onSubmit = async (e: React.FormEvent) => {
+    //     e.preventDefault()
+    //     setShowAllErrors(true)
 
-        const isStep1Valid = await validateStep(1, true)
+    //     const isStep1Valid = await validateStep(1, true)
 
-        if (!isStep1Valid) {
-            setStep(1)
-            SweetAlertService.warning(
-                'Required Fields Missing',
-                'Please fill in all required fields (Full Name, Email, and Phone)'
-            )
-            return
-        }
+    //     if (!isStep1Valid) {
+    //         setStep(1)
+    //         SweetAlertService.warning(
+    //             'Required Fields Missing',
+    //             'Please fill in all required fields (Full Name, Email, and Phone)'
+    //         )
+    //         return
+    //     }
 
-        setIsSubmitting(true)
+    //     setIsSubmitting(true)
 
-        try {
-            const submitFormData = new FormData()
-            submitFormData.append('_method', 'PUT')
+    //     try {
+    //         const submitFormData = new FormData()
+    //         submitFormData.append('_method', 'PUT')
 
-            // Required fields
-            const requiredFields: Record<string, string> = {
-                full_name: formData.full_name,
-                email: formData.email,
-                phone: formData.phone,
-                client_code: formData.client_code,
-                is_active: formData.is_active ? '1' : '0'
-            }
+    //         // Required fields
+    //         const requiredFields: Record<string, string> = {
+    //             full_name: formData.full_name,
+    //             email: formData.email,
+    //             phone: formData.phone,
+    //             client_code: formData.client_code,
+    //             is_active: formData.is_active ? '1' : '0'
+    //         }
 
-            Object.entries(requiredFields).forEach(([key, value]) => {
-                if (value) submitFormData.append(key, value)
-            })
+    //         Object.entries(requiredFields).forEach(([key, value]) => {
+    //             if (value) submitFormData.append(key, value)
+    //         })
 
-            // Optional fields
-            const optionalFields: Record<string, any> = {
-                company_name: formData.company_name,
-                tax_id: formData.tax_id,
-                country: formData.country,
-                city: formData.city,
-                address: formData.address,
-                zip_code: formData.zip_code,
-                currency_id: formData.currency_id,
-                registration_date: formData.registration_date,
-                business_type: formData.business_type,
-                industry: formData.industry,
-                website: formData.website,
-                contact_person: formData.contact_person,
-                contact_person_phone: formData.contact_person_phone,
-                license_number: formData.license_number,
-                notes: formData.notes
-            }
+    //         // Optional fields
+    //         const optionalFields: Record<string, any> = {
+    //             company_name: formData.company_name,
+    //             tax_id: formData.tax_id,
+    //             country: formData.country,
+    //             city: formData.city,
+    //             address: formData.address,
+    //             zip_code: formData.zip_code,
+    //             currency_id: formData.currency_id,
+    //             registration_date: formData.registration_date,
+    //             business_type: formData.business_type,
+    //             industry: formData.industry,
+    //             website: formData.website,
+    //             contact_person: formData.contact_person,
+    //             contact_person_phone: formData.contact_person_phone,
+    //             license_number: formData.license_number,
+    //             notes: formData.notes
+    //         }
 
-            Object.entries(optionalFields).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && value !== '') {
-                    submitFormData.append(key, value.toString())
-                }
-            })
+    //         Object.entries(optionalFields).forEach(([key, value]) => {
+    //             if (value !== undefined && value !== null && value !== '') {
+    //                 submitFormData.append(key, value.toString())
+    //             }
+    //         })
 
-            // Password (only if provided)
-            if (formData.password && formData.password.trim() !== '') {
-                submitFormData.append('password', formData.password)
-            }
+    //         // Password (only if provided)
+    //         if (formData.password && formData.password.trim() !== '') {
+    //             submitFormData.append('password', formData.password)
+    //         }
 
-            // Contacts
-            if (formData.contacts.length > 0) {
-                submitFormData.append('contacts', JSON.stringify(formData.contacts))
-            }
+    //         // Contacts
+    //         if (formData.contacts.length > 0) {
+    //             submitFormData.append('contacts', JSON.stringify(formData.contacts))
+    //         }
 
-            // Sites
-            if (formData.sites.length > 0) {
-                submitFormData.append('sites', JSON.stringify(formData.sites))
-            }
+    //         // Sites
+    //         if (formData.sites.length > 0) {
+    //             submitFormData.append('sites', JSON.stringify(formData.sites))
+    //         }
 
-            // Document types
-            if (selectedDocumentTypes.length > 0) {
-                submitFormData.append('client_document_types', JSON.stringify(selectedDocumentTypes))
-            }
+    //         // Document types
+    //         if (selectedDocumentTypes.length > 0) {
+    //             submitFormData.append('client_document_types', JSON.stringify(selectedDocumentTypes))
+    //         }
 
-            // Media categories
-            if (formData.media_categories.length > 0) {
-                submitFormData.append('media_categories', JSON.stringify(formData.media_categories))
-            }
+    //         // Media categories
+    //         if (formData.media_categories.length > 0) {
+    //             submitFormData.append('media_categories', JSON.stringify(formData.media_categories))
+    //         }
 
-            // Files
-            if (profileImage) {
-                submitFormData.append('profile_image', profileImage)
-            } else if (existingProfileImage && !profileImage) {
-                submitFormData.append('keep_profile_image', '1')
-            }
+    //         // Files
+    //         if (profileImage) {
+    //             submitFormData.append('profile_image', profileImage)
+    //         } else if (existingProfileImage && !profileImage) {
+    //             submitFormData.append('keep_profile_image', '1')
+    //         }
 
-            if (documents.length > 0) {
-                documents.forEach((doc) => {
-                    submitFormData.append('documents[]', doc)
-                })
-            }
+    //         if (documents.length > 0) {
+    //             documents.forEach((doc) => {
+    //                 submitFormData.append('documents[]', doc)
+    //             })
+    //         }
 
-            const result = await dispatch(updateClient({ id: clientId, data: submitFormData }))
+    //         const result = await dispatch(updateClient({ id: clientId, data: submitFormData }))
 
-            if (updateClient.fulfilled.match(result)) {
-                await SweetAlertService.success(
-                    'Client Updated Successfully',
-                    `${formData.company_name || formData.full_name} has been updated successfully.`,
-                    { timer: 2000, showConfirmButton: false }
-                )
+    //         if (updateClient.fulfilled.match(result)) {
+    //             await SweetAlertService.success(
+    //                 'Client Updated Successfully',
+    //                 `${formData.company_name || formData.full_name} has been updated successfully.`,
+    //                 { timer: 2000, showConfirmButton: false }
+    //             )
 
-                resetForm()
-                onSuccess?.()
-                handleDialogClose(false)
-            } else {
-                const errorMessage = (result.payload as string) || 'Failed to update client'
-                throw new Error(errorMessage)
-            }
-        } catch (error) {
-            await SweetAlertService.error(
-                'Update Failed',
-                error instanceof Error ? error.message : 'There was an error updating the client. Please try again.'
-            )
-            console.error('Error updating client:', error)
-        } finally {
-            setIsSubmitting(false)
-        }
+    //             resetForm()
+    //             onSuccess?.()
+    //             handleDialogClose(false)
+    //         } else {
+    //             const errorMessage = (result.payload as string) || 'Failed to update client'
+    //             throw new Error(errorMessage)
+    //         }
+    //     } catch (error) {
+    //         await SweetAlertService.error(
+    //             'Update Failed',
+    //             error instanceof Error ? error.message : 'There was an error updating the client. Please try again.'
+    //         )
+    //         console.error('Error updating client:', error)
+    //     } finally {
+    //         setIsSubmitting(false)
+    //     }
+    // }
+
+    // Submit handler - FIXED with indexed array format
+const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setShowAllErrors(true)
+
+    const isStep1Valid = await validateStep(1, true)
+
+    if (!isStep1Valid) {
+        setStep(1)
+        SweetAlertService.warning(
+            'Required Fields Missing',
+            'Please fill in all required fields (Full Name, Email, and Phone)'
+        )
+        return
     }
+
+    setIsSubmitting(true)
+
+    try {
+        const submitFormData = new FormData()
+        submitFormData.append('_method', 'POST')
+
+        // Required fields
+        const requiredFields: Record<string, string> = {
+            full_name: formData.full_name,
+            email: formData.email,
+            phone: formData.phone,
+            client_code: formData.client_code,
+            is_active: formData.is_active ? '1' : '0'
+        }
+
+        Object.entries(requiredFields).forEach(([key, value]) => {
+            if (value) submitFormData.append(key, value)
+        })
+
+        // Optional fields
+        const optionalFields: Record<string, any> = {
+            company_name: formData.company_name,
+            tax_id: formData.tax_id,
+            country: formData.country,
+            city: formData.city,
+            address: formData.address,
+            zip_code: formData.zip_code,
+            currency_id: formData.currency_id,
+            registration_date: formData.registration_date,
+            business_type: formData.business_type,
+            industry: formData.industry,
+            website: formData.website,
+            contact_person: formData.contact_person,
+            contact_person_phone: formData.contact_person_phone,
+            license_number: formData.license_number,
+            notes: formData.notes
+        }
+
+        Object.entries(optionalFields).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                submitFormData.append(key, value.toString())
+            }
+        })
+
+        // Password (only if provided)
+        if (formData.password && formData.password.trim() !== '') {
+            submitFormData.append('password', formData.password)
+        }
+
+        // Contacts
+        if (formData.contacts.length > 0) {
+            submitFormData.append('contacts', JSON.stringify(formData.contacts))
+        }
+
+        // Sites
+        if (formData.sites.length > 0) {
+            submitFormData.append('sites', JSON.stringify(formData.sites))
+        }
+
+        // Document types (for reference)
+        if (selectedDocumentTypes.length > 0) {
+            submitFormData.append('client_document_types', JSON.stringify(selectedDocumentTypes))
+        }
+
+        // Media categories
+        if (formData.media_categories.length > 0) {
+            submitFormData.append('media_categories', JSON.stringify(formData.media_categories))
+        }
+
+        // Profile image
+        if (profileImage) {
+            submitFormData.append('profile_image', profileImage)
+        } else if (existingProfileImage && !profileImage) {
+            submitFormData.append('keep_profile_image', '1')
+        } else if (!existingProfileImage && !profileImage) {
+            submitFormData.append('remove_profile_image', '1')
+        }
+
+        // Documents to delete
+        const documentsToDelete = existingDocuments
+            .filter(doc => {
+                // Check if this existing document is no longer in selected types
+                const docTypeFromName = doc.name.split('-')[0] // Extract type from filename
+                return !selectedDocumentTypes.includes(docTypeFromName)
+            })
+            .map(doc => doc.id)
+
+        if (documentsToDelete.length > 0) {
+            submitFormData.append('delete_documents', JSON.stringify(documentsToDelete))
+        }
+
+        // 🔥 FIX: Send new documents as indexed arrays (0, 1, 2, etc.)
+        // Create an array of documents with their types
+        const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
+        
+        // Process new documents
+        documents.forEach((doc) => {
+            // Extract document type from filename (format: "document_type-filename.ext")
+            const firstHyphenIndex = doc.name.indexOf('-')
+            let documentType = ''
+            let originalFileName = doc.name
+            
+            if (firstHyphenIndex > 0) {
+                documentType = doc.name.substring(0, firstHyphenIndex)
+                originalFileName = doc.name.substring(firstHyphenIndex + 1)
+            } else {
+                // Try to find matching document type from selected types
+                for (const docType of selectedDocumentTypes) {
+                    if (doc.name.toLowerCase().includes(docType.toLowerCase())) {
+                        documentType = docType
+                        originalFileName = doc.name
+                        break
+                    }
+                }
+            }
+            
+            if (documentType) {
+                // Create a clean file without the type prefix
+                const cleanFile = new File([doc], originalFileName, { type: doc.type })
+                documentsToSend.push({ type: documentType, file: cleanFile, originalName: originalFileName })
+            } else {
+                // If no type found, use 'other' as default
+                documentsToSend.push({ type: 'other', file: doc, originalName: doc.name })
+            }
+        })
+        
+        // Send documents as indexed arrays (matching Postman/guard format)
+        documentsToSend.forEach((doc, index) => {
+            // Add document type for this index
+            submitFormData.append(`document_types[${index}]`, doc.type)
+            // Add document file for this index
+            submitFormData.append(`documents[${index}]`, doc.file)
+        })
+
+        // Debug log
+        if (documentsToSend.length > 0) {
+            console.log('Sending documents:', documentsToSend.map((d, i) => ({
+                index: i,
+                type: d.type,
+                fileName: d.file.name,
+                fileSize: d.file.size
+            })))
+        }
+
+        // Dispatch update action
+        const result = await dispatch(updateClient({ id: clientId, data: submitFormData }))
+
+        if (updateClient.fulfilled.match(result)) {
+            await SweetAlertService.success(
+                'Client Updated Successfully',
+                `${formData.company_name || formData.full_name} has been updated successfully.`,
+                { timer: 2000, showConfirmButton: false }
+            )
+
+            resetForm()
+            onSuccess?.()
+            handleDialogClose(false)
+        } else {
+            const errorMessage = (result.payload as string) || 'Failed to update client'
+            throw new Error(errorMessage)
+        }
+    } catch (error) {
+        await SweetAlertService.error(
+            'Update Failed',
+            error instanceof Error ? error.message : 'There was an error updating the client. Please try again.'
+        )
+        console.error('Error updating client:', error)
+    } finally {
+        setIsSubmitting(false)
+    }
+}
 
     const nextStep = useCallback(async () => {
         const isValid = await validateStep(step, true)
