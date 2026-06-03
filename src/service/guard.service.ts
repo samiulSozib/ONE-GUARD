@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/app/types/api.types";
-import { Guard, GuardContact, GuardParams } from "@/app/types/guard";
+import { Guard, GuardContact, GuardParams, PasswordResetParams } from "@/app/types/guard";
 import api, { handleApiResponse } from "./api.service";
 
 export const guardService = {
@@ -29,7 +29,7 @@ export const guardService = {
   
   // Update guard
   updateGuard: (id: number, data: FormData | Partial<Guard>) =>
-    handleApiResponse(api.put<ApiResponse<{item:Guard}>>(`/admin/guards/${id}`, data, {
+    handleApiResponse(api.post<ApiResponse<{item:Guard}>>(`/admin/guards/${id}`, data, {
       headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined
     })),
   
@@ -76,4 +76,9 @@ export const guardService = {
   // Get guard attendance
   getGuardAttendance: (guardId: number, params?: { date_from?: string; date_to?: string }) =>
     handleApiResponse(api.get<ApiResponse<void>>(`/admin/guards/${guardId}/attendance`, { params })),
+
+
+  // Reset guard password
+  resetPassword: (id: number, data: PasswordResetParams) =>
+    handleApiResponse(api.post<ApiResponse<{message: string}>>(`/admin/guards/${id}/reset-password`, data)),
 };

@@ -33,7 +33,7 @@ export const clientService = {
   // Update client
   updateClient: (id: number, data: FormData | Partial<Client>) =>
     handleApiResponse(
-      api.put<ApiResponse<{item:Client}>>(`/admin/clients/${id}`, data, {
+      api.post<ApiResponse<{item:Client}>>(`/admin/clients/${id}`, data, {
         headers: data instanceof FormData 
           ? { 'Content-Type': 'multipart/form-data' } 
           : undefined

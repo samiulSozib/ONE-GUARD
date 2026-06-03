@@ -236,3 +236,9 @@ export interface GuardProfileData {
     emergency_contact_relation?: string
     notes?: string
 }
+
+
+// Password reset types
+export interface PasswordResetParams {
+  new_password: string;
+}
