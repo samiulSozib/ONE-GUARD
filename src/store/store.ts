@@ -25,6 +25,7 @@ import jobCategoriesReducer from './slices/jobCategoriesSlice';
 import jobReducer from './slices/jobSlice';
 import jobApplicationReducer from './slices/jobApplicationSlice';
 import emailTemplateReducer from './slices/emailTemplateSlice';
+import emailLogReducer from './slices/email-logSlice';
 
 export const store = configureStore({
   reducer: {
@@ -54,6 +55,7 @@ export const store = configureStore({
     jobs: jobReducer,
     jobApplications: jobApplicationReducer,
     emailTemplates: emailTemplateReducer,
+    emailLogs: emailLogReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

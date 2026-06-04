@@ -2379,6 +2379,26 @@ useEffect(() => {
 // Submit handler - FIXED FOR ARRAY FORMAT
 const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate file sizes before submitting
+    if (profileImage && profileImage.size > 2 * 1024 * 1024) {
+        await SweetAlertService.error(
+            'File Too Large',
+            'Profile image must be less than 2MB. Please compress your image and try again.'
+        )
+        return
+    }
+
+    const oversizedDocuments = documents.filter(doc => doc.size > 2 * 1024 * 1024)
+    if (oversizedDocuments.length > 0) {
+        const fileNames = oversizedDocuments.map(doc => doc.name).join(', ')
+        await SweetAlertService.error(
+            'Files Too Large',
+            `The following document(s) exceed the 2MB limit:\n${fileNames}\n\nPlease compress these files and try again.`
+        )
+        return
+    }
+
     setIsSubmitting(true)
 
     try {

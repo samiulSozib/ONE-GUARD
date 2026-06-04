@@ -115,7 +115,8 @@ const navGroups = [
     label: "Email Templates",
     items: [
 
-      { title: "Email Templates", url: "/email-template-settings", icon: MessageSquareWarning }
+      { title: "Email Templates", url: "/email-template-settings", icon: MessageSquareWarning },
+      { title: "Email Logs", url: "/email-logs", icon: MessageSquareWarning }
     ],
   },
 ]
