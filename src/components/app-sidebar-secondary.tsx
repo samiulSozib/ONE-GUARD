@@ -111,6 +111,13 @@ const navGroups = [
       { title: "Job Applications", url: "/job-applications", icon: AlertTriangle },
     ],
   },
+  {
+    label: "Email Templates",
+    items: [
+
+      { title: "Email Templates", url: "/email-template-settings", icon: MessageSquareWarning }
+    ],
+  },
 ]
 
 export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Sidebar>) {

@@ -24,6 +24,7 @@ import liveTrackingReducer from './slices/liveTrackingSlice'
 import jobCategoriesReducer from './slices/jobCategoriesSlice';
 import jobReducer from './slices/jobSlice';
 import jobApplicationReducer from './slices/jobApplicationSlice';
+import emailTemplateReducer from './slices/emailTemplateSlice';
 
 export const store = configureStore({
   reducer: {
@@ -52,6 +53,7 @@ export const store = configureStore({
     jobCategories: jobCategoriesReducer,
     jobs: jobReducer,
     jobApplications: jobApplicationReducer,
+    emailTemplates: emailTemplateReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
