@@ -75,6 +75,8 @@ import { ClientContract, ClientContractParams } from "@/app/types/clientContract
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
 import { ClientContractViewDialog } from "./client-contract-view-dialog";
+import { ClientContractEditForm } from "./client-contract-edit-form"; // ✅ Fixed import
+import { ClientContractCreateForm } from "./client-contract-create-form"; // Keep for create
 import SweetAlertService from "@/lib/sweetAlert";
 import { clientContractService } from "@/service/clientContract.service";
 
@@ -106,17 +108,17 @@ interface ClientContractDataTableProps {
   clientId?: number;
 }
 
-export function ClientContractDataTable({ 
-  onAddClick, 
-  onViewClick, 
+export function ClientContractDataTable({
+  onAddClick,
+  onViewClick,
   onEditClick,
-  clientId 
+  clientId
 }: ClientContractDataTableProps) {
   const dispatch = useAppDispatch();
-  
+
   // Redux state
   const { contracts, pagination, isLoading, error } = useAppSelector((state) => state.clientContract);
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [contractSearch, setContractSearch] = useState("");
@@ -130,15 +132,18 @@ export function ClientContractDataTable({
   const [contractToDelete, setContractToDelete] = useState<ClientContract | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  
+
   // View dialog state
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
-  
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
   // Date filter state
   const [startDateFilter, setStartDateFilter] = useState<Date | undefined>(undefined);
   const [endDateFilter, setEndDateFilter] = useState<Date | undefined>(undefined);
-  
+
   // Fetch contracts on mount and filter changes
   useEffect(() => {
     const fetchParams: ClientContractParams = {
@@ -149,47 +154,47 @@ export function ClientContractDataTable({
       start_date: startDateFilter ? format(startDateFilter, 'yyyy-MM-dd') : undefined,
       end_date: endDateFilter ? format(endDateFilter, 'yyyy-MM-dd') : undefined,
     };
-    
+
     // Remove undefined values
-    Object.keys(fetchParams).forEach(key => 
+    Object.keys(fetchParams).forEach(key =>
       fetchParams[key as keyof ClientContractParams] === undefined && delete fetchParams[key as keyof ClientContractParams]
     );
-    
+
     dispatch(fetchContracts(fetchParams));
   }, [dispatch, filters, searchTerm, statusFilter, typeFilter, startDateFilter, endDateFilter, clientId]);
-  
+
   // Handle search
   const handleContractSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContractSearch(e.target.value);
   };
-  
+
   const handleContractSearchSubmit = () => {
     setSearchTerm(contractSearch);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   // Handle filter changes
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(status);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   const handleTypeFilterChange = (type: string) => {
     setTypeFilter(type);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   // Handle date filters
   const handleStartDateChange = (date: Date | undefined) => {
     setStartDateFilter(date);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   const handleEndDateChange = (date: Date | undefined) => {
     setEndDateFilter(date);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -205,7 +210,7 @@ export function ClientContractDataTable({
     });
     setSelectedContracts([]);
   };
-  
+
   // Handle contract selection
   const handleSelectContract = (contractId: number) => {
     setSelectedContracts(prev =>
@@ -214,7 +219,7 @@ export function ClientContractDataTable({
         : [...prev, contractId]
     );
   };
-  
+
   const handleSelectAll = () => {
     if (selectedContracts.length === contracts.length) {
       setSelectedContracts([]);
@@ -222,18 +227,18 @@ export function ClientContractDataTable({
       setSelectedContracts(contracts.map((contract: ClientContract) => contract.id));
     }
   };
-  
+
   // Handle delete
   const handleDeleteClick = (contract: ClientContract) => {
     setContractToDelete(contract);
     setDeleteDialogOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     if (contractToDelete) {
       try {
         await dispatch(deleteContract(contractToDelete.id)).unwrap();
-        
+
         SweetAlertService.success(
           'Contract Deleted',
           `Contract ${contractToDelete.contract_number || contractToDelete.name} has been deleted successfully.`,
@@ -242,10 +247,10 @@ export function ClientContractDataTable({
             showConfirmButton: false,
           }
         );
-        
+
         setDeleteDialogOpen(false);
         setContractToDelete(null);
-        
+
         // Refresh list
         dispatch(fetchContracts(filters));
       } catch (error) {
@@ -256,20 +261,20 @@ export function ClientContractDataTable({
       }
     }
   };
-  
+
   // Handle view details
   const handleViewDetails = (contract: ClientContract) => {
     setSelectedContractId(contract.id);
     setViewDialogOpen(true);
     if (onViewClick) onViewClick(contract);
   };
-  
+
   // Handle edit from view dialog
   const handleEditFromView = (contract: ClientContract) => {
     setViewDialogOpen(false);
     if (onEditClick) onEditClick(contract);
   };
-  
+
   // Handle download
   const handleDownload = async (contractId: number) => {
     try {
@@ -288,17 +293,17 @@ export function ClientContractDataTable({
       SweetAlertService.error('Download Failed', 'Failed to download contract document.');
     }
   };
-  
+
   // Handle contract actions
   const handleActivate = async (contract: ClientContract) => {
     try {
       const result = await SweetAlertService.confirm(
         `Are you sure you want to activate contract ${contract.contract_number || contract.name}?`
       );
-      
+
       if (result.isConfirmed) {
         await dispatch(activateContract(contract.id)).unwrap();
-        
+
         SweetAlertService.success(
           'Contract Activated',
           'The contract has been activated successfully.'
@@ -317,13 +322,13 @@ export function ClientContractDataTable({
       const result = await SweetAlertService.confirm(
         `Are you sure you want to suspend contract ${contract.contract_number || contract.name}?`
       );
-      
+
       if (result.isConfirmed) {
-        await dispatch(suspendContract({ 
-          id: contract.id, 
-          data: { reason: 'Suspended by user' } 
+        await dispatch(suspendContract({
+          id: contract.id,
+          data: { reason: 'Suspended by user' }
         })).unwrap();
-        
+
         SweetAlertService.success(
           'Contract Suspended',
           'The contract has been suspended successfully.'
@@ -342,16 +347,16 @@ export function ClientContractDataTable({
       const result = await SweetAlertService.confirm(
         `Are you sure you want to terminate contract ${contract.contract_number || contract.name}?`
       );
-      
+
       if (result.isConfirmed) {
-        await dispatch(terminateContract({ 
-          id: contract.id, 
-          data: { 
+        await dispatch(terminateContract({
+          id: contract.id,
+          data: {
             reason: 'Terminated by user',
             effective_date: format(new Date(), 'yyyy-MM-dd')
-          } 
+          }
         })).unwrap();
-        
+
         SweetAlertService.success(
           'Contract Terminated',
           'The contract has been terminated successfully.'
@@ -370,16 +375,16 @@ export function ClientContractDataTable({
       const result = await SweetAlertService.confirm(
         `Are you sure you want to renew contract ${contract.contract_number || contract.name}?`
       );
-      
+
       if (result.isConfirmed) {
-        await dispatch(renewContract({ 
-          id: contract.id, 
-          data: { 
+        await dispatch(renewContract({
+          id: contract.id,
+          data: {
             end_date: contract.end_date,
-            notes: 'Contract renewed' 
-          } 
+            notes: 'Contract renewed'
+          }
         })).unwrap();
-        
+
         SweetAlertService.success(
           'Contract Renewed',
           'The contract has been renewed successfully.'
@@ -392,7 +397,7 @@ export function ClientContractDataTable({
       );
     }
   };
-  
+
   // Handle status toggle
   const handleToggleStatus = async (contract: ClientContract) => {
     try {
@@ -401,7 +406,7 @@ export function ClientContractDataTable({
         id: contract.id,
         status: newStatus
       })).unwrap();
-      
+
       SweetAlertService.success(
         'Status Updated',
         `Contract status has been updated successfully.`
@@ -413,14 +418,14 @@ export function ClientContractDataTable({
       );
     }
   };
-  
-  // Handle edit
+
+  // ✅ Single handleEdit function - removed duplicate
   const handleEdit = (contract: ClientContract) => {
-    if (onEditClick) {
-      onEditClick(contract);
-    }
+    setSelectedContractId(contract.id);
+    setEditDialogOpen(true);
+    if (onEditClick) onEditClick(contract);
   };
-  
+
   // Format currency
   const formatCurrency = (value?: string | number, currency: string = 'USD') => {
     if (!value) return 'N/A';
@@ -432,7 +437,7 @@ export function ClientContractDataTable({
       maximumFractionDigits: 2,
     }).format(numValue);
   };
-  
+
   // Format date
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -442,7 +447,7 @@ export function ClientContractDataTable({
       return dateString;
     }
   };
-  
+
   // Get status display
   const getStatusDisplay = (status: string = 'draft') => {
     const statusMap: Record<string, string> = {
@@ -456,7 +461,7 @@ export function ClientContractDataTable({
     };
     return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
   };
-  
+
   // Get type display
   const getTypeDisplay = (type: string = 'ongoing') => {
     const typeMap: Record<string, string> = {
@@ -467,19 +472,19 @@ export function ClientContractDataTable({
     };
     return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
   };
-  
+
   // Get contract duration
   const getContractDuration = (contract: ClientContract) => {
     if (!contract.start_date) return 'N/A';
     if (!contract.end_date) return `${formatDate(contract.start_date)} - Ongoing`;
     return `${formatDate(contract.start_date)} - ${formatDate(contract.end_date)}`;
   };
-  
+
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
-  
+
   // Export functionality
   const handleExport = () => {
     SweetAlertService.info(
@@ -487,7 +492,7 @@ export function ClientContractDataTable({
       'Export functionality will be implemented soon.'
     );
   };
-  
+
   // Loading skeleton
   if (isLoading && contracts.length === 0) {
     return (
@@ -510,7 +515,7 @@ export function ClientContractDataTable({
       </Card>
     );
   }
-  
+
   return (
     <>
       <Card className="shadow-sm rounded-2xl">
@@ -521,7 +526,7 @@ export function ClientContractDataTable({
             Filters
           </CardTitle>
 
-          <CardTitle 
+          <CardTitle
             className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80"
             onClick={handleExport}
           >
@@ -530,8 +535,8 @@ export function ClientContractDataTable({
           </CardTitle>
 
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
-            <Checkbox 
-              id="select-all" 
+            <Checkbox
+              id="select-all"
               className="dark:bg-white dark:border-black"
               checked={selectedContracts.length === contracts.length && contracts.length > 0}
               onCheckedChange={handleSelectAll}
@@ -540,8 +545,8 @@ export function ClientContractDataTable({
           </CardTitle>
 
           {onAddClick && (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={onAddClick}
               className="ml-auto"
             >
@@ -557,8 +562,8 @@ export function ClientContractDataTable({
             {/* Contract Search Input */}
             <div className="sm:col-span-4">
               <InputGroup>
-                <InputGroupInput 
-                  placeholder="Search by contract # or name..." 
+                <InputGroupInput
+                  placeholder="Search by contract # or name..."
                   value={contractSearch}
                   onChange={handleContractSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleContractSearchSubmit()}
@@ -568,7 +573,7 @@ export function ClientContractDataTable({
                 </InputGroupAddon>
               </InputGroup>
             </div>
-            
+
             {/* Type Filter */}
             <div className="sm:col-span-2">
               <select
@@ -829,13 +834,13 @@ export function ClientContractDataTable({
                               <Eye className="mr-2 h-4 w-4" />
                               View details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(contract)}>
+                            {/* <DropdownMenuItem onClick={() => handleEdit(contract)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit contract
-                            </DropdownMenuItem>
-                            
+                            </DropdownMenuItem> */}
+
                             <DropdownMenuSeparator />
-                            
+
                             {/* Status-based actions */}
                             {contract.status === 'draft' && (
                               <DropdownMenuItem onClick={() => handleActivate(contract)}>
@@ -843,7 +848,7 @@ export function ClientContractDataTable({
                                 <span className="text-green-600">Activate</span>
                               </DropdownMenuItem>
                             )}
-                            
+
                             {contract.status === 'active' && (
                               <>
                                 <DropdownMenuItem onClick={() => handleSuspend(contract)}>
@@ -856,16 +861,16 @@ export function ClientContractDataTable({
                                 </DropdownMenuItem>
                               </>
                             )}
-                            
+
                             {(contract.status === 'active' || contract.status === 'suspended') && (
                               <DropdownMenuItem onClick={() => handleTerminate(contract)}>
                                 <Ban className="mr-2 h-4 w-4 text-red-600" />
                                 <span className="text-red-600">Terminate</span>
                               </DropdownMenuItem>
                             )}
-                            
+
                             <DropdownMenuSeparator />
-                            
+
                             <DropdownMenuItem
                               onClick={() => handleToggleStatus(contract)}
                               className="text-amber-600"
@@ -882,7 +887,7 @@ export function ClientContractDataTable({
                                 </>
                               )}
                             </DropdownMenuItem>
-                            
+
                             <DropdownMenuItem
                               onClick={() => handleDeleteClick(contract)}
                               className="text-red-600 focus:text-red-600"
@@ -936,7 +941,7 @@ export function ClientContractDataTable({
           )}
         </CardContent>
       </Card>
-      
+
       {/* Delete Dialog */}
       <DeleteDialog
         isOpen={deleteDialogOpen}
@@ -954,6 +959,20 @@ export function ClientContractDataTable({
         onEdit={handleEditFromView}
         onDownload={handleDownload}
       />
+
+      {/* ✅ Edit Dialog - Using ClientContractEditForm */}
+      {selectedContractId && (
+        <ClientContractEditForm
+          trigger={<></>} // Hidden trigger since we control it via isOpen
+          isOpen={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          contractId={selectedContractId}
+          onSuccess={() => {
+            // Refresh the contracts list
+            dispatch(fetchContracts(filters));
+          }}
+        />
+      )}
     </>
   );
 }

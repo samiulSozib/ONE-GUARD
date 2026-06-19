@@ -11,15 +11,15 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Building, DollarSign, Clock, FileText, Users, Globe, Plus, X } from "lucide-react"
+import { CalendarIcon, Building, DollarSign, Clock, FileText, Users, Globe, Plus, X, Loader2 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
-import { createContract } from "@/store/slices/clientContractSlice"
+import { updateContract, fetchContract } from "@/store/slices/clientContractSlice"
 import { fetchClients } from "@/store/slices/clientSlice"
 import { fetchSites } from "@/store/slices/siteSlice"
-import { CreateClientContractDto, CreateClientContractSite } from "@/app/types/clientContract"
+import { CreateClientContractDto, CreateClientContractSite, ClientContract } from "@/app/types/clientContract"
 import { cn } from "@/lib/utils"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import SweetAlertService from "@/lib/sweetAlert"
@@ -33,12 +33,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-interface ClientContractCreateFormProps {
+interface ClientContractEditFormProps {
     trigger: ReactNode
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
     onSuccess?: () => void
-    preSelectedClient?: number
+    contractId: number
 }
 
 interface ClientContractFormData {
@@ -64,6 +64,7 @@ interface ClientContractFormData {
     auto_renew?: boolean
     notes?: string
     sites: {
+        id?: number
         site_id?: number
         site_name?: string
         address?: string
@@ -71,7 +72,7 @@ interface ClientContractFormData {
         longitude?: number
         guards_required?: number
         site_instruction?: string
-        pivot: {
+        pivot?: {
             guards_required?: number
             site_specific_rate?: number
             is_primary?: boolean
@@ -79,7 +80,7 @@ interface ClientContractFormData {
     }[]
 }
 
-const defaultSite: CreateClientContractSite = {
+const defaultSite = {
     site_id: undefined,
     site_name: "",
     address: "",
@@ -94,24 +95,28 @@ const defaultSite: CreateClientContractSite = {
     }
 }
 
-export function ClientContractCreateForm({
+export function ClientContractEditForm({
     trigger,
     isOpen,
     onOpenChange,
     onSuccess,
-    preSelectedClient
-}: ClientContractCreateFormProps) {
+    contractId
+}: ClientContractEditFormProps) {
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
+    const [isFetching, setIsFetching] = useState(false)
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({})
+    const [initialized, setInitialized] = useState(false)
+    const [contractData, setContractData] = useState<ClientContract | null>(null)
 
     const { clients, isLoading: clientsLoading } = useAppSelector((state) => state.client)
     const { sites, isLoading: sitesLoading } = useAppSelector((state) => state.site)
+    const { currentContract } = useAppSelector((state) => state.clientContract)
 
     const [clientSearch, setClientSearch] = useState("")
     const [siteSearch, setSiteSearch] = useState("")
 
-    const [startDate, setStartDate] = useState<Date | undefined>(new Date())
+    const [startDate, setStartDate] = useState<Date | undefined>()
     const [endDate, setEndDate] = useState<Date | undefined>()
     const [signedDate, setSignedDate] = useState<Date | undefined>()
     const [effectiveDate, setEffectiveDate] = useState<Date | undefined>()
@@ -126,7 +131,7 @@ export function ClientContractCreateForm({
         formState: { errors },
     } = useForm<ClientContractFormData>({
         defaultValues: {
-            client_id: preSelectedClient,
+            client_id: undefined,
             name: "",
             type: "ongoing",
             start_date: "",
@@ -147,28 +152,141 @@ export function ClientContractCreateForm({
             renewal_notice_days: 30,
             auto_renew: false,
             notes: "",
-            sites: [defaultSite]
+            sites: [{ ...defaultSite }]
         }
     })
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control,
         name: "sites"
     })
 
     const formValues = watch()
 
+    // Fetch contract data when dialog opens
+    useEffect(() => {
+        if (isOpen && contractId && !initialized) {
+            fetchContractData(contractId)
+        }
+    }, [isOpen, contractId, initialized])
+
+    // Fetch clients and sites
     useEffect(() => {
         dispatch(fetchClients({ page: 1, per_page: 10, search: clientSearch }))
         dispatch(fetchSites({ page: 1, per_page: 10, search: siteSearch }))
     }, [dispatch])
 
-    useEffect(() => {
-        if (preSelectedClient) {
-            setValue("client_id", preSelectedClient)
+    const fetchContractData = async (id: number) => {
+        setIsFetching(true)
+        try {
+            const result = await dispatch(fetchContract({ 
+                id, 
+                params: { include: ['client', 'sites', 'created_by', 'updated_by'] } 
+            }))
+            
+            if (fetchContract.fulfilled.match(result)) {
+                const contract = result.payload.item
+                setContractData(contract)
+                populateForm(contract)
+                setInitialized(true)
+            }
+        } catch (error) {
+            console.error('Failed to fetch contract:', error)
+            SweetAlertService.error(
+                'Error',
+                'Failed to load contract data. Please try again.'
+            )
+        } finally {
+            setIsFetching(false)
         }
-    }, [preSelectedClient, setValue])
+    }
 
+    const populateForm = (contract: ClientContract) => {
+        // Basic info - get client_id from client object
+        if (contract.client) {
+            setValue('client_id', contract.client.id)
+        }
+
+        // Contract name
+        setValue('name', contract.name || '')
+
+        // Contract type
+        if (contract.type) {
+            setValue('type', contract.type as any)
+        }
+
+        // Dates
+        if (contract.start_date) {
+            const date = new Date(contract.start_date)
+            setStartDate(date)
+            setValue('start_date', format(date, 'yyyy-MM-dd'))
+        }
+        
+        if (contract.end_date) {
+            const date = new Date(contract.end_date)
+            setEndDate(date)
+            setValue('end_date', format(date, 'yyyy-MM-dd'))
+        }
+        
+        if (contract.signed_date) {
+            const date = new Date(contract.signed_date)
+            setSignedDate(date)
+            setValue('signed_date', format(date, 'yyyy-MM-dd'))
+        }
+        
+        if (contract.effective_date) {
+            const date = new Date(contract.effective_date)
+            setEffectiveDate(date)
+            setValue('effective_date', format(date, 'yyyy-MM-dd'))
+        }
+
+        // Financial
+        setValue('contract_value', contract.contract_value?.toString() || '')
+        setValue('hourly_rate', contract.hourly_rate?.toString() || '')
+        setValue('overtime_rate', contract.overtime_rate?.toString() || '')
+        setValue('holiday_rate', contract.holiday_rate?.toString() || '')
+        setValue('admin_fee_percentage', contract.admin_fee_percentage?.toString() || '')
+
+        // Billing & Terms
+        setValue('billing_cycle', (contract.billing_cycle as any) || 'monthly')
+        setValue('payment_terms', (contract.payment_terms as any) || 'net_30')
+        setValue('currency', (contract.currency as any) || 'USD')
+        setValue('governing_law', contract.governing_law || '')
+        setValue('venue_location', contract.venue_location || '')
+        setValue('termination_notice_days', contract.termination_notice_days || 30)
+        setValue('renewal_notice_days', contract.renewal_notice_days || 30)
+        setValue('auto_renew', contract.auto_renew || false)
+        setValue('notes', contract.notes || '')
+
+        // Sites - handle the nested structure
+        if (contract.sites && contract.sites.length > 0) {
+            const sitesData = contract.sites.map((siteItem: any) => {
+                const site = siteItem.site || siteItem
+                const pivot = siteItem.pivot || {}
+                
+                return {
+                    id: siteItem.id || site.id,
+                    site_id: site.id,
+                    site_name: site.site_name || '',
+                    address: site.address || '',
+                    latitude: site.latitude ? parseFloat(String(site.latitude)) : undefined,
+                    longitude: site.longitude ? parseFloat(String(site.longitude)) : undefined,
+                    guards_required: pivot.guards_required || site.guards_required || 1,
+                    site_instruction: site.site_instruction || '',
+                    pivot: {
+                        guards_required: pivot.guards_required || site.guards_required || 1,
+                        site_specific_rate: pivot.site_specific_rate ? parseFloat(String(pivot.site_specific_rate)) : undefined,
+                        is_primary: pivot.is_primary || false
+                    }
+                }
+            })
+            replace(sitesData)
+        } else {
+            replace([{ ...defaultSite }])
+        }
+    }
+
+    // Search debouncing
     useEffect(() => {
         const timer = setTimeout(() => {
             dispatch(fetchClients({ page: 1, per_page: 10, search: clientSearch.trim() || undefined }))
@@ -183,6 +301,7 @@ export function ClientContractCreateForm({
         return () => clearTimeout(timer)
     }, [siteSearch, dispatch])
 
+    // Update form values when dates change
     useEffect(() => {
         if (startDate) setValue('start_date', format(startDate, 'yyyy-MM-dd'))
     }, [startDate, setValue])
@@ -222,7 +341,6 @@ export function ClientContractCreateForm({
             errors.start_date = "Start date is required"
         }
 
-        // Check if at least one site exists
         if (!data.sites || data.sites.length === 0) {
             errors.sites = "At least one site is required"
         }
@@ -232,7 +350,6 @@ export function ClientContractCreateForm({
     }
 
     const onSubmit = async (data: ClientContractFormData) => {
-        // Validate required fields
         if (!validateForm(data)) {
             return
         }
@@ -245,23 +362,23 @@ export function ClientContractCreateForm({
                     return {
                         site_id: site.site_id,
                         pivot: {
-                            guards_required: site.pivot.guards_required || site.guards_required,
-                            site_specific_rate: site.pivot.site_specific_rate,
-                            is_primary: site.pivot.is_primary || false
+                            guards_required: site.pivot?.guards_required || site.guards_required || 1,
+                            site_specific_rate: site.pivot?.site_specific_rate,
+                            is_primary: site.pivot?.is_primary || false
                         }
                     }
                 } else {
                     return {
-                        site_name: site.site_name,
-                        address: site.address,
+                        site_name: site.site_name || '',
+                        address: site.address || '',
                         latitude: site.latitude,
                         longitude: site.longitude,
-                        guards_required: site.guards_required,
-                        site_instruction: site.site_instruction,
+                        guards_required: site.guards_required || 1,
+                        site_instruction: site.site_instruction || '',
                         pivot: {
-                            guards_required: site.pivot.guards_required || site.guards_required,
-                            site_specific_rate: site.pivot.site_specific_rate,
-                            is_primary: site.pivot.is_primary || false
+                            guards_required: site.pivot?.guards_required || site.guards_required || 1,
+                            site_specific_rate: site.pivot?.site_specific_rate,
+                            is_primary: site.pivot?.is_primary || false
                         }
                     }
                 }
@@ -273,27 +390,34 @@ export function ClientContractCreateForm({
                 type: data.type || "ongoing",
                 start_date: data.start_date!,
                 end_date: data.end_date || undefined,
+                signed_date: data.signed_date || undefined,
+                effective_date: data.effective_date || undefined,
+                contract_value: data.contract_value ? parseFloat(data.contract_value) : undefined,
                 hourly_rate: data.hourly_rate ? parseFloat(data.hourly_rate) : undefined,
+                overtime_rate: data.overtime_rate ? parseFloat(data.overtime_rate) : undefined,
+                holiday_rate: data.holiday_rate ? parseFloat(data.holiday_rate) : undefined,
+                admin_fee_percentage: data.admin_fee_percentage ? parseFloat(data.admin_fee_percentage) : undefined,
                 billing_cycle: data.billing_cycle || "monthly",
                 payment_terms: data.payment_terms || "net_30",
+                currency: data.currency || "USD",
+                governing_law: data.governing_law || undefined,
+                venue_location: data.venue_location || undefined,
+                termination_notice_days: data.termination_notice_days || 30,
+                renewal_notice_days: data.renewal_notice_days || 30,
+                auto_renew: data.auto_renew || false,
+                notes: data.notes || undefined,
                 sites: sitesData
             }
 
-            const result = await dispatch(createContract(submitData))
+            const result = await dispatch(updateContract({ id: contractId, data: submitData }))
 
-            if (createContract.fulfilled.match(result)) {
+            if (updateContract.fulfilled.match(result)) {
                 await SweetAlertService.success(
-                    'Contract Created Successfully',
-                    `Contract "${data.name}" has been created successfully.`
+                    'Contract Updated Successfully',
+                    `Contract "${data.name}" has been updated successfully.`
                 )
-                reset()
-                setValidationErrors({})
-                setStartDate(new Date())
-                setEndDate(undefined)
-                setSignedDate(undefined)
-                setEffectiveDate(undefined)
-                setClientSearch("")
-                setSiteSearch("")
+                setInitialized(false)
+                setContractData(null)
                 onSuccess?.()
                 onOpenChange?.(false)
             } else {
@@ -301,8 +425,8 @@ export function ClientContractCreateForm({
             }
         } catch (error: unknown) {
             await SweetAlertService.error(
-                'Contract Creation Failed',
-                "Failed to create contract. Please try again."
+                'Contract Update Failed',
+                "Failed to update contract. Please try again."
             )
         } finally {
             setIsLoading(false)
@@ -310,16 +434,10 @@ export function ClientContractCreateForm({
     }
 
     const handleCancel = () => {
-        const hasData = formValues.client_id || formValues.name || formValues.notes
-
-        if (!hasData) {
-            reset()
-            setValidationErrors({})
-            setStartDate(new Date())
-            setEndDate(undefined)
-            setSignedDate(undefined)
-            setEffectiveDate(undefined)
-            onOpenChange?.(false)
+        const hasChanges = formValues.name || formValues.notes
+        
+        if (!hasChanges && !initialized) {
+            handleClose()
             return
         }
 
@@ -330,50 +448,63 @@ export function ClientContractCreateForm({
             'No, keep'
         ).then((result) => {
             if (result.isConfirmed) {
-                reset()
-                setValidationErrors({})
-                setStartDate(new Date())
-                setEndDate(undefined)
-                setSignedDate(undefined)
-                setEffectiveDate(undefined)
-                onOpenChange?.(false)
+                handleClose()
             }
         })
     }
 
+    const handleClose = () => {
+        reset()
+        setValidationErrors({})
+        setStartDate(undefined)
+        setEndDate(undefined)
+        setSignedDate(undefined)
+        setEffectiveDate(undefined)
+        setInitialized(false)
+        setContractData(null)
+        onOpenChange?.(false)
+    }
+
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
-            const hasData = formValues.client_id || formValues.name || formValues.notes
-
-            if (!hasData) {
-                reset()
-                setValidationErrors({})
-                setStartDate(new Date())
-                setEndDate(undefined)
-                setSignedDate(undefined)
-                setEffectiveDate(undefined)
-                onOpenChange?.(false)
-            } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
-                    if (result.isConfirmed) {
-                        reset()
-                        setValidationErrors({})
-                        setStartDate(new Date())
-                        setEndDate(undefined)
-                        setSignedDate(undefined)
-                        setEffectiveDate(undefined)
-                        onOpenChange?.(false)
-                    }
-                })
-            }
+            handleCancel()
         } else {
             onOpenChange?.(true)
         }
+    }
+
+    // Loading state
+    if (isFetching) {
+        return (
+            <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                        <span className="ml-3 text-lg font-medium">Loading contract...</span>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    // If not initialized and not fetching, return null or loading state
+    if (!isFetching && !initialized && isOpen) {
+        return (
+            <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                        <span className="ml-3 text-lg font-medium">Loading contract...</span>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
     }
 
     return (
@@ -385,7 +516,12 @@ export function ClientContractCreateForm({
             <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
                 <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6">
                     <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Create Client Contract</span>
+                    <span className="whitespace-nowrap">Edit Client Contract</span>
+                    {contractData?.contract_number && (
+                        <span className="text-sm font-normal text-gray-500 ml-2">
+                            #{contractData.contract_number}
+                        </span>
+                    )}
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -402,11 +538,10 @@ export function ClientContractCreateForm({
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Client *
                                 </Label>
-                                {/* <SearchableDropdownWithIcon
+                                <SearchableDropdownWithIcon
                                     value={formValues.client_id?.toString() || ""}
                                     onValueChange={(value) => {
                                         setValue("client_id", Number(value))
-                                        // Clear validation error when field is filled
                                         if (validationErrors.client_id) {
                                             setValidationErrors(prev => ({ ...prev, client_id: "" }))
                                         }
@@ -417,43 +552,12 @@ export function ClientContractCreateForm({
                                     })) || []}
                                     onSearch={setClientSearch}
                                     placeholder="Select client"
-                                    disabled={isLoading || clientsLoading || !!preSelectedClient}
-                                    isLoading={clientsLoading}
-                                    emptyMessage={clientSearch ? "No clients found" : "No clients available"}
-                                    searchPlaceholder="Search clients..."
-                                    icon={User}
-                                    iconPosition="left"
-                                /> */}
-                                <SearchableDropdownWithIcon
-                                    value={formValues.client_id || ""}
-                                    onValueChange={(value) => {
-                                        setValue("client_id", Number(value), { shouldValidate: true })
-                                    }}
-                                    options={clients.map((client: Client) => ({
-                                        value: client.id,
-                                        label: `${client.full_name} (${client.client_code})`,
-                                        ...client
-                                    }))}
-                                    onSearch={(search) => {
-                                        setClientSearch(search)
-                                        dispatch(fetchClients({
-                                            page: 1,
-                                            per_page: 10,
-                                            search: search
-                                        }))
-                                    }}
-                                    placeholder="Select client"
                                     disabled={isLoading || clientsLoading}
                                     isLoading={clientsLoading}
                                     emptyMessage={clientSearch ? "No clients found" : "No clients available"}
                                     searchPlaceholder="Search clients..."
                                     icon={Users}
                                     iconPosition="left"
-                                    displayValue={(value, options) => {
-                                        if (!value) return "Select client"
-                                        const option = options.find(opt => opt.value === value)
-                                        return option?.label || "Select client"
-                                    }}
                                 />
                                 {validationErrors.client_id && (
                                     <p className="text-sm text-red-500 mt-1">{validationErrors.client_id}</p>
@@ -495,20 +599,20 @@ export function ClientContractCreateForm({
                                             disabled={isLoading}
                                         >
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="ongoing" id="ongoing" />
-                                                <Label htmlFor="ongoing" className="cursor-pointer text-sm">Ongoing</Label>
+                                                <RadioGroupItem value="ongoing" id="edit-ongoing" />
+                                                <Label htmlFor="edit-ongoing" className="cursor-pointer text-sm">Ongoing</Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="fixed_term" id="fixed_term" />
-                                                <Label htmlFor="fixed_term" className="cursor-pointer text-sm">Fixed Term</Label>
+                                                <RadioGroupItem value="fixed_term" id="edit-fixed_term" />
+                                                <Label htmlFor="edit-fixed_term" className="cursor-pointer text-sm">Fixed Term</Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="trial" id="trial" />
-                                                <Label htmlFor="trial" className="cursor-pointer text-sm">Trial</Label>
+                                                <RadioGroupItem value="trial" id="edit-trial" />
+                                                <Label htmlFor="edit-trial" className="cursor-pointer text-sm">Trial</Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="one_time" id="one_time" />
-                                                <Label htmlFor="one_time" className="cursor-pointer text-sm">One Time</Label>
+                                                <RadioGroupItem value="one_time" id="edit-one_time" />
+                                                <Label htmlFor="edit-one_time" className="cursor-pointer text-sm">One Time</Label>
                                             </div>
                                         </RadioGroup>
                                     )}
@@ -658,7 +762,7 @@ export function ClientContractCreateForm({
                         </CardContent>
                     </Card>
 
-                    {/* Financial Information - All Optional */}
+                    {/* Financial Information */}
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -760,7 +864,7 @@ export function ClientContractCreateForm({
                         </CardContent>
                     </Card>
 
-                    {/* Billing & Terms - All Optional */}
+                    {/* Billing & Terms */}
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -849,12 +953,12 @@ export function ClientContractCreateForm({
                                         render={({ field }) => (
                                             <>
                                                 <Switch
-                                                    id="auto_renew"
+                                                    id="edit-auto_renew"
                                                     checked={field.value}
                                                     onCheckedChange={field.onChange}
                                                     disabled={isLoading}
                                                 />
-                                                <Label htmlFor="auto_renew" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                                <Label htmlFor="edit-auto_renew" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                                                     Auto Renew Contract
                                                 </Label>
                                             </>
@@ -865,7 +969,7 @@ export function ClientContractCreateForm({
                         </CardContent>
                     </Card>
 
-                    {/* Legal Information - All Optional */}
+                    {/* Legal Information */}
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -913,7 +1017,7 @@ export function ClientContractCreateForm({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => append(defaultSite)}
+                                    onClick={() => append({ ...defaultSite })}
                                     disabled={isLoading || fields.length >= 10}
                                     className="text-xs"
                                 >
@@ -931,18 +1035,25 @@ export function ClientContractCreateForm({
                                 <div key={field.id} className="border rounded-lg p-4 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-sm font-medium">Site #{index + 1}</h4>
-                                        {fields.length > 1 && (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => remove(index)}
-                                                disabled={isLoading}
-                                                className="text-red-500 hover:text-red-700"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {field.id && (
+                                                <span className="text-xs text-gray-400">
+                                                    ID: {field.id}
+                                                </span>
+                                            )}
+                                            {fields.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => remove(index)}
+                                                    disabled={isLoading}
+                                                    className="text-red-500 hover:text-red-700"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -954,6 +1065,13 @@ export function ClientContractCreateForm({
                                                 value={formValues.sites?.[index]?.site_id?.toString() || ""}
                                                 onValueChange={(value) => {
                                                     setValue(`sites.${index}.site_id`, Number(value))
+                                                    // Clear site fields if existing site selected
+                                                    if (value) {
+                                                        setValue(`sites.${index}.site_name`, "")
+                                                        setValue(`sites.${index}.address`, "")
+                                                        setValue(`sites.${index}.latitude`, undefined)
+                                                        setValue(`sites.${index}.longitude`, undefined)
+                                                    }
                                                 }}
                                                 options={sites?.map((site: Site) => ({
                                                     value: site.id,
@@ -1051,12 +1169,12 @@ export function ClientContractCreateForm({
                                                 render={({ field }) => (
                                                     <>
                                                         <Switch
-                                                            id={`sites.${index}.is_primary`}
+                                                            id={`edit-sites.${index}.is_primary`}
                                                             checked={field.value}
                                                             onCheckedChange={field.onChange}
                                                             disabled={isLoading}
                                                         />
-                                                        <Label htmlFor={`sites.${index}.is_primary`} className="text-sm font-medium cursor-pointer">
+                                                        <Label htmlFor={`edit-sites.${index}.is_primary`} className="text-sm font-medium cursor-pointer">
                                                             Primary Site
                                                         </Label>
                                                     </>
@@ -1082,7 +1200,7 @@ export function ClientContractCreateForm({
                         </CardContent>
                     </Card>
 
-                    {/* Notes - Optional */}
+                    {/* Notes */}
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -1105,11 +1223,10 @@ export function ClientContractCreateForm({
 
                     <DialogActionFooter
                         cancelText="Cancel"
-                        submitText="Create Contract"
+                        submitText="Update Contract"
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                         onSubmit={handleSubmit(onSubmit)}
-                    //onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>

@@ -73,6 +73,8 @@ export interface ClientContract {
             company_signature_path?: string,
             company_signature_url?: string,
             is_fully_signed?:boolean
+
+            client_id: number
 }
 
 export interface ClientContractSite {
@@ -119,19 +121,61 @@ export interface ClientContractParams {
     sort_order?: "asc" | "desc"
 }
 
+// export interface CreateClientContractDto {
+//     client_id: number
+//     name: string
+//     type: string
+
+//     start_date: string
+//     end_date?: string
+
+//     hourly_rate?: number
+
+//     billing_cycle?: string
+//     payment_terms?: string
+
+//     sites: CreateClientContractSite[]
+//     signed_date?:string
+//     effective_date?:string
+// }
+
 export interface CreateClientContractDto {
+    // Required fields
     client_id: number
     name: string
-    type: string
-
-    start_date: string
-    end_date?: string
-
+    type: "ongoing" | "fixed_term" | "trial" | "one_time"
+    start_date: string // Format: YYYY-MM-DD
+    
+    // Optional fields
+    end_date?: string // Format: YYYY-MM-DD
+    signed_date?: string // Format: YYYY-MM-DD
+    effective_date?: string // Format: YYYY-MM-DD
+    
+    // Financial fields
+    contract_value?: number
     hourly_rate?: number
-
-    billing_cycle?: string
-    payment_terms?: string
-
+    overtime_rate?: number
+    holiday_rate?: number
+    admin_fee_percentage?: number
+    
+    // Billing & Terms
+    billing_cycle?: "weekly" | "bi_weekly" | "monthly" | "quarterly" | "annually"
+    payment_terms?: "net_15" | "net_30" | "net_45" | "net_60" | "due_on_receipt"
+    currency?: "USD" | "EUR" | "GBP" | "CAD" | "AUD"
+    
+    // Legal
+    governing_law?: string
+    venue_location?: string
+    
+    // Terms
+    termination_notice_days?: number
+    renewal_notice_days?: number
+    auto_renew?: boolean
+    
+    // Notes
+    notes?: string
+    
+    // Sites (Required - at least one)
     sites: CreateClientContractSite[]
 }
 
