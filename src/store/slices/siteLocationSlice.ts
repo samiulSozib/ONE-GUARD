@@ -1,7 +1,7 @@
-import { 
-  SiteLocation, 
-  SiteLocationParams, 
-  SiteLocationState 
+import {
+  SiteLocation,
+  SiteLocationParams,
+  SiteLocationState
 } from '@/app/types/siteLocation.types';
 import { siteLocationService } from '@/service/siteLocation.service';
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';

@@ -51,7 +51,7 @@ const initialState: ShiftLogState = {
 // Thunk 1: Fetch guards status
 export const fetchGuardsStatus = createAsyncThunk(
     "shiftLogs/fetchGuardsStatus",
-    async (params?: GuardStatusParams, { rejectWithValue }) => {
+    async (params: GuardStatusParams, { rejectWithValue }) => {
         try {
             const response = await shiftLogService.getGuardsStatus(params);
             return response;
@@ -65,7 +65,7 @@ export const fetchGuardsStatus = createAsyncThunk(
 // Thunk 2: Fetch shift logs
 export const fetchShiftLogs = createAsyncThunk(
     "shiftLogs/fetchShiftLogs",
-    async (params?: ShiftLogParams, { rejectWithValue }) => {
+    async (params: ShiftLogParams, { rejectWithValue }) => {
         try {
             const response = await shiftLogService.getShiftLogs(params);
             return response;
