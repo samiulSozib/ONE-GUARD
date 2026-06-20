@@ -14,7 +14,7 @@ export default function ShiftLogsPage() {
 
     const handleRefresh = () => {
         setIsLoading(true)
-        dispatch(fetchGuardsStatus())
+        dispatch(fetchGuardsStatus({}))
         dispatch(fetchShiftLogs({ page: 1, per_page: 20, ...filters }))
             .finally(() => setIsLoading(false))
     }
@@ -41,7 +41,7 @@ export default function ShiftLogsPage() {
                     />
                 </div>
                 <div className="py-2 px-4 md:px-6">
-                    <ShiftLogsDataTable 
+                    <ShiftLogsDataTable
                         filters={filters}
                         onViewDetails={(log) => {
                             // Navigate to log details or show modal

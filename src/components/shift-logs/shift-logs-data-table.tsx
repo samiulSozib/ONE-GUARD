@@ -152,7 +152,7 @@ export function ShiftLogsDataTable({
     useEffect(() => {
         const params = buildFilterParams();
         dispatch(fetchShiftLogs(params));
-        dispatch(fetchGuardsStatus());
+        dispatch(fetchGuardsStatus({}));
     }, [dispatch, currentPage, searchTerm, actionFilter, statusFilter, guardFilter, assignmentFilter, startDate, endDate, externalFilters]);
 
     // Handle search
@@ -221,7 +221,7 @@ export function ShiftLogsDataTable({
         const params = buildFilterParams();
         dispatch(clearShiftLogs());
         dispatch(fetchShiftLogs(params));
-        dispatch(fetchGuardsStatus());
+        dispatch(fetchGuardsStatus({}));
     };
 
     // Format date and time
