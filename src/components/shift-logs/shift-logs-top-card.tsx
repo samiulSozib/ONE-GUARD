@@ -46,7 +46,7 @@ export function ShiftLogsTopCard({
         if (onRefresh) {
             onRefresh()
         } else {
-            dispatch(fetchGuardsStatus())
+            dispatch(fetchGuardsStatus({}))
             dispatch(fetchShiftLogs({ page: 1, per_page: 20 }))
         }
     }
