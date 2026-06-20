@@ -17,7 +17,11 @@ import {
     Edit,
     Trash2,
     Loader2,
-    ChevronDown
+    ChevronDown,
+    FileText,
+    CheckCircle,
+    XCircle,
+    RefreshCw
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -43,11 +47,25 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 // Redux
 import { useAppDispatch } from '@/hooks/useAppDispatch'
 import { useAppSelector } from '@/hooks/useAppSelector'
 import { fetchAssignment, deleteAssignment, updateAssignmentStatus } from '@/store/slices/guardAssignmentSlice'
+import {
+    fetchAssignmentSummary,
+    fetchAssignmentLogs,
+    clearAssignmentData
+} from '@/store/slices/shiftLogsSlice'
 import SweetAlertService from '@/lib/sweetAlert'
 import { format } from 'date-fns'
 import { GuardAssignmentEditForm } from '@/components/guard-assignment/guard-assignment-edit-form'
@@ -80,14 +98,21 @@ export default function GuardAssignmentViewPage() {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [isUpdating, setIsUpdating] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
 
     const { currentAssignment, isLoading: storeLoading, error } = useAppSelector(
         (state) => state.guardAssignment
+    )
+    const { assignmentSummary, assignmentLogs, isLoading: shiftLogsLoading } = useAppSelector(
+        (state) => state.shiftLogs
     )
 
     useEffect(() => {
         if (id) {
             loadAssignment()
+        }
+        return () => {
+            dispatch(clearAssignmentData())
         }
     }, [id])
 
@@ -104,6 +129,20 @@ export default function GuardAssignmentViewPage() {
             setIsLoading(false)
         }
     }
+
+    const loadShiftLogs = async (assignmentId: number) => {
+        dispatch(fetchAssignmentSummary(assignmentId))
+        dispatch(fetchAssignmentLogs({
+            assignmentId,
+            params: { page: currentPage, per_page: 20 }
+        }))
+    }
+
+    useEffect(() => {
+        if (currentAssignment?.id) {
+            loadShiftLogs(currentAssignment.id)
+        }
+    }, [currentAssignment?.id, currentPage])
 
     const handleDelete = async () => {
         if (!currentAssignment) return
@@ -163,6 +202,9 @@ export default function GuardAssignmentViewPage() {
                 )
 
                 await loadAssignment()
+                if (currentAssignment?.id) {
+                    loadShiftLogs(currentAssignment.id)
+                }
             } catch (error) {
                 await SweetAlertService.error(
                     'Update Failed',
@@ -192,6 +234,16 @@ export default function GuardAssignmentViewPage() {
         }
     }
 
+    const formatDuration = (minutes?: number) => {
+        if (!minutes) return 'N/A'
+        const hours = Math.floor(minutes / 60)
+        const mins = Math.round(minutes % 60)
+        if (hours > 0) {
+            return `${hours}h ${mins}m`
+        }
+        return `${mins}m`
+    }
+
     const calculateDuration = () => {
         if (!currentAssignment?.start_date || !currentAssignment?.end_date) return 'N/A'
         
@@ -202,6 +254,41 @@ export default function GuardAssignmentViewPage() {
             return `${days} day${days !== 1 ? 's' : ''}`
         } catch {
             return 'N/A'
+        }
+    }
+
+    const getActionBadge = (action: string) => {
+        const configs: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+            check_in: {
+                label: 'Check In',
+                color: 'bg-green-50 text-green-700 border-green-200',
+                icon: <CheckCircle className="h-3 w-3" />
+            },
+            check_out: {
+                label: 'Check Out',
+                color: 'bg-red-50 text-red-700 border-red-200',
+                icon: <XCircle className="h-3 w-3" />
+            },
+            break: {
+                label: 'Break',
+                color: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                icon: <Clock className="h-3 w-3" />
+            },
+            patrol: {
+                label: 'Patrol',
+                color: 'bg-blue-50 text-blue-700 border-blue-200',
+                icon: <Shield className="h-3 w-3" />
+            },
+            incident: {
+                label: 'Incident',
+                color: 'bg-red-50 text-red-700 border-red-200',
+                icon: <AlertCircle className="h-3 w-3" />
+            }
+        }
+        return configs[action] || {
+            label: action,
+            color: 'bg-gray-50 text-gray-700 border-gray-200',
+            icon: <FileText className="h-3 w-3" />
         }
     }
 
@@ -286,7 +373,13 @@ export default function GuardAssignmentViewPage() {
                 </Button>
 
                 <div className="flex items-center gap-2">
-                    
+                    <Button
+                        variant="outline"
+                        onClick={() => setEditDialogOpen(true)}
+                    >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                    </Button>
                     <Button
                         variant="destructive"
                         onClick={() => setDeleteDialogOpen(true)}
@@ -298,12 +391,60 @@ export default function GuardAssignmentViewPage() {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="space-y-6">
-                {/* Title Card with Status */}
-                <Card>
-                    <CardHeader className="pb-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Main Content with Tabs */}
+            <Tabs defaultValue="details" className="space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <TabsList>
+                        <TabsTrigger value="details">Assignment Details</TabsTrigger>
+                        <TabsTrigger value="shift-logs" className="flex items-center gap-2">
+                            Shift Logs
+                            {assignmentSummary && assignmentSummary.logs_count > 0 && (
+                                <Badge variant="secondary" className="ml-1">
+                                    {assignmentSummary.logs_count}
+                                </Badge>
+                            )}
+                        </TabsTrigger>
+                    </TabsList>
+                    
+                    {/* Status Badge with Dropdown */}
+                    <div className="flex items-center gap-2">
+                        {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="gap-2">
+                                    <span className={`
+                                        px-2 py-0.5 rounded-full text-xs font-medium
+                                        ${statusConfig[currentStatus]?.color || 'bg-gray-100'}
+                                    `}>
+                                        {statusConfig[currentStatus]?.label || currentStatus}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                {availableStatuses.map((status) => (
+                                    <DropdownMenuItem
+                                        key={status.status}
+                                        onClick={() => handleStatusUpdate(status.status)}
+                                        className="gap-2"
+                                    >
+                                        <span className={`
+                                            w-2 h-2 rounded-full
+                                            ${status.color.split(' ')[0]}
+                                        `} />
+                                        {status.label}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+
+                {/* Details Tab */}
+                <TabsContent value="details" className="space-y-6 mt-0">
+                    {/* Title Card with Status */}
+                    <Card>
+                        <CardHeader className="pb-4">
                             <div>
                                 <CardTitle className="text-2xl font-bold flex items-center gap-2">
                                     <Shield className="h-6 w-6 text-primary" />
@@ -314,159 +455,395 @@ export default function GuardAssignmentViewPage() {
                                     Created {formatDateTime(currentAssignment.created_at)}
                                 </CardDescription>
                             </div>
-                            
-                            {/* Status Badge with Dropdown */}
-                            <div className="flex items-center gap-2">
-                                {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="gap-2">
-                                            <span className={`
-                                                px-2 py-0.5 rounded-full text-xs font-medium
-                                                ${statusConfig[currentStatus]?.color || 'bg-gray-100'}
-                                            `}>
-                                                {statusConfig[currentStatus]?.label || currentStatus}
-                                            </span>
-                                            <ChevronDown className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48">
-                                        {availableStatuses.map((status) => (
-                                            <DropdownMenuItem
-                                                key={status.status}
-                                                onClick={() => handleStatusUpdate(status.status)}
-                                                className="gap-2"
-                                            >
-                                                <span className={`
-                                                    w-2 h-2 rounded-full
-                                                    ${status.color.split(' ')[0]}
-                                                `} />
-                                                {status.label}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
-                    </CardHeader>
-                </Card>
-
-                {/* Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Officer Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <User className="h-5 w-5" />
-                                Officer Information
-                            </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-start gap-4">
-                                <Avatar className="h-16 w-16 border-2 border-gray-200">
-                                    <AvatarFallback className="bg-primary/10">
-                                        {currentAssignment.guard?.full_name?.charAt(0) || 'G'}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-semibold">
-                                        {currentAssignment.guard?.full_name || `Officer #${currentAssignment.guard_id}`}
-                                    </h3>
-                                    {currentAssignment.guard?.guard_code && (
-                                        <Badge variant="outline" className="mt-1">
-                                            <Hash className="h-3 w-3 mr-1" />
-                                            {currentAssignment.guard.guard_code}
-                                        </Badge>
+                    </Card>
+
+                    {/* Two Column Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Officer Information */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <User className="h-5 w-5" />
+                                    Officer Information
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <Avatar className="h-16 w-16 border-2 border-gray-200">
+                                        <AvatarFallback className="bg-primary/10">
+                                            {currentAssignment.guard?.full_name?.charAt(0) || 'G'}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold">
+                                            {currentAssignment.guard?.full_name || `Officer #${currentAssignment.guard_id}`}
+                                        </h3>
+                                        {currentAssignment.guard?.guard_code && (
+                                            <Badge variant="outline" className="mt-1">
+                                                <Hash className="h-3 w-3 mr-1" />
+                                                {currentAssignment.guard.guard_code}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {currentAssignment.guard?.phone && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Phone className="h-4 w-4 text-gray-500" />
+                                            <span>{currentAssignment.guard.phone}</span>
+                                        </div>
+                                    )}
+                                    {currentAssignment.guard?.email && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Mail className="h-4 w-4 text-gray-500" />
+                                            <span className="truncate">{currentAssignment.guard.email}</span>
+                                        </div>
                                     )}
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            <Separator />
+                        {/* Duty Information */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Building className="h-5 w-5" />
+                                    Duty Information
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold">
+                                        {currentAssignment.duty?.title || `Duty #${currentAssignment.duty_id}`}
+                                    </h3>
+                                </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {currentAssignment.guard?.phone && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Phone className="h-4 w-4 text-gray-500" />
-                                        <span>{currentAssignment.guard.phone}</span>
-                                    </div>
-                                )}
-                                {currentAssignment.guard?.email && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Mail className="h-4 w-4 text-gray-500" />
-                                        <span className="truncate">{currentAssignment.guard.email}</span>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <Separator />
 
-                    {/* Duty Information */}
+                                <div className="space-y-3">
+                                    {currentAssignment.duty?.start_datetime && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Clock className="h-4 w-4 text-gray-500" />
+                                            <span className="text-gray-600">Starts:</span>
+                                            <span className="font-medium">
+                                                {formatDateTime(currentAssignment.duty.start_datetime)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {currentAssignment.duty?.end_datetime && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Clock className="h-4 w-4 text-gray-500" />
+                                            <span className="text-gray-600">Ends:</span>
+                                            <span className="font-medium">
+                                                {formatDateTime(currentAssignment.duty.end_datetime)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Assignment Period */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-lg flex items-center gap-2">
-                                <Building className="h-5 w-5" />
-                                Duty Information
+                                <Calendar className="h-5 w-5" />
+                                Assignment Period
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <h3 className="text-lg font-semibold">
-                                    {currentAssignment.duty?.title || `Duty #${currentAssignment.duty_id}`}
-                                </h3>
-                            </div>
-
-                            <Separator />
-
-                            <div className="space-y-3">
-                                {currentAssignment.duty?.start_datetime && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Clock className="h-4 w-4 text-gray-500" />
-                                        <span className="text-gray-600">Starts:</span>
-                                        <span className="font-medium">
-                                            {formatDateTime(currentAssignment.duty.start_datetime)}
-                                        </span>
-                                    </div>
-                                )}
-                                {currentAssignment.duty?.end_datetime && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Clock className="h-4 w-4 text-gray-500" />
-                                        <span className="text-gray-600">Ends:</span>
-                                        <span className="font-medium">
-                                            {formatDateTime(currentAssignment.duty.end_datetime)}
-                                        </span>
-                                    </div>
-                                )}
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                <div className="space-y-1">
+                                    <p className="text-sm text-gray-500">Start Date</p>
+                                    <p className="font-medium">{formatDate(currentAssignment.start_date)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-gray-500">End Date</p>
+                                    <p className="font-medium">{formatDate(currentAssignment.end_date)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-gray-500">Duration</p>
+                                    <p className="font-medium">{calculateDuration()}</p>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
-                </div>
+                </TabsContent>
 
-                {/* Assignment Period */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Calendar className="h-5 w-5" />
-                            Assignment Period
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div className="space-y-1">
-                                <p className="text-sm text-gray-500">Start Date</p>
-                                <p className="font-medium">{formatDate(currentAssignment.start_date)}</p>
+                {/* Shift Logs Tab */}
+                <TabsContent value="shift-logs" className="space-y-6 mt-0">
+                    {shiftLogsLoading ? (
+                        <Card>
+                            <CardContent className="py-12 flex flex-col items-center justify-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+                                <p className="text-gray-500">Loading shift logs...</p>
+                            </CardContent>
+                        </Card>
+                    ) : assignmentSummary ? (
+                        <>
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <Card>
+                                    <CardContent className="pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm text-gray-500">Total Hours</p>
+                                                <p className="text-2xl font-bold">
+                                                    {assignmentSummary.shift_summary?.formatted_total || 'N/A'}
+                                                </p>
+                                            </div>
+                                            <Clock className="h-8 w-8 text-blue-500 opacity-50" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardContent className="pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm text-gray-500">Net Hours</p>
+                                                <p className="text-2xl font-bold">
+                                                    {assignmentSummary.shift_summary?.formatted_net || 'N/A'}
+                                                </p>
+                                            </div>
+                                            <CheckCircle className="h-8 w-8 text-green-500 opacity-50" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardContent className="pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm text-gray-500">Breaks</p>
+                                                <p className="text-2xl font-bold">{assignmentSummary.break_count || 0}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    Total: {formatDuration(assignmentSummary.shift_summary?.break_time)}
+                                                </p>
+                                            </div>
+                                            <Clock className="h-8 w-8 text-yellow-500 opacity-50" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardContent className="pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm text-gray-500">Logs</p>
+                                                <p className="text-2xl font-bold">{assignmentSummary.logs_count || 0}</p>
+                                            </div>
+                                            <FileText className="h-8 w-8 text-purple-500 opacity-50" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-gray-500">End Date</p>
-                                <p className="font-medium">{formatDate(currentAssignment.end_date)}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm text-gray-500">Duration</p>
-                                <p className="font-medium">{calculateDuration()}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+
+                            {/* Break Details */}
+                            {assignmentSummary.break_details && assignmentSummary.break_details.length > 0 && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Clock className="h-5 w-5" />
+                                            Break Details
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {assignmentSummary.break_details.length} break{assignmentSummary.break_details.length > 1 ? 's' : ''} taken during the shift
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ScrollArea className="h-[200px]">
+                                            <div className="space-y-3">
+                                                {assignmentSummary.break_details.map((breakItem, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                                    >
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="h-4 w-4 text-gray-500" />
+                                                                <span className="text-sm font-medium">
+                                                                    Break #{index + 1}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                                                <span>From: {formatDateTime(breakItem.start_time)}</span>
+                                                                <span>To: {formatDateTime(breakItem.end_time)}</span>
+                                                            </div>
+                                                            {breakItem.location && (
+                                                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                                    <MapPin className="h-3 w-3" />
+                                                                    <span>{breakItem.location}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <Badge variant="outline" className="mt-2 sm:mt-0">
+                                                            {breakItem.duration_formatted || formatDuration(breakItem.duration_minutes)}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Logs Table */}
+                            {assignmentLogs && assignmentLogs.logs.length > 0 ? (
+                                <Card>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between flex-wrap gap-4">
+                                            <div>
+                                                <CardTitle className="text-lg flex items-center gap-2">
+                                                    <FileText className="h-5 w-5" />
+                                                    Assignment Logs
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    All activity logs for this assignment
+                                                </CardDescription>
+                                            </div>
+                                            <Badge variant="secondary">
+                                                {assignmentLogs.pagination.total} logs
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ScrollArea className="h-[400px]">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Action</TableHead>
+                                                        <TableHead>Time</TableHead>
+                                                        <TableHead>Location</TableHead>
+                                                        <TableHead>Remarks</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {assignmentLogs.logs.map((log) => {
+                                                        const actionConfig = getActionBadge(log.action)
+                                                        return (
+                                                            <TableRow key={log.id}>
+                                                                <TableCell>
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={actionConfig.color}
+                                                                    >
+                                                                        <span className="flex items-center gap-1">
+                                                                            {actionConfig.icon}
+                                                                            {actionConfig.label}
+                                                                        </span>
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-sm font-medium">
+                                                                            {formatDateTime(log.action_time)}
+                                                                        </span>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-sm truncate max-w-[200px]" title={log.location_address}>
+                                                                            {log.location_address || 'N/A'}
+                                                                        </span>
+                                                                        {log.latitude && log.longitude && (
+                                                                            <span className="text-xs text-gray-500">
+                                                                                {parseFloat(log.latitude).toFixed(4)}, {parseFloat(log.longitude).toFixed(4)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className="text-sm">
+                                                                        {log.remarks || '-'}
+                                                                    </span>
+                                                                    {log.metadata?.battery_level && (
+                                                                        <span className="text-xs text-gray-500 block">
+                                                                            🔋 {log.metadata.battery_level}%
+                                                                        </span>
+                                                                    )}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
+
+                                        {/* Pagination */}
+                                        {assignmentLogs.pagination.last_page > 1 && (
+                                            <div className="flex items-center justify-between mt-4">
+                                                <p className="text-sm text-gray-500">
+                                                    Page {assignmentLogs.pagination.current_page} of {assignmentLogs.pagination.last_page}
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={currentPage === 1}
+                                                        onClick={() => setCurrentPage(prev => prev - 1)}
+                                                    >
+                                                        Previous
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={currentPage === assignmentLogs.pagination.last_page}
+                                                        onClick={() => setCurrentPage(prev => prev + 1)}
+                                                    >
+                                                        Next
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <Card>
+                                    <CardContent className="flex flex-col items-center justify-center py-12">
+                                        <FileText className="h-12 w-12 text-gray-400 mb-4" />
+                                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                            No Logs Found
+                                        </h3>
+                                        <p className="text-gray-500">
+                                            No shift logs have been recorded for this assignment yet.
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </>
+                    ) : (
+                        <Card>
+                            <CardContent className="flex flex-col items-center justify-center py-12">
+                                <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                    No Data Available
+                                </h3>
+                                <p className="text-gray-500">
+                                    No shift log data found for this assignment.
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    className="mt-4"
+                                    onClick={() => {
+                                        if (currentAssignment?.id) {
+                                            loadShiftLogs(currentAssignment.id)
+                                        }
+                                    }}
+                                >
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Retry
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+                </TabsContent>
+            </Tabs>
 
             {/* Dialogs */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

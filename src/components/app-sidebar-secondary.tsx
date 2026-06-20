@@ -83,6 +83,7 @@ const navGroups = [
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
       { title: "Time & Attendance", url: "/duty-attendance", icon: UserCheck },
       { title: "Shift Status Reports", url: "/duty-status-report", icon: BarChart3 },
+      { title: "Shift Logs", url: "/shift-logs", icon: BarChart3 },
     ],
   },
   {
