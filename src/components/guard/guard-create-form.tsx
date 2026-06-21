@@ -121,7 +121,7 @@ export function GuardCreateForm({
     const [hasFetchedTypes, setHasFetchedTypes] = useState(false)
     const guardCodeRef = useRef<HTMLInputElement>(null)
 
-        // Get officer types from Redux store
+    // Get officer types from Redux store
     const { guardTypes, isLoading: isLoadingGuardTypes } = useAppSelector((state) => state.guardTypes)
 
     // Fetch officer types when dialog opens
@@ -707,26 +707,26 @@ export function GuardCreateForm({
     }, [addLanguage, addVisaCountry])
 
     // Prepare profile data for submission
-        const prepareProfileData = (data: ProfileDataInterface): Partial<GuardProfileData> => {
-            const profileData: Partial<GuardProfileData> = {}
+    const prepareProfileData = (data: ProfileDataInterface): Partial<GuardProfileData> => {
+        const profileData: Partial<GuardProfileData> = {}
 
-            Object.entries(data).forEach(([key, value]) => {
-                if (
-                    value !== undefined &&
-                    value !== null &&
-                    value !== '' &&
-                    !(Array.isArray(value) && value.length === 0)
-                ) {
-                    if (key === 'has_work_permit' || key === 'has_security_training') {
-                        (profileData as any)[key] = value ? 1 : 0
-                    } else {
-                        (profileData as any)[key] = value
-                    }
+        Object.entries(data).forEach(([key, value]) => {
+            if (
+                value !== undefined &&
+                value !== null &&
+                value !== '' &&
+                !(Array.isArray(value) && value.length === 0)
+            ) {
+                if (key === 'has_work_permit' || key === 'has_security_training') {
+                    (profileData as any)[key] = value ? 1 : 0
+                } else {
+                    (profileData as any)[key] = value
                 }
-            })
+            }
+        })
 
-            return profileData
-        }
+        return profileData
+    }
     // Submit handler
     // const onSubmit = async (e: React.FormEvent) => {
     //     e.preventDefault()
@@ -860,197 +860,197 @@ export function GuardCreateForm({
     //     }
     // }
     // Submit handler - FIXED for indexed array format like update form
-const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    const onSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
 
-    // Show all errors by marking all fields as touched
-    setShowAllErrors(true)
+        // Show all errors by marking all fields as touched
+        setShowAllErrors(true)
 
-    // Validate all steps before submission with marking all fields as touched
-    const isStep1Valid = await validateStep(1, true)
-    const isStep2Valid = await validateStep(2, true)
-    const isStep3Valid = await validateStep(3, true)
+        // Validate all steps before submission with marking all fields as touched
+        const isStep1Valid = await validateStep(1, true)
+        const isStep2Valid = await validateStep(2, true)
+        const isStep3Valid = await validateStep(3, true)
 
-    if (!isStep1Valid || !isStep2Valid || !isStep3Valid) {
-        // Find first step with errors and navigate to it
-        if (!isStep1Valid) setStep(1)
-        else if (!isStep2Valid) setStep(2)
-        else if (!isStep3Valid) setStep(3)
+        if (!isStep1Valid || !isStep2Valid || !isStep3Valid) {
+            // Find first step with errors and navigate to it
+            if (!isStep1Valid) setStep(1)
+            else if (!isStep2Valid) setStep(2)
+            else if (!isStep3Valid) setStep(3)
 
-        SweetAlertService.warning(
-            'Incomplete Information',
-            'Please fill in all required fields correctly before submitting.'
-        )
-        return
-    }
-
-    // Validate file sizes
-    if (profileImage && profileImage.size > 2 * 1024 * 1024) {
-        await SweetAlertService.error(
-            'File Too Large',
-            'Profile image must be less than 2MB. Please compress your image and try again.'
-        )
-        return
-    }
-
-    const oversizedDocuments = documents.filter(doc => doc.size > 2 * 1024 * 1024)
-    if (oversizedDocuments.length > 0) {
-        const fileNames = oversizedDocuments.map(doc => doc.name).join(', ')
-        await SweetAlertService.error(
-            'Files Too Large',
-            `The following document(s) exceed the 2MB limit:\n${fileNames}\n\nPlease compress these files and try again.`
-        )
-        return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-        const submitFormData = new FormData()
-
-        // Append required fields
-        const requiredFields: Record<string, string> = {
-            guard_code: guardCode,
-            full_name: formData.full_name,
-            phone: formData.phone,
-            employee_company_card_number: formData.employee_company_card_number,
-            gender: formData.gender,
-            country: formData.country,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zip_code: formData.zip_code,
-            joining_date: formData.joining_date,
-            is_active: formData.is_active ? '1' : '0'
+            SweetAlertService.warning(
+                'Incomplete Information',
+                'Please fill in all required fields correctly before submitting.'
+            )
+            return
         }
 
-        Object.entries(requiredFields).forEach(([key, value]) => {
-            if (value) submitFormData.append(key, value)
-        })
-
-        // Append optional fields
-        const optionalFields: Record<string, string | undefined> = {
-            email: formData.email,
-            password: formData.password,
-            driver_license: formData.driver_license,
-            date_of_birth: formData.date_of_birth,
-            license_expiry_date: formData.license_expiry_date,
-            issuing_source: formData.issuing_source
+        // Validate file sizes
+        if (profileImage && profileImage.size > 2 * 1024 * 1024) {
+            await SweetAlertService.error(
+                'File Too Large',
+                'Profile image must be less than 2MB. Please compress your image and try again.'
+            )
+            return
         }
 
-        Object.entries(optionalFields).forEach(([key, value]) => {
-            if (value && value.toString().trim() !== '') {
-                submitFormData.append(key, value)
+        const oversizedDocuments = documents.filter(doc => doc.size > 2 * 1024 * 1024)
+        if (oversizedDocuments.length > 0) {
+            const fileNames = oversizedDocuments.map(doc => doc.name).join(', ')
+            await SweetAlertService.error(
+                'Files Too Large',
+                `The following document(s) exceed the 2MB limit:\n${fileNames}\n\nPlease compress these files and try again.`
+            )
+            return
+        }
+
+        setIsSubmitting(true)
+
+        try {
+            const submitFormData = new FormData()
+
+            // Append required fields
+            const requiredFields: Record<string, string> = {
+                guard_code: guardCode,
+                full_name: formData.full_name,
+                phone: formData.phone,
+                employee_company_card_number: formData.employee_company_card_number,
+                gender: formData.gender,
+                country: formData.country,
+                address: formData.address,
+                city: formData.city,
+                state: formData.state,
+                zip_code: formData.zip_code,
+                joining_date: formData.joining_date,
+                is_active: formData.is_active ? '1' : '0'
             }
-        })
 
-        // Append numeric fields
-        if (formData.guard_type_id) {
-            submitFormData.append('guard_type_id', formData.guard_type_id.toString())
-        }
+            Object.entries(requiredFields).forEach(([key, value]) => {
+                if (value) submitFormData.append(key, value)
+            })
 
-        // Append profile data
-        const profileData = prepareProfileData(formData.profile_data)
-        if (Object.keys(profileData).length > 0) {
-            submitFormData.append('profile_data', JSON.stringify(profileData))
-        }
+            // Append optional fields
+            const optionalFields: Record<string, string | undefined> = {
+                email: formData.email,
+                password: formData.password,
+                driver_license: formData.driver_license,
+                date_of_birth: formData.date_of_birth,
+                license_expiry_date: formData.license_expiry_date,
+                issuing_source: formData.issuing_source
+            }
 
-        // Append document types as JSON (for reference)
-        if (selectedDocumentTypes.length > 0) {
-            submitFormData.append('document_types', JSON.stringify(selectedDocumentTypes))
-        }
+            Object.entries(optionalFields).forEach(([key, value]) => {
+                if (value && value.toString().trim() !== '') {
+                    submitFormData.append(key, value)
+                }
+            })
 
-        // Append files with indexed array format (matching Postman)
-        if (profileImage) {
-            submitFormData.append('profile_image', profileImage)
-        }
+            // Append numeric fields
+            if (formData.guard_type_id) {
+                submitFormData.append('guard_type_id', formData.guard_type_id.toString())
+            }
 
-        // 🔥 FIX: Send documents as indexed arrays (0, 1, 2, etc.) like update form
-        // Create an array of documents with their types
-        const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
-        
-        // Process new documents
-        documents.forEach((doc) => {
-            // Extract document type from filename (format: "document_type-filename.ext")
-            const firstHyphenIndex = doc.name.indexOf('-')
-            let documentType = ''
-            let originalFileName = doc.name
-            
-            if (firstHyphenIndex > 0) {
-                documentType = doc.name.substring(0, firstHyphenIndex)
-                originalFileName = doc.name.substring(firstHyphenIndex + 1)
-            } else {
-                // Try to find matching document type from selected types
-                for (const docType of selectedDocumentTypes) {
-                    if (doc.name.toLowerCase().includes(docType.toLowerCase())) {
-                        documentType = docType
-                        originalFileName = doc.name
-                        break
+            // Append profile data
+            const profileData = prepareProfileData(formData.profile_data)
+            if (Object.keys(profileData).length > 0) {
+                submitFormData.append('profile_data', JSON.stringify(profileData))
+            }
+
+            // Append document types as JSON (for reference)
+            if (selectedDocumentTypes.length > 0) {
+                submitFormData.append('document_types', JSON.stringify(selectedDocumentTypes))
+            }
+
+            // Append files with indexed array format (matching Postman)
+            if (profileImage) {
+                submitFormData.append('profile_image', profileImage)
+            }
+
+            // 🔥 FIX: Send documents as indexed arrays (0, 1, 2, etc.) like update form
+            // Create an array of documents with their types
+            const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
+
+            // Process new documents
+            documents.forEach((doc) => {
+                // Extract document type from filename (format: "document_type-filename.ext")
+                const firstHyphenIndex = doc.name.indexOf('-')
+                let documentType = ''
+                let originalFileName = doc.name
+
+                if (firstHyphenIndex > 0) {
+                    documentType = doc.name.substring(0, firstHyphenIndex)
+                    originalFileName = doc.name.substring(firstHyphenIndex + 1)
+                } else {
+                    // Try to find matching document type from selected types
+                    for (const docType of selectedDocumentTypes) {
+                        if (doc.name.toLowerCase().includes(docType.toLowerCase())) {
+                            documentType = docType
+                            originalFileName = doc.name
+                            break
+                        }
                     }
                 }
-            }
-            
-            if (documentType) {
-                // Create a clean file without the type prefix
-                const cleanFile = new File([doc], originalFileName, { type: doc.type })
-                documentsToSend.push({ type: documentType, file: cleanFile, originalName: originalFileName })
+
+                if (documentType) {
+                    // Create a clean file without the type prefix
+                    const cleanFile = new File([doc], originalFileName, { type: doc.type })
+                    documentsToSend.push({ type: documentType, file: cleanFile, originalName: originalFileName })
+                } else {
+                    // If no type found, use 'other' as default
+                    documentsToSend.push({ type: 'other', file: doc, originalName: doc.name })
+                }
+            })
+
+            // Send documents as indexed arrays (matching Postman format)
+            documentsToSend.forEach((doc, index) => {
+                // Add document type for this index
+                submitFormData.append(`document_types[${index}]`, doc.type)
+                // Add document file for this index
+                submitFormData.append(`documents[${index}]`, doc.file)
+            })
+
+            // Debug log
+            console.log('Sending documents:', documentsToSend.map((d, i) => ({
+                index: i,
+                type: d.type,
+                fileName: d.file.name,
+                fileSize: d.file.size
+            })))
+
+            // Dispatch create guard action
+            const result = await dispatch(createGuard(submitFormData))
+
+            if (createGuard.fulfilled.match(result)) {
+                await SweetAlertService.success(
+                    'Security Officer Created Successfully',
+                    `${formData.full_name} has been created with code: ${guardCode}`,
+                    { timer: 2000, showConfirmButton: false }
+                )
+
+                // Reset form and generate new code for next entry
+                resetFormAfterSubmit()
+                onSuccess?.()
+
+                // Refresh guard list
+                await dispatch(fetchGuards({
+                    page: 1,
+                    per_page: 10,
+                    sort_by: 'created_at',
+                    sort_order: 'desc'
+                }))
             } else {
-                // If no type found, use 'other' as default
-                documentsToSend.push({ type: 'other', file: doc, originalName: doc.name })
+                const errorMessage = (result.payload as string) || 'Failed to create guard'
+                throw new Error(errorMessage)
             }
-        })
-        
-        // Send documents as indexed arrays (matching Postman format)
-        documentsToSend.forEach((doc, index) => {
-            // Add document type for this index
-            submitFormData.append(`document_types[${index}]`, doc.type)
-            // Add document file for this index
-            submitFormData.append(`documents[${index}]`, doc.file)
-        })
-
-        // Debug log
-        console.log('Sending documents:', documentsToSend.map((d, i) => ({
-            index: i,
-            type: d.type,
-            fileName: d.file.name,
-            fileSize: d.file.size
-        })))
-
-        // Dispatch create guard action
-        const result = await dispatch(createGuard(submitFormData))
-
-        if (createGuard.fulfilled.match(result)) {
-            await SweetAlertService.success(
-                'Security Officer Created Successfully',
-                `${formData.full_name} has been created with code: ${guardCode}`,
-                { timer: 2000, showConfirmButton: false }
+        } catch (error) {
+            await SweetAlertService.error(
+                'Creation Failed',
+                error instanceof Error ? error.message : 'There was an error creating the guard. Please try again.'
             )
-
-            // Reset form and generate new code for next entry
-            resetFormAfterSubmit()
-            onSuccess?.()
-
-            // Refresh guard list
-            await dispatch(fetchGuards({
-                page: 1,
-                per_page: 10,
-                sort_by: 'created_at',
-                sort_order: 'desc'
-            }))
-        } else {
-            const errorMessage = (result.payload as string) || 'Failed to create guard'
-            throw new Error(errorMessage)
+            console.error('Error creating guard:', error)
+        } finally {
+            setIsSubmitting(false)
         }
-    } catch (error) {
-        await SweetAlertService.error(
-            'Creation Failed',
-            error instanceof Error ? error.message : 'There was an error creating the guard. Please try again.'
-        )
-        console.error('Error creating guard:', error)
-    } finally {
-        setIsSubmitting(false)
     }
-}
 
     const nextStep = useCallback(async () => {
         // Show errors and validate current step, marking all fields as touched

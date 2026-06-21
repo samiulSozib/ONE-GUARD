@@ -53,6 +53,8 @@ import { ClientGuardRequestOverview } from "@/components/home/home-client-guard-
 import { Wifi, WifiOff, Users, UserCheck } from "lucide-react";
 import { useRealtimeDashboard } from "@/hooks/useRealTimeDashboard";
 import { SocketProvider, useSocket } from "@/components/contexts/SocketContext";
+import { PendingCheckouts } from "@/components/home/pending-checkouts";
+import { RecentJobsAndApplications } from "@/components/home/recent-job-applications";
 
 function DashboardContent() {
   const { isConnected, onlineCount, totalGuards } = useRealtimeDashboard();
@@ -117,11 +119,17 @@ function DashboardContent() {
             <div className="flex-1">
               <ClientGuardRequestOverview />
             </div>
+
+             {/* Data Table Card */}
+            <div className="flex-1">
+              <RecentJobsAndApplications />
+            </div>
           </div>
 
           {/* RIGHT COLUMN — Additional Components */}
           <div className="lg:col-span-3 flex flex-col gap-4 h-full">
             <OnGoingShifts />
+            <PendingCheckouts/>
             <ClientReviewCard />
           </div>
 

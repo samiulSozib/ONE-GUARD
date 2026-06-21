@@ -176,8 +176,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         tooltip={item.title}
                         className={cn(
                           "group/btn h-8 rounded-md px-2 text-[13px] transition-colors duration-100",
-                          "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100",
-                          isActive && "bg-zinc-800 text-white hover:bg-zinc-800",
+                          "text-zinc-400 hover:bg-red-800/60 hover:text-zinc-100",
+                          isActive && "bg-red-800 text-white hover:bg-red-800",
                         )}
                       >
                         <Link href={item.url} className="flex items-center gap-2.5">
@@ -186,7 +186,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               "h-3.5 w-3.5 shrink-0",
                               isActive
                                 ? "text-white"
-                                : "text-zinc-500 group-hover/btn:text-zinc-300",
+                                : "text-red-500 group-hover/btn:text-zinc-300",
                             )}
                             strokeWidth={isActive ? 2.5 : 1.8}
                           />

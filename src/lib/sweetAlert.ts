@@ -166,10 +166,9 @@ class SweetAlertService {
       icon: 'error',
       confirmButtonText: 'OK',
       confirmButtonColor: '#6b0016',
-      showCancelButton: false,
-      allowOutsideClick: true,
-      allowEscapeKey: true,
-      allowEnterKey: true,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
       ...options,
     });
   }
@@ -185,9 +184,9 @@ class SweetAlertService {
       text,
       icon: 'warning',
       confirmButtonText: 'OK',
-      confirmButtonColor: '#f59e0b',
-      allowOutsideClick: true,
-      allowEscapeKey: true,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
       ...options,
     });
   }

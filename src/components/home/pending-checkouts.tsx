@@ -1,7 +1,6 @@
-// components/dashboard/ongoing-shifts.tsx
+// components/dashboard/pending-checkouts.tsx
 "use client";
 
-import Image from "next/image";
 import { AlertCircle, PlusIcon } from "lucide-react";
 import {
     Card,
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JSX, useEffect } from "react";
-import { IconCar, IconCircleFilled, IconClock, IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
+import { IconCircleFilled, IconClock, IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { fetchDashboard } from "@/store/slices/dashboardSlice";
@@ -62,7 +61,7 @@ const formatTime = (time: string | null) => {
     return time;
 };
 
-export function OnGoingShifts() {
+export function PendingCheckouts() {
     const dispatch = useAppDispatch();
     const router = useRouter();
     const { data: dashboard, isLoading } = useAppSelector((state) => state.dashboard);
@@ -71,7 +70,8 @@ export function OnGoingShifts() {
         dispatch(fetchDashboard());
     }, [dispatch]);
 
-    const ongoingShifts: OngoingShift[] = dashboard?.ongoing_shifts || [];
+    const pendingCheckouts = dashboard?.pending_checkouts?.list || [];
+    const stats = dashboard?.pending_checkouts || { count: 0, critical: 0, warning: 0, info: 0 };
 
     const getInitials = (name: string | null) => {
         if (!name) return "G";
@@ -88,42 +88,41 @@ export function OnGoingShifts() {
     };
 
     const handleViewAllClick = () => {
-        router.push('/guard-assignment');
+        router.push('/guard-assignment?filter=pending-checkout');
     };
 
     // Loading skeleton
     if (isLoading) {
         return (
-            <Card className="shadow-sm rounded-2xl pt-2">
-                <CardHeader className="flex flex-row items-center justify-between mt-2">
+            <Card className="shadow-sm rounded-2xl pt-2 border border-gray-100">
+                <CardHeader className="flex flex-row items-center justify-between mt-2 px-4">
                     <CardTitle>
-                        <div className="flex flex-col items-start gap-2">
-                            <Skeleton className="h-6 w-32" />
-                            <Skeleton className="h-4 w-24" />
+                        <div className="flex flex-col items-start gap-1">
+                            <Skeleton className="h-6 w-40" />
+                            <Skeleton className="h-4 w-32" />
                         </div>
                     </CardTitle>
                     <Skeleton className="h-8 w-8 rounded-full" />
                 </CardHeader>
 
-                <CardContent className="p-2">
-                    <div className="space-y-3">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="flex items-center justify-between p-2">
-                                <div className="flex items-center gap-3">
-                                    <Skeleton className="h-10 w-10 rounded-full" />
-                                    <div>
-                                        <Skeleton className="h-4 w-24 mb-1" />
-                                        <Skeleton className="h-3 w-16" />
+                <CardContent className="p-0">
+                    <div className="px-4 py-6">
+                        <div className="space-y-3">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex items-center justify-between p-2 border-b-2 border-gray-200">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-8 w-8 rounded-full" />
+                                        <div>
+                                            <Skeleton className="h-4 w-32 mb-1" />
+                                            <Skeleton className="h-3 w-24" />
+                                        </div>
                                     </div>
+                                    <Skeleton className="h-6 w-20" />
                                 </div>
-                                <div className="flex flex-col items-center gap-1">
-                                    <Skeleton className="h-4 w-4 rounded-full" />
-                                    <Skeleton className="h-5 w-16" />
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                        <Skeleton className="h-10 w-full mt-4 rounded-md" />
                     </div>
-                    <Skeleton className="h-10 w-full mt-2 rounded-md" />
                 </CardContent>
             </Card>
         );
@@ -134,10 +133,23 @@ export function OnGoingShifts() {
             <CardHeader className="flex flex-row items-center justify-between mt-2 px-4">
                 <CardTitle>
                     <div className="flex flex-col items-start gap-1">
-                        <span className="font-semibold text-lg text-gray-900">Ongoing Shifts</span>
-                        <span className="text-sm text-gray-500">
-                            {ongoingShifts.length} {ongoingShifts.length === 1 ? 'Shift' : 'Shifts'} in progress
-                        </span>
+                        <span className="font-semibold text-lg text-gray-900">Pending Checkouts</span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-500">
+                                {stats.count} {stats.count === 1 ? 'Checkout' : 'Checkouts'} pending
+                            </span>
+                            {stats.critical > 0 && (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-2 py-0 h-5">
+                                    <IconAlertCircle className="w-3 h-3 mr-1" />
+                                    {stats.critical} Critical
+                                </Badge>
+                            )}
+                            {stats.warning > 0 && (
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] px-2 py-0 h-5">
+                                    {stats.warning} Warning
+                                </Badge>
+                            )}
+                        </div>
                     </div>
                 </CardTitle>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
@@ -149,22 +161,22 @@ export function OnGoingShifts() {
                 <div className="overflow-x-auto">
                     <Table>
                         <TableBody>
-                            {ongoingShifts.length === 0 ? (
+                            {pendingCheckouts.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={2} className="text-center py-12">
                                         <div className="flex flex-col items-center justify-center">
-                                            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-3">
+                                                <IconCheck className="h-6 w-6 text-green-500" />
                                             </div>
-                                            <p className="text-sm font-medium text-gray-600">No ongoing shifts</p>
-                                            <p className="text-xs text-gray-400 mt-1">All shifts are completed or scheduled</p>
+                                            <p className="text-sm font-medium text-gray-600">No pending checkouts</p>
+                                            <p className="text-xs text-gray-400 mt-1">All shifts have been checked out</p>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                ongoingShifts.map((shift, index) => {
-                                    const statusColor = shift.status_color || 'default';
-                                    const shiftStatus = shift.shift_status || 'assigned';
+                                pendingCheckouts.map((shift: OngoingShift, index: number) => {
+                                    const statusColor = shift.status_color || 'warning';
+                                    const shiftStatus = shift.shift_status || 'active';
                                     const isOverdue = shift.is_overdue || false;
 
                                     return (
@@ -177,8 +189,8 @@ export function OnGoingShifts() {
                                             <TableCell className="py-3 px-4 w-3/5">
                                                 <div className="flex items-center gap-3">
                                                     {/* Initials Avatar - Small */}
-                                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                        <span className="text-xs font-semibold text-gray-600">
+                                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
+                                                        <span className="text-xs font-semibold text-yellow-700">
                                                             {getInitials(shift.guard_name)}
                                                         </span>
                                                     </div>
@@ -189,16 +201,16 @@ export function OnGoingShifts() {
                                                             <span className="font-medium text-gray-900 text-sm truncate max-w-[120px]">
                                                                 {shift.guard_name || 'Unknown Guard'}
                                                             </span>
-                                                            {shiftStatus === 'active' && (
-                                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0 h-4 font-medium">
-                                                                    <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse mr-1" />
-                                                                    Live
-                                                                </Badge>
-                                                            )}
                                                             {isOverdue && (
                                                                 <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0 h-4 font-medium">
                                                                     <IconAlertCircle className="w-2.5 h-2.5 mr-0.5" />
                                                                     Overdue
+                                                                </Badge>
+                                                            )}
+                                                            {statusColor === 'critical' && (
+                                                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0 h-4 font-medium">
+                                                                    <IconAlertCircle className="w-2.5 h-2.5 mr-0.5" />
+                                                                    Critical
                                                                 </Badge>
                                                             )}
                                                         </div>
@@ -210,8 +222,8 @@ export function OnGoingShifts() {
                                                             {shift.checked_in_at && (
                                                                 <>
                                                                     <span className="text-gray-300 text-[10px]">•</span>
-                                                                    <span className="text-[10px] text-green-600 flex items-center gap-1 font-medium">
-                                                                        <span className="w-1 h-1 rounded-full bg-green-500" />
+                                                                    <span className="text-[10px] text-yellow-600 flex items-center gap-1 font-medium">
+                                                                        <IconClock className="w-2.5 h-2.5" />
                                                                         In: {formatTime(shift.checked_in_at)}
                                                                     </span>
                                                                 </>
@@ -239,7 +251,7 @@ export function OnGoingShifts() {
                                                             <span className="text-gray-300">|</span>
                                                             <span className="text-gray-500 capitalize flex items-center gap-1 text-[10px]">
                                                                 <span className={`w-1 h-1 rounded-full ${
-                                                                    shiftStatus === 'active' ? 'bg-green-500' :
+                                                                    shiftStatus === 'active' ? 'bg-yellow-500' :
                                                                     shiftStatus === 'assigned' ? 'bg-yellow-500' :
                                                                     shiftStatus === 'accepted' ? 'bg-blue-500' :
                                                                     'bg-gray-400'
@@ -261,12 +273,12 @@ export function OnGoingShifts() {
                                                 <div className="flex items-center justify-end gap-2">
                                                     <Badge
                                                         variant="outline"
-                                                        className={`${statusColorMap[statusColor] || statusColorMap.default} px-2.5 py-1 text-[11px] font-medium border whitespace-nowrap`}
+                                                        className={`${statusColorMap[statusColor] || statusColorMap.warning} px-2.5 py-1 text-[11px] font-medium border whitespace-nowrap`}
                                                     >
                                                         <span className="flex items-center gap-1.5">
-                                                            {getStatusIcon(shiftStatus, statusColor)}
+                                                            <IconClock className="w-3.5 h-3.5 text-yellow-500" />
                                                             <span className="truncate max-w-[100px]">
-                                                                {shift.status || shiftStatus}
+                                                                Pending Checkout
                                                             </span>
                                                         </span>
                                                     </Badge>
@@ -280,14 +292,14 @@ export function OnGoingShifts() {
                     </Table>
                 </div>
 
-                {ongoingShifts.length > 0 && (
+                {pendingCheckouts.length > 0 && (
                     <div className="px-4 py-3 border-t-2 border-gray-200 bg-gray-50/50 rounded-b-2xl">
                         <Button
                             className="w-full text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200"
                             variant="ghost"
                             onClick={handleViewAllClick}
                         >
-                            View All ({ongoingShifts.length}) 
+                            View All ({pendingCheckouts.length}) 
                             <span className="ml-2 text-gray-400">→</span>
                         </Button>
                     </div>

@@ -99,13 +99,49 @@ export function HomeInfo() {
                 </g>
             </svg>)
         },
+        // New Job Card
+        {
+            title: dashboard?.jobs?.total?.toLocaleString() || "0",
+            label: "Total Jobs",
+            subLabel: `${dashboard?.jobs?.active || 0} active, ${dashboard?.jobs?.urgent || 0} urgent, ${dashboard?.jobs?.featured || 0} featured`,
+            color: "#E8F5E9",
+            icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g opacity="0.08">
+                    <path d="M93.3333 28H74.6667V22.4C74.6667 17.92 72.8 14 69.3333 11.2C66.4 8.86667 62.4 7.46667 58.6667 7.46667H53.3333C49.6 7.46667 45.6 8.86667 42.6667 11.2C39.2 14 37.3333 17.92 37.3333 22.4V28H18.6667C15.5333 28 13.0667 30.4667 13.0667 33.6V86.8C13.0667 89.9333 15.5333 92.4 18.6667 92.4H93.3333C96.4667 92.4 98.9333 89.9333 98.9333 86.8V33.6C98.9333 30.4667 96.4667 28 93.3333 28ZM46.6667 22.4C46.6667 20.5333 47.6 19.1333 48.8 18.2C49.8667 17.2667 51.4667 16.8 53.3333 16.8H58.6667C60.5333 16.8 62.1333 17.2667 63.2 18.2C64.4 19.1333 65.3333 20.5333 65.3333 22.4V28H46.6667V22.4ZM89.6 74.6667H74.6667V83.0667H67.7333V74.6667H22.4V67.7333H67.7333V59.3333H74.6667V67.7333H89.6V74.6667Z" fill="#2E7D32"/>
+                </g>
+            </svg>)
+        },
+        // New Applications Card
+        {
+            title: dashboard?.applications?.total?.toLocaleString() || "0",
+            label: "Total Applications",
+            subLabel: `${dashboard?.applications?.reviewed || 0} reviewed, ${dashboard?.applications?.hired || 0} hired, ${dashboard?.applications?.pending || 0} pending`,
+            color: "#FFF3E0",
+            icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g opacity="0.08">
+                    <path d="M74.6667 14H37.3333C28.9333 14 22.4 20.5333 22.4 28.9333V83.0667C22.4 91.4667 28.9333 98 37.3333 98H74.6667C83.0667 98 89.6 91.4667 89.6 83.0667V28.9333C89.6 20.5333 83.0667 14 74.6667 14ZM65.3333 65.3333H46.6667C43.8667 65.3333 41.6 63.0667 41.6 60.2667C41.6 57.4667 43.8667 55.2 46.6667 55.2H65.3333C68.1333 55.2 70.4 57.4667 70.4 60.2667C70.4 63.0667 68.1333 65.3333 65.3333 65.3333ZM65.3333 46.6667H46.6667C43.8667 46.6667 41.6 44.4 41.6 41.6C41.6 38.8 43.8667 36.5333 46.6667 36.5333H65.3333C68.1333 36.5333 70.4 38.8 70.4 41.6C70.4 44.4 68.1333 46.6667 65.3333 46.6667Z" fill="#E65100"/>
+                </g>
+            </svg>)
+        },
+        // Applications Breakdown Card
+        {
+            title: `${dashboard?.applications?.hired || 0}/${dashboard?.applications?.total || 0}`,
+            label: "Hiring Rate",
+            subLabel: `${dashboard?.applications?.shortlisted || 0} shortlisted, ${dashboard?.applications?.interview_scheduled || 0} interviews, ${dashboard?.applications?.rejected || 0} rejected`,
+            color: "#E3F2FD",
+            icon: (<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g opacity="0.08">
+                    <path d="M56 9.33301C30.24 9.33301 9.33337 30.2397 9.33337 55.9997C9.33337 81.7597 30.24 102.666 56 102.666C81.76 102.666 102.667 81.7597 102.667 55.9997C102.667 30.2397 81.76 9.33301 56 9.33301ZM77.4667 79.333H34.5334C31.92 79.333 29.8667 77.2797 29.8667 74.6663C29.8667 72.053 31.92 69.9997 34.5334 69.9997H77.4667C80.08 69.9997 82.1334 72.053 82.1334 74.6663C82.1334 77.2797 80.08 79.333 77.4667 79.333ZM82.1334 60.6663H29.8667C27.2534 60.6663 25.2 58.613 25.2 55.9997C25.2 53.3863 27.2534 51.333 29.8667 51.333H82.1334C84.7467 51.333 86.8 53.3863 86.8 55.9997C86.8 58.613 84.7467 60.6663 82.1334 60.6663Z" fill="#0D47A1"/>
+                </g>
+            </svg>)
+        },
     ];
 
     // Loading state
     if (isLoading) {
         return (
             <div className="grid grid-cols-2 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6].map((index) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((index) => (
                     <Card key={index} className="@container/card p-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 items-center">
                             <div>
