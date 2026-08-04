@@ -291,6 +291,7 @@ export function ClientUpdateForm({
                         // Map sites
                         const sites = (client?.sites && Array.isArray(client.sites))
                             ? client.sites.map((site: Site) => ({
+                                id: site.id,
                                 site_name: site?.site_name || '',
                                 site_instruction: site?.site_instruction || '',
                                 address: site?.address || '',
@@ -884,14 +885,14 @@ const onSubmit = async (e: React.FormEvent) => {
         // 🔥 FIX: Send new documents as indexed arrays (0, 1, 2, etc.)
         // Create an array of documents with their types
         const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
-        
+
         // Process new documents
         documents.forEach((doc) => {
             // Extract document type from filename (format: "document_type-filename.ext")
             const firstHyphenIndex = doc.name.indexOf('-')
             let documentType = ''
             let originalFileName = doc.name
-            
+
             if (firstHyphenIndex > 0) {
                 documentType = doc.name.substring(0, firstHyphenIndex)
                 originalFileName = doc.name.substring(firstHyphenIndex + 1)
@@ -905,7 +906,7 @@ const onSubmit = async (e: React.FormEvent) => {
                     }
                 }
             }
-            
+
             if (documentType) {
                 // Create a clean file without the type prefix
                 const cleanFile = new File([doc], originalFileName, { type: doc.type })
@@ -915,7 +916,7 @@ const onSubmit = async (e: React.FormEvent) => {
                 documentsToSend.push({ type: 'other', file: doc, originalName: doc.name })
             }
         })
-        
+
         // Send documents as indexed arrays (matching Postman/guard format)
         documentsToSend.forEach((doc, index) => {
             // Add document type for this index
