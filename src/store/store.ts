@@ -27,6 +27,11 @@ import jobApplicationReducer from './slices/jobApplicationSlice';
 import emailTemplateReducer from './slices/emailTemplateSlice';
 import emailLogReducer from './slices/email-logSlice';
 import shiftLogsReducer from './slices/shiftLogsSlice';
+import companyServiceCategoryReducer from './slices/company-service-category.slice';
+import companyServiceUnitTypeReducer from './slices/company-service-unit-type.slice';
+import companyServiceBillingMethodReducer from './slices/company-service-billing-method.slice';
+import companyServiceReducer from './slices/company-service.slice';
+import companyServiceComponentReducer from './slices/company-service-component.slice';
 
 export const store = configureStore({
   reducer: {
@@ -58,6 +63,11 @@ export const store = configureStore({
     emailTemplates: emailTemplateReducer,
     emailLogs: emailLogReducer,
     shiftLogs: shiftLogsReducer,
+    companyServiceCategory: companyServiceCategoryReducer,
+    companyServiceUnitType: companyServiceUnitTypeReducer,
+    companyServiceBillingMethod: companyServiceBillingMethodReducer,
+    companyService: companyServiceReducer,
+    companyServiceComponent: companyServiceComponentReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

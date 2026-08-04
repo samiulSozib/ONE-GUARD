@@ -120,6 +120,14 @@ const navGroups = [
       { title: "Email Logs", url: "/email-logs", icon: MessageSquareWarning }
     ],
   },
+  {
+    label: "Company Service",
+    items: [
+
+      { title: "Service Category", url: "/company-service-categories", icon: MessageSquareWarning },
+      { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
+    ],
+  },
 ]
 
 export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Sidebar>) {

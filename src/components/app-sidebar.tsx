@@ -94,12 +94,12 @@ const navGroups = [
       { title: "Shift Instruction", url: "/shift-instruction", icon: AlertTriangle },
 
     ],
-    
+
   },
   {
       label: "Jobs",
       items: [
-  
+
         { title: "Job Categories", url: "/job-categories", icon: MessageSquareWarning },
         { title: "Jobs", url: "/jobs", icon: AlertTriangle },
         { title: "Job Applications", url: "/job-applications", icon: AlertTriangle },
@@ -111,6 +111,14 @@ const navGroups = [
 
       { title: "Email Templates", url: "/email-template-settings", icon: MessageSquareWarning },
       { title: "Email Logs", url: "/email-logs", icon: MessageSquareWarning }
+    ],
+  },
+  {
+    label: "Company Service",
+    items: [
+
+      { title: "Service Category", url: "/company-service-categories", icon: MessageSquareWarning },
+       { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
     ],
   },
 ]
