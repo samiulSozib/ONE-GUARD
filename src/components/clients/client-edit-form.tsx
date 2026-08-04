@@ -301,6 +301,7 @@ export function ClientUpdateForm({
                                 status: site?.status || 'planned',
                                 locations: (site?.locations && Array.isArray(site.locations))
                                     ? site.locations.map((loc: SiteLocation) => ({
+                                        id: loc.id,
                                         title: loc?.title || '',
                                         description: loc?.description || '',
                                         latitude: loc?.latitude ? parseFloat(loc.latitude.toString()) : 0,
