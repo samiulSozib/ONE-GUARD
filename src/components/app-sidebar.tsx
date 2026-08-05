@@ -121,6 +121,8 @@ const navGroups = [
        { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
              { title: "Billing Methods", url: "/company-service-billing-method", icon: MessageSquareWarning },
                    { title: "Company Service", url: "/company-service", icon: MessageSquareWarning },
+                         { title: "Service Component", url: "/company-service-component", icon: MessageSquareWarning },
+
 
 
     ],

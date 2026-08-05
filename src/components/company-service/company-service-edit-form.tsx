@@ -65,9 +65,7 @@ const serviceSchema = z.object({
 
   guard_type_id: z.number().optional().nullable(),
 
-  service_type: z.enum(['standalone', 'package', 'component'], {
-    required_error: "Service type is required",
-  }),
+  service_type: z.enum(['standalone', 'package', 'component']),
 
   description: z.string().optional().nullable(),
 

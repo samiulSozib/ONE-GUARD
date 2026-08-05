@@ -15,36 +15,36 @@ export const companyServiceComponentService = {
           total: number;
           per_page: number;
         }
-      }>>('/company-service-components', { params })
+      }>>('/admin/company-service-components', { params })
     ),
 
   // Get single component
   getCompanyServiceComponent: (id: number) =>
     handleApiResponse(
-      api.get<ApiResponse<{item: CompanyServiceComponent}>>(`/company-service-components/${id}/show`)
+      api.get<ApiResponse<{item: CompanyServiceComponent}>>(`/admin/company-service-components/${id}/show`)
     ),
 
   // Create component
   createCompanyServiceComponent: (data: CreateCompanyServiceComponentDto) =>
     handleApiResponse(
-      api.post<ApiResponse<{item: CompanyServiceComponent}>>('/company-service-components', data)
+      api.post<ApiResponse<{item: CompanyServiceComponent}>>('/admin/company-service-components', data)
     ),
 
   // Update component
   updateCompanyServiceComponent: (id: number, data: UpdateCompanyServiceComponentDto) =>
     handleApiResponse(
-      api.put<ApiResponse<{item: CompanyServiceComponent}>>(`/company-service-components/${id}`, data)
+      api.put<ApiResponse<{item: CompanyServiceComponent}>>(`/admin/company-service-components/${id}`, data)
     ),
 
   // Delete component
   deleteCompanyServiceComponent: (id: number) =>
     handleApiResponse(
-      api.delete<ApiResponse<void>>(`/company-service-components/${id}`)
+      api.delete<ApiResponse<void>>(`/admin/company-service-components/${id}`)
     ),
 
   // Toggle component status
   toggleStatus: (id: number, is_active: boolean) =>
     handleApiResponse(
-      api.patch<ApiResponse<{message: string}>>(`/company-service-components/${id}/change-status`, { is_active })
+      api.patch<ApiResponse<{message: string}>>(`/admin/company-service-components/${id}/change-status`, { is_active })
     ),
 };
