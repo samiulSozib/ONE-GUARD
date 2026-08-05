@@ -72,14 +72,27 @@ const serviceSchema = z.object({
   default_selling_rate: z.string()
     .optional()
     .nullable()
-    .refine((val) => val === null || val === '' || /^\d+(\.\d{1,2})?$/.test(val), {
-      message: "Please enter a valid amount",
-    }),
+    .refine(
+  (val) =>
+    val === undefined ||
+    val === null ||
+    val === '' ||
+    /^\d+(\.\d{1,2})?$/.test(val),
+  {
+    message: "Please enter a valid amount",
+  }
+),
 
   default_internal_cost: z.string()
     .optional()
     .nullable()
-    .refine((val) => val === null || val === '' || /^\d+(\.\d{1,2})?$/.test(val), {
+    .refine(
+  (val) =>
+    val === undefined ||
+    val === null ||
+    val === '' ||
+    /^\d+(\.\d{1,2})?$/.test(val),
+  {
       message: "Please enter a valid amount",
     }),
 
