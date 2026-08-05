@@ -129,10 +129,10 @@ const companyServiceSlice = createSlice({
         state.pagination = action.payload.data;
         // Update categorized lists
         state.packageServices = action.payload.items.filter(
-          (service: CompanyService) => service.is_package
+          (service: CompanyService) => service.is_package === true
         );
         state.standaloneServices = action.payload.items.filter(
-          (service: CompanyService) => !service.is_package && service.service_type === 'standalone'
+          (service: CompanyService) => service.is_package === false
         );
       })
       .addCase(fetchCompanyServices.rejected, (state, action) => {

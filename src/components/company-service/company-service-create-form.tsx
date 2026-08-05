@@ -33,12 +33,17 @@ import {
   Tag,
   Ruler,
   CreditCard,
-  Shield,
-  DollarSign,
   Package,
   Hash,
+  DollarSign,
+  Shield,
   Users,
-  Building
+  Clock,
+  Calendar,
+  Building,
+  FileText,
+  CheckSquare,
+  AlertCircle
 } from "lucide-react";
 
 // Zod schema
@@ -60,6 +65,10 @@ const serviceSchema = z.object({
 
   company_service_billing_method_id: z.number()
     .min(1, { message: "Billing method is required" }),
+
+  currency_id: z.number().optional().nullable(),
+
+  guard_type_id: z.number().optional().nullable(),
 
   service_type: z.enum(['standalone', 'package', 'component'], {
     required_error: "Service type is required",
@@ -93,6 +102,12 @@ const serviceSchema = z.object({
 
   is_package: z.boolean(),
   is_active: z.boolean(),
+  is_sellable: z.boolean(),
+  is_component: z.boolean(),
+  requires_guard: z.boolean(),
+  requires_shift: z.boolean(),
+  requires_attendance: z.boolean(),
+  requires_asset: z.boolean(),
   sort_order: z.number()
     .min(0, { message: "Sort order must be a positive number" })
     .optional()
@@ -143,6 +158,8 @@ export function CompanyServiceCreateForm({
       company_service_category_id: undefined,
       company_service_unit_type_id: undefined,
       company_service_billing_method_id: undefined,
+      currency_id: 1,
+      guard_type_id: null,
       service_type: "standalone",
       description: "",
       default_selling_rate: "",
@@ -151,6 +168,12 @@ export function CompanyServiceCreateForm({
       default_quantity: 1,
       is_package: false,
       is_active: true,
+      is_sellable: true,
+      is_component: false,
+      requires_guard: false,
+      requires_shift: false,
+      requires_attendance: false,
+      requires_asset: false,
       sort_order: 0,
       notes: "",
     },
@@ -178,6 +201,11 @@ export function CompanyServiceCreateForm({
       setValue('code', generatedCode);
     }
   }, [formValues.name, formValues.code, setValue]);
+
+  // Update is_package based on service_type
+  useEffect(() => {
+    setValue('is_package', formValues.service_type === 'package');
+  }, [formValues.service_type, setValue]);
 
   // Fetch categories when search changes
   useEffect(() => {
@@ -233,7 +261,10 @@ export function CompanyServiceCreateForm({
         company_service_category_id: data.company_service_category_id,
         company_service_unit_type_id: data.company_service_unit_type_id,
         company_service_billing_method_id: data.company_service_billing_method_id,
+        currency_id: data.currency_id || 1,
+        guard_type_id: data.guard_type_id || null,
         service_type: data.service_type,
+        service_kind: data.service_type,
         description: data.description?.trim() || null,
         default_selling_rate: data.default_selling_rate ? parseFloat(data.default_selling_rate) : null,
         default_internal_cost: data.default_internal_cost ? parseFloat(data.default_internal_cost) : null,
@@ -241,6 +272,12 @@ export function CompanyServiceCreateForm({
         default_quantity: data.default_quantity || 1,
         is_package: data.service_type === 'package',
         is_active: data.is_active,
+        is_sellable: data.is_sellable,
+        is_component: data.is_component,
+        requires_guard: data.requires_guard,
+        requires_shift: data.requires_shift,
+        requires_attendance: data.requires_attendance,
+        requires_asset: data.requires_asset,
         sort_order: data.sort_order || 0,
         notes: data.notes?.trim() || null,
       };
@@ -293,7 +330,7 @@ export function CompanyServiceCreateForm({
         {trigger}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[800px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
+      <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
         {/* Header */}
         <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
           <Image src="/images/logo.png" alt="" width={24} height={24} />
@@ -309,7 +346,7 @@ export function CompanyServiceCreateForm({
                 {...register("name")}
                 error={errors.name?.message}
                 disabled={isLoading}
-                placeholder="e.g., Unarmed Security Guard"
+                placeholder="e.g., Motorcycle Patrol Service"
               />
             </div>
             <div className="w-full">
@@ -318,7 +355,7 @@ export function CompanyServiceCreateForm({
                 {...register("code")}
                 error={errors.code?.message}
                 disabled={isLoading}
-                placeholder="e.g., unarmed_security_guard"
+                placeholder="e.g., motorcycle_patrol_service"
                 // helperText="Auto-generated from name"
               />
             </div>
@@ -477,7 +514,7 @@ export function CompanyServiceCreateForm({
           {/* Description */}
           <div className="w-full">
             <FloatingLabelTextarea
-              label="Description (Optional)"
+              label="Description"
               rows={3}
               {...register("description")}
               disabled={isLoading}
@@ -540,7 +577,77 @@ export function CompanyServiceCreateForm({
             </div>
           </div>
 
-          {/* Sort Order, Status, and Notes */}
+          {/* Flags */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="is_sellable"
+                checked={formValues.is_sellable}
+                onCheckedChange={(checked) => setValue("is_sellable", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="is_sellable" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Sellable
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="is_component"
+                checked={formValues.is_component}
+                onCheckedChange={(checked) => setValue("is_component", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="is_component" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Component
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="requires_guard"
+                checked={formValues.requires_guard}
+                onCheckedChange={(checked) => setValue("requires_guard", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="requires_guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Requires Guard
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="requires_shift"
+                checked={formValues.requires_shift}
+                onCheckedChange={(checked) => setValue("requires_shift", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="requires_shift" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Requires Shift
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="requires_attendance"
+                checked={formValues.requires_attendance}
+                onCheckedChange={(checked) => setValue("requires_attendance", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="requires_attendance" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Requires Attendance
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="requires_asset"
+                checked={formValues.requires_asset}
+                onCheckedChange={(checked) => setValue("requires_asset", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="requires_asset" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Requires Asset
+              </Label>
+            </div>
+          </div>
+
+          {/* Sort Order, Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="w-full">
               <FloatingLabelInput

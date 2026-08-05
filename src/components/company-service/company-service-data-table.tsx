@@ -13,11 +13,15 @@ import {
   XCircle,
   Package,
   Hash,
-  Building,
-  DollarSign,
+  Tag,
   Ruler,
   CreditCard,
-  Tag,
+  DollarSign,
+  Shield,
+  Users,
+  Clock,
+  Calendar,
+  Building,
 } from "lucide-react";
 import {
   Card,
@@ -280,8 +284,8 @@ export function CompanyServiceDataTable({ onAddClick }: CompanyServiceDataTableP
   };
 
   // Get service type badge
-  const getServiceTypeBadge = (type: string, isPackage: boolean) => {
-    if (isPackage) {
+  const getServiceTypeBadge = (service: CompanyService) => {
+    if (service.is_package) {
       return (
         <Badge variant="outline" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-0">
           <Package className="h-3 w-3 mr-1" />
@@ -289,7 +293,7 @@ export function CompanyServiceDataTable({ onAddClick }: CompanyServiceDataTableP
         </Badge>
       );
     }
-    if (type === 'component') {
+    if (service.is_component || service.service_type === 'component') {
       return (
         <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-0">
           <Hash className="h-3 w-3 mr-1" />
@@ -308,6 +312,28 @@ export function CompanyServiceDataTable({ onAddClick }: CompanyServiceDataTableP
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined) return "-";
     return `$${amount.toFixed(2)}`;
+  };
+
+  // Get requirement badges
+  const getRequirementBadges = (service: CompanyService) => {
+    const requirements = [];
+    if (service.requires_guard) requirements.push({ label: 'Guard', icon: Shield });
+    if (service.requires_shift) requirements.push({ label: 'Shift', icon: Clock });
+    if (service.requires_attendance) requirements.push({ label: 'Attendance', icon: Calendar });
+    if (service.requires_asset) requirements.push({ label: 'Asset', icon: Building });
+
+    if (requirements.length === 0) return null;
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {requirements.map((req, index) => (
+          <Badge key={index} variant="outline" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-0 text-xs">
+            <req.icon className="h-2 w-2 mr-1" />
+            {req.label}
+          </Badge>
+        ))}
+      </div>
+    );
   };
 
   // Loading skeleton
@@ -459,7 +485,8 @@ export function CompanyServiceDataTable({ onAddClick }: CompanyServiceDataTableP
                   <TableHead>Unit Type</TableHead>
                   <TableHead>Billing</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Selling Rate</TableHead>
+                  <TableHead className="text-right">Rate</TableHead>
+                  <TableHead>Requirements</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
@@ -468,7 +495,7 @@ export function CompanyServiceDataTable({ onAddClick }: CompanyServiceDataTableP
               <TableBody>
                 {companyServices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={10} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center">
                         <Package className="h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -537,15 +564,22 @@ export function CompanyServiceDataTable({ onAddClick }: CompanyServiceDataTableP
 
                       {/* Service Type */}
                       <TableCell>
-                        {getServiceTypeBadge(service.service_type, service.is_package)}
+                        {getServiceTypeBadge(service)}
                       </TableCell>
 
                       {/* Selling Rate */}
-                      <TableCell className="font-semibold text-gray-900 dark:text-white">
-                        <div className="flex items-center gap-2">
+                      <TableCell className="text-right font-semibold text-gray-900 dark:text-white">
+                        <div className="flex items-center justify-end gap-2">
                           <DollarSign className="h-4 w-4 text-gray-500" />
                           <span>{formatCurrency(service.default_selling_rate)}</span>
                         </div>
+                      </TableCell>
+
+                      {/* Requirements */}
+                      <TableCell>
+                        {getRequirementBadges(service) || (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
                       </TableCell>
 
                       {/* Status */}
