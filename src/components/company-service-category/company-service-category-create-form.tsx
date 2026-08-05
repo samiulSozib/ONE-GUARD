@@ -41,7 +41,7 @@ const categorySchema = z.object({
     .optional()
     .nullable(),
 
-  is_active: z.boolean().optional().default(true),
+  is_active: z.boolean(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -186,7 +186,7 @@ export function CompanyServiceCategoryCreateForm({
               error={errors.code?.message}
               disabled={isLoading}
               placeholder="e.g., security_services"
-              helperText="Auto-generated from name. Use lowercase letters, numbers, and underscores only."
+              // helperText="Auto-generated from name. Use lowercase letters, numbers, and underscores only."
             />
           </div>
 

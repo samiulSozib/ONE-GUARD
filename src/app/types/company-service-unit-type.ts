@@ -6,9 +6,26 @@ export interface CompanyServiceUnitType {
   description: string | null;
   sort_order: number | null;
   is_active: boolean;
+  services?: any[] | null;
   services_count?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CreateCompanyServiceUnitTypeDto {
+  name: string;
+  code: string;
+  description?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateCompanyServiceUnitTypeDto {
+  name?: string;
+  code?: string;
+  description?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
 }
 
 export interface CompanyServiceUnitTypeParams {

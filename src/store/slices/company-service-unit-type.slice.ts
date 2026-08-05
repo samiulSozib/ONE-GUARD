@@ -1,5 +1,5 @@
 // store/slices/company-service-unit-type.slice.ts
-import { CompanyServiceUnitType, CompanyServiceUnitTypeParams, CompanyServiceUnitTypeState } from '@/app/types/company-service-unit-type';
+import { CompanyServiceUnitType, CompanyServiceUnitTypeParams, CompanyServiceUnitTypeState, CreateCompanyServiceUnitTypeDto, UpdateCompanyServiceUnitTypeDto } from '@/app/types/company-service-unit-type';
 import { companyServiceUnitTypeService } from '@/service/company-service-unit-type.service';
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
@@ -44,7 +44,7 @@ export const fetchCompanyServiceUnitType = createAsyncThunk(
 
 export const createCompanyServiceUnitType = createAsyncThunk(
   'companyServiceUnitType/createCompanyServiceUnitType',
-  async (data: Omit<CompanyServiceUnitType, 'id' | 'created_at' | 'updated_at' | 'services_count'>, { rejectWithValue }) => {
+  async (data: CreateCompanyServiceUnitTypeDto, { rejectWithValue }) => {
     try {
       return await companyServiceUnitTypeService.createCompanyServiceUnitType(data);
     } catch (error: unknown) {
@@ -56,7 +56,7 @@ export const createCompanyServiceUnitType = createAsyncThunk(
 
 export const updateCompanyServiceUnitType = createAsyncThunk(
   'companyServiceUnitType/updateCompanyServiceUnitType',
-  async ({ id, data }: { id: number; data: Partial<CompanyServiceUnitType> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: UpdateCompanyServiceUnitTypeDto }, { rejectWithValue }) => {
     try {
       return await companyServiceUnitTypeService.updateCompanyServiceUnitType(id, data);
     } catch (error: unknown) {

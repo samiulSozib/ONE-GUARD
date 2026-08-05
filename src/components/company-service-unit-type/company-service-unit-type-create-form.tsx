@@ -15,13 +15,13 @@ import { FloatingLabelTextarea } from "../ui/floating-textarea";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { createCompanyServiceUnitType } from "@/store/slices/company-service-unit-type.slice";
-import { CreateCompanyServiceUnitTypeDto } from "@/app/types/company-service-unit-type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { boolean, z } from "zod";
 import SweetAlertService from "@/lib/sweetAlert";
 import { DialogActionFooter } from "../shared/dialog-action-footer";
 import { Switch } from "../ui/switch";
+import { CompanyServiceUnitType, CreateCompanyServiceUnitTypeDto } from '@/app/types/company-service-unit-type';
 
 // Zod schema
 const unitTypeSchema = z.object({
@@ -41,7 +41,7 @@ const unitTypeSchema = z.object({
     .optional()
     .nullable(),
 
-  is_active: z.boolean().optional().default(true),
+  is_active: z.boolean(),
 });
 
 type UnitTypeFormData = z.infer<typeof unitTypeSchema>;
@@ -175,7 +175,7 @@ export function CompanyServiceUnitTypeCreateForm({
               error={errors.name?.message}
               disabled={isLoading}
               placeholder="e.g., Guard Per Month"
-              helperText="Example: Guard Per Month, Hour, Day, Item, Fixed Service"
+              // helperText="Example: Guard Per Month, Hour, Day, Item, Fixed Service"
             />
           </div>
 
@@ -187,7 +187,7 @@ export function CompanyServiceUnitTypeCreateForm({
               error={errors.code?.message}
               disabled={isLoading}
               placeholder="e.g., guard_per_month"
-              helperText="Auto-generated from name. Use lowercase letters, numbers, and underscores only."
+              // helperText="Auto-generated from name. Use lowercase letters, numbers, and underscores only."
             />
           </div>
 

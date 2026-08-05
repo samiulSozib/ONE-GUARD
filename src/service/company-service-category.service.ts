@@ -1,7 +1,7 @@
 // service/company-service-category.service.ts
 import { ApiResponse } from "@/app/types/api.types";
+import { CompanyServiceCategory, CompanyServiceCategoryParams, CreateCompanyServiceCategoryDto, UpdateCompanyServiceCategoryDto } from "@/app/types/company-service-category";
 import api, { handleApiResponse } from "./api.service";
-import { CompanyServiceCategory, CompanyServiceCategoryParams } from "@/app/types/company-service-category";
 
 export const companyServiceCategoryService = {
   // Get all categories
@@ -25,13 +25,13 @@ export const companyServiceCategoryService = {
     ),
 
   // Create category
-  createCompanyServiceCategory: (data: Omit<CompanyServiceCategory, 'id' | 'created_at' | 'updated_at' | 'services_count'>) =>
+  createCompanyServiceCategory: (data: CreateCompanyServiceCategoryDto) =>
     handleApiResponse(
       api.post<ApiResponse<{item: CompanyServiceCategory}>>('/admin/company-service-categories', data)
     ),
 
   // Update category
-  updateCompanyServiceCategory: (id: number, data: Partial<CompanyServiceCategory>) =>
+  updateCompanyServiceCategory: (id: number, data: UpdateCompanyServiceCategoryDto) =>
     handleApiResponse(
       api.put<ApiResponse<{item: CompanyServiceCategory}>>(`/admin/company-service-categories/${id}`, data)
     ),

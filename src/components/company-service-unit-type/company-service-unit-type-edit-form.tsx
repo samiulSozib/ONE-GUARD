@@ -21,7 +21,7 @@ import {
 import { CompanyServiceUnitType, UpdateCompanyServiceUnitTypeDto } from "@/app/types/company-service-unit-type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { boolean, z } from "zod";
 import SweetAlertService from "@/lib/sweetAlert";
 import { DialogActionFooter } from "../shared/dialog-action-footer";
 import { Switch } from "../ui/switch";
@@ -44,7 +44,7 @@ const unitTypeSchema = z.object({
     .optional()
     .nullable(),
 
-  is_active: z.boolean().optional().default(true),
+  is_active: z.boolean(),
 });
 
 type UnitTypeFormData = z.infer<typeof unitTypeSchema>;
@@ -126,6 +126,7 @@ export function CompanyServiceUnitTypeEditForm({
 
     setIsLoading(true);
     try {
+      // Use UpdateCompanyServiceUnitTypeDto instead of CompanyServiceUnitType
       const submitData: UpdateCompanyServiceUnitTypeDto = {
         name: data.name.trim(),
         code: data.code.trim().toLowerCase(),
@@ -258,7 +259,6 @@ export function CompanyServiceUnitTypeEditForm({
                 error={errors.code?.message}
                 disabled={isLoading || isFetching}
                 placeholder="e.g., guard_per_month"
-                helperText="Use lowercase letters, numbers, and underscores only."
               />
             </div>
 

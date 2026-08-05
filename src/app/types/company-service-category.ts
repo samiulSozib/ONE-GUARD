@@ -11,6 +11,22 @@ export interface CompanyServiceCategory {
   updated_at?: string;
 }
 
+export interface CreateCompanyServiceCategoryDto {
+  name: string;
+  code: string;
+  description?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateCompanyServiceCategoryDto {
+  name?: string;
+  code?: string;
+  description?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
 export interface CompanyServiceCategoryParams {
   page?: number;
   per_page?: number;

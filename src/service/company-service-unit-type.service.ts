@@ -1,7 +1,7 @@
 // service/company-service-unit-type.service.ts
 import { ApiResponse } from "@/app/types/api.types";
 import api, { handleApiResponse } from "./api.service";
-import { CompanyServiceUnitType, CompanyServiceUnitTypeParams } from "@/app/types/company-service-unit-type";
+import { CompanyServiceUnitType, CompanyServiceUnitTypeParams, CreateCompanyServiceUnitTypeDto, UpdateCompanyServiceUnitTypeDto } from "@/app/types/company-service-unit-type";
 
 export const companyServiceUnitTypeService = {
   // Get all unit types
@@ -25,13 +25,13 @@ export const companyServiceUnitTypeService = {
     ),
 
   // Create unit type
-  createCompanyServiceUnitType: (data: Omit<CompanyServiceUnitType, 'id' | 'created_at' | 'updated_at' | 'services_count'>) =>
+  createCompanyServiceUnitType: (data: CreateCompanyServiceUnitTypeDto) =>
     handleApiResponse(
       api.post<ApiResponse<{item: CompanyServiceUnitType}>>('/admin/company-service-unit-types', data)
     ),
 
   // Update unit type
-  updateCompanyServiceUnitType: (id: number, data: Partial<CompanyServiceUnitType>) =>
+  updateCompanyServiceUnitType: (id: number, data: UpdateCompanyServiceUnitTypeDto) =>
     handleApiResponse(
       api.put<ApiResponse<{item: CompanyServiceUnitType}>>(`/admin/company-service-unit-types/${id}`, data)
     ),
