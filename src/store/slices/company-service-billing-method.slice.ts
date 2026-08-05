@@ -1,5 +1,5 @@
 // store/slices/company-service-billing-method.slice.ts
-import { CompanyServiceBillingMethod, CompanyServiceBillingMethodParams, CompanyServiceBillingMethodState } from '@/app/types/company-service-billing-method';
+import { CompanyServiceBillingMethod, CompanyServiceBillingMethodParams, CompanyServiceBillingMethodState, CreateCompanyServiceBillingMethodDto, UpdateCompanyServiceBillingMethodDto } from '@/app/types/company-service-billing-method';
 import { companyServiceBillingMethodService } from '@/service/company-service-billing-method.service';
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
@@ -44,7 +44,7 @@ export const fetchCompanyServiceBillingMethod = createAsyncThunk(
 
 export const createCompanyServiceBillingMethod = createAsyncThunk(
   'companyServiceBillingMethod/createCompanyServiceBillingMethod',
-  async (data: Omit<CompanyServiceBillingMethod, 'id' | 'created_at' | 'updated_at' | 'services_count'>, { rejectWithValue }) => {
+  async (data: CreateCompanyServiceBillingMethodDto, { rejectWithValue }) => {
     try {
       return await companyServiceBillingMethodService.createCompanyServiceBillingMethod(data);
     } catch (error: unknown) {
@@ -56,7 +56,7 @@ export const createCompanyServiceBillingMethod = createAsyncThunk(
 
 export const updateCompanyServiceBillingMethod = createAsyncThunk(
   'companyServiceBillingMethod/updateCompanyServiceBillingMethod',
-  async ({ id, data }: { id: number; data: Partial<CompanyServiceBillingMethod> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: UpdateCompanyServiceBillingMethodDto }, { rejectWithValue }) => {
     try {
       return await companyServiceBillingMethodService.updateCompanyServiceBillingMethod(id, data);
     } catch (error: unknown) {

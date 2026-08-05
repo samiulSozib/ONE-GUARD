@@ -47,7 +47,7 @@ export function LoginForm({
     }
     return false
   })
-  
+
   const hasLoadedCredentials = useRef(false)
 
   const {
@@ -72,12 +72,12 @@ export function LoginForm({
     if (!hasLoadedCredentials.current && rememberMe) {
       const savedEmail = localStorage.getItem(STORAGE_KEYS.SAVED_EMAIL)
       const savedPassword = localStorage.getItem(STORAGE_KEYS.SAVED_PASSWORD)
-      
+
       if (savedEmail && savedPassword) {
         setValue('email', savedEmail)
         setValue('password', savedPassword)
       }
-      
+
       hasLoadedCredentials.current = true
     }
   }, [rememberMe, setValue])
@@ -109,7 +109,7 @@ export function LoginForm({
     setRememberMe(false)
     setValue('email', '')
     setValue('password', '')
-    
+
     await SweetAlertService.success(
       'Credentials Cleared',
       'Saved login credentials have been removed.',
@@ -123,7 +123,7 @@ export function LoginForm({
   const onSubmit = async (data: LoginFormData) => {
     try {
       console.log('Submitting form with data:', data);
-      
+
       const result = await dispatch(login(data))
 
       if (login.fulfilled.match(result)) {
@@ -143,7 +143,7 @@ export function LoginForm({
               showConfirmButton: false,
             }
           );
-          
+
           setTimeout(() => {
             router.push('/')
           }, 1600);
@@ -193,7 +193,7 @@ export function LoginForm({
           {/* LEFT PANEL */}
           <div className="flex flex-1 flex-col items-center justify-center bg-[#fbf7f2] p-8 text-center md:p-10">
             <h2 className="text-lg font-semibold text-neutral-800 md:text-xl">
-              Welcome to the
+              Welcome to
             </h2>
             <h1 className="mt-1 text-xl font-bold tracking-wide md:text-2xl">
               Security{" "}
@@ -276,7 +276,7 @@ export function LoginForm({
                       Remember me
                     </label>
                   </div>
-                  
+
                   {/* Clear Saved Credentials Button */}
                   {hasSavedCredentials() && (
                     <button

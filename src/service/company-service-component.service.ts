@@ -1,7 +1,7 @@
 // service/company-service-component.service.ts
 import { ApiResponse } from "@/app/types/api.types";
 import api, { handleApiResponse } from "./api.service";
-import { CompanyServiceComponent, CompanyServiceComponentParams } from "@/app/types/company-service-component";
+import { CompanyServiceComponent, CompanyServiceComponentParams, CreateCompanyServiceComponentDto, UpdateCompanyServiceComponentDto } from "@/app/types/company-service-component";
 
 export const companyServiceComponentService = {
   // Get all components
@@ -25,13 +25,13 @@ export const companyServiceComponentService = {
     ),
 
   // Create component
-  createCompanyServiceComponent: (data: Omit<CompanyServiceComponent, 'id' | 'created_at' | 'updated_at' | 'parent_service' | 'component_service'>) =>
+  createCompanyServiceComponent: (data: CreateCompanyServiceComponentDto) =>
     handleApiResponse(
       api.post<ApiResponse<{item: CompanyServiceComponent}>>('/company-service-components', data)
     ),
 
   // Update component
-  updateCompanyServiceComponent: (id: number, data: Partial<CompanyServiceComponent>) =>
+  updateCompanyServiceComponent: (id: number, data: UpdateCompanyServiceComponentDto) =>
     handleApiResponse(
       api.put<ApiResponse<{item: CompanyServiceComponent}>>(`/company-service-components/${id}`, data)
     ),

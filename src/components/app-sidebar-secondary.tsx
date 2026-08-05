@@ -126,6 +126,8 @@ const navGroups = [
 
       { title: "Service Category", url: "/company-service-categories", icon: MessageSquareWarning },
       { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
+      { title: "Billing Methods", url: "/company-service-billing-method", icon: MessageSquareWarning },
+      { title: "Company Service", url: "/company-service", icon: MessageSquareWarning },
     ],
   },
 ]

@@ -1,5 +1,5 @@
 // store/slices/company-service.slice.ts
-import { CompanyService, CompanyServiceParams, CompanyServiceState } from '@/app/types/company-service';
+import { CompanyService, CompanyServiceParams, CompanyServiceState, CreateCompanyServiceDto, UpdateCompanyServiceDto } from '@/app/types/company-service';
 import { companyServiceService } from '@/service/company-service.service';
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 
@@ -46,7 +46,7 @@ export const fetchCompanyService = createAsyncThunk(
 
 export const createCompanyService = createAsyncThunk(
   'companyService/createCompanyService',
-  async (data: Omit<CompanyService, 'id' | 'created_at' | 'updated_at' | 'category' | 'unit_type' | 'billing_method' | 'components'>, { rejectWithValue }) => {
+  async (data: CreateCompanyServiceDto, { rejectWithValue }) => {
     try {
       return await companyServiceService.createCompanyService(data);
     } catch (error: unknown) {
@@ -58,7 +58,7 @@ export const createCompanyService = createAsyncThunk(
 
 export const updateCompanyService = createAsyncThunk(
   'companyService/updateCompanyService',
-  async ({ id, data }: { id: number; data: Partial<CompanyService> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: UpdateCompanyServiceDto }, { rejectWithValue }) => {
     try {
       return await companyServiceService.updateCompanyService(id, data);
     } catch (error: unknown) {

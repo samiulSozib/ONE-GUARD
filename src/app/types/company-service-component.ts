@@ -24,6 +24,40 @@ export interface CompanyServiceComponent {
   component_service?: CompanyService;
 }
 
+export interface CreateCompanyServiceComponentDto {
+  parent_company_service_id: number;
+  component_company_service_id: number;
+  default_quantity?: number | null;
+  included_quantity?: number | null;
+  is_required?: boolean;
+  is_optional?: boolean;
+  is_included_in_parent_price?: boolean;
+  is_client_billable?: boolean;
+  default_selling_rate?: number | null;
+  default_internal_cost?: number | null;
+  additional_unit_rate?: number | null;
+  sort_order?: number | null;
+  is_active?: boolean;
+  notes?: string | null;
+}
+
+export interface UpdateCompanyServiceComponentDto {
+  parent_company_service_id?: number;
+  component_company_service_id?: number;
+  default_quantity?: number | null;
+  included_quantity?: number | null;
+  is_required?: boolean;
+  is_optional?: boolean;
+  is_included_in_parent_price?: boolean;
+  is_client_billable?: boolean;
+  default_selling_rate?: number | null;
+  default_internal_cost?: number | null;
+  additional_unit_rate?: number | null;
+  sort_order?: number | null;
+  is_active?: boolean;
+  notes?: string | null;
+}
+
 export interface CompanyServiceComponentParams {
   page?: number;
   per_page?: number;

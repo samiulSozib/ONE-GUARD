@@ -32,6 +32,46 @@ export interface CompanyService {
   components?: CompanyServiceComponent[];
 }
 
+export interface CreateCompanyServiceDto {
+  company_service_category_id: number;
+  company_service_unit_type_id: number;
+  company_service_billing_method_id: number;
+  guard_type_id?: number | null;
+  currency_id?: number | null;
+  name: string;
+  code: string;
+  service_type: 'standalone' | 'package' | 'component';
+  description?: string | null;
+  default_selling_rate?: number | null;
+  default_internal_cost?: number | null;
+  minimum_quantity?: number | null;
+  default_quantity?: number | null;
+  is_package?: boolean;
+  is_active?: boolean;
+  sort_order?: number | null;
+  notes?: string | null;
+}
+
+export interface UpdateCompanyServiceDto {
+  company_service_category_id?: number;
+  company_service_unit_type_id?: number;
+  company_service_billing_method_id?: number;
+  guard_type_id?: number | null;
+  currency_id?: number | null;
+  name?: string;
+  code?: string;
+  service_type?: 'standalone' | 'package' | 'component';
+  description?: string | null;
+  default_selling_rate?: number | null;
+  default_internal_cost?: number | null;
+  minimum_quantity?: number | null;
+  default_quantity?: number | null;
+  is_package?: boolean;
+  is_active?: boolean;
+  sort_order?: number | null;
+  notes?: string | null;
+}
+
 export interface CompanyServiceParams {
   page?: number;
   per_page?: number;

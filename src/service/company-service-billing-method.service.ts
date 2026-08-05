@@ -1,7 +1,7 @@
 // service/company-service-billing-method.service.ts
 import { ApiResponse } from "@/app/types/api.types";
 import api, { handleApiResponse } from "./api.service";
-import { CompanyServiceBillingMethod, CompanyServiceBillingMethodParams } from "@/app/types/company-service-billing-method";
+import { CompanyServiceBillingMethod, CompanyServiceBillingMethodParams, CreateCompanyServiceBillingMethodDto, UpdateCompanyServiceBillingMethodDto } from "@/app/types/company-service-billing-method";
 
 export const companyServiceBillingMethodService = {
   // Get all billing methods
@@ -15,36 +15,36 @@ export const companyServiceBillingMethodService = {
           total: number;
           per_page: number;
         }
-      }>>('/company-service-billing-methods', { params })
+      }>>('/admin/company-service-billing-methods', { params })
     ),
 
   // Get single billing method
   getCompanyServiceBillingMethod: (id: number) =>
     handleApiResponse(
-      api.get<ApiResponse<{item: CompanyServiceBillingMethod}>>(`/company-service-billing-methods/${id}/show`)
+      api.get<ApiResponse<{item: CompanyServiceBillingMethod}>>(`/admin/company-service-billing-methods/${id}/show`)
     ),
 
   // Create billing method
-  createCompanyServiceBillingMethod: (data: Omit<CompanyServiceBillingMethod, 'id' | 'created_at' | 'updated_at' | 'services_count'>) =>
+  createCompanyServiceBillingMethod: (data: CreateCompanyServiceBillingMethodDto) =>
     handleApiResponse(
-      api.post<ApiResponse<{item: CompanyServiceBillingMethod}>>('/company-service-billing-methods', data)
+      api.post<ApiResponse<{item: CompanyServiceBillingMethod}>>('/admin/company-service-billing-methods', data)
     ),
 
   // Update billing method
-  updateCompanyServiceBillingMethod: (id: number, data: Partial<CompanyServiceBillingMethod>) =>
+  updateCompanyServiceBillingMethod: (id: number, data: UpdateCompanyServiceBillingMethodDto) =>
     handleApiResponse(
-      api.put<ApiResponse<{item: CompanyServiceBillingMethod}>>(`/company-service-billing-methods/${id}`, data)
+      api.put<ApiResponse<{item: CompanyServiceBillingMethod}>>(`/admin/company-service-billing-methods/${id}`, data)
     ),
 
   // Delete billing method
   deleteCompanyServiceBillingMethod: (id: number) =>
     handleApiResponse(
-      api.delete<ApiResponse<void>>(`/company-service-billing-methods/${id}`)
+      api.delete<ApiResponse<void>>(`/admin/company-service-billing-methods/${id}`)
     ),
 
   // Toggle billing method status
   toggleStatus: (id: number, is_active: boolean) =>
     handleApiResponse(
-      api.patch<ApiResponse<{message: string}>>(`/company-service-billing-methods/${id}/change-status`, { is_active })
+      api.patch<ApiResponse<{message: string}>>(`/admin/company-service-billing-methods/${id}/change-status`, { is_active })
     ),
 };
