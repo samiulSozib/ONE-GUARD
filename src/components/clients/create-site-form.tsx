@@ -308,7 +308,7 @@ export function CreateSiteForm({
                    formData.client_contract_id
                    setOpen(false)
 
-    
+
   }
 
   // Validation

@@ -45,9 +45,8 @@ import { NavUser } from "./nav-user"
 
 const data = {
   user: {
-    name: "John Doe",
-    email: "john@securityfirm.com",
-    avatar: "/avatars/user.jpg",
+    name: "OGS",
+
   },
   teams: [
     { name: "OGS Security", logo: GalleryVerticalEnd, plan: "Enterprise" },
@@ -187,7 +186,7 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                         tooltip={item.title}
                         className={cn(
                           "group/btn relative h-8 rounded-md px-2.5 text-[13px] font-medium transition-all duration-100",
-                          !isActive && "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800",
+                          !isActive && "text-black hover:bg-zinc-50 hover:text-zinc-800",
                           isActive && "bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white",
                         )}
                       >

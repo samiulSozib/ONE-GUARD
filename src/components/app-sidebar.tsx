@@ -40,9 +40,8 @@ import { NavUser } from "@/components/nav-user"
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "OGS",
+    
   },
 }
 
@@ -171,7 +170,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent className="px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navGroups.map((group) => (
           <SidebarGroup key={group.label} className="mb-3 px-0">
-            <SidebarGroupLabel className="mb-1 px-2 text-[10px] font-medium uppercase tracking-widest text-zinc-600 group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel className="mb-1 px-2 text-[10px] font-medium uppercase tracking-widest text-black group-data-[collapsible=icon]:hidden">
               {group.label}
             </SidebarGroupLabel>
 
@@ -190,7 +189,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         tooltip={item.title}
                         className={cn(
                           "group/btn h-8 rounded-md px-2 text-[13px] transition-colors duration-100",
-                          "text-zinc-400 hover:bg-red-800/60 hover:text-zinc-100",
+                          "text-black hover:bg-red-800/60 hover:text-zinc-100",
                           isActive && "bg-red-800 text-white hover:bg-red-800",
                         )}
                       >
