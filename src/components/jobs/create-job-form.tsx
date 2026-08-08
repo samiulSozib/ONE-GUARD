@@ -18,7 +18,8 @@ import {
     Tag,
     Users,
     Briefcase,
-    MapPin
+    MapPin,
+    Plus
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
@@ -37,7 +38,7 @@ import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
 import TiptapEditor from "../ui/tiptap-editor"
-
+import { JobCategoryCreateForm } from '@/app/(admin)/job-categories/job-category-create-form'
 
 // Employment types
 const employmentTypes = [
@@ -112,6 +113,9 @@ export function JobCreateForm({
     const [isLoading, setIsLoading] = useState(false)
     const [mounted, setMounted] = useState(false)
 
+    // Dialog states for create forms
+    const [categoryCreateDialogOpen, setCategoryCreateDialogOpen] = useState(false)
+
     // Redux states for dropdown data
     const { items: categories, isLoading: categoriesLoading } =
         useAppSelector((state) => state.jobCategories)
@@ -128,13 +132,15 @@ export function JobCreateForm({
 
     // Fetch categories on mount
     useEffect(() => {
-        dispatch(fetchJobCategories({ page: 1, per_page: 100 }))
-    }, [dispatch])
+        if (isOpen) {
+            dispatch(fetchJobCategories({ page: 1, per_page: 100 }))
+        }
+    }, [dispatch, isOpen])
 
     // Fetch categories when search changes
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (categorySearch.trim() || categorySearch === "") {
+            if (isOpen) {
                 dispatch(fetchJobCategories({
                     page: 1,
                     per_page: 10,
@@ -144,7 +150,17 @@ export function JobCreateForm({
         }, 300)
 
         return () => clearTimeout(timer)
-    }, [categorySearch, dispatch])
+    }, [categorySearch, dispatch, isOpen])
+
+    // Handle category creation success
+    const handleCategoryCreated = () => {
+        dispatch(fetchJobCategories({
+            page: 1,
+            per_page: 10,
+            search: categorySearch.trim(),
+        }))
+        setCategoryCreateDialogOpen(false)
+    }
 
     const {
         register,
@@ -249,272 +265,303 @@ export function JobCreateForm({
         }
     }
 
-   
-    return (
-        <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild>
-                {trigger}
-            </DialogTrigger>
-
-            <DialogContent className="sm:max-w-[700px] w-[90vw] max-w-[90vw] mx-auto max-h-[85vh] overflow-y-auto dark:bg-gray-900 p-6">
-                {/* Header */}
-                <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
-                    <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Create New Job</span>
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    {/* Job Title */}
-                    <div className="w-full">
-                        <FloatingLabelInput
-                            label="Job Title *"
-                            {...register("title")}
-                            error={errors.title?.message}
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    {/* Category & Location Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Category */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Category *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.category_id || ""}
-                                onValueChange={(value) => {
-                                    setValue("category_id", Number(value), { shouldValidate: true })
-                                }}
-                                options={categories.map((cat: JobCategory) => ({
-                                    value: cat.id,
-                                    label: cat.name,
-                                    ...cat
-                                }))}
-                                onSearch={(search) => {
-                                    setCategorySearch(search)
-                                    dispatch(fetchJobCategories({
-                                        page: 1,
-                                        per_page: 10,
-                                        search: search,
-                                    }))
-                                }}
-                                placeholder="Select category"
-                                disabled={isLoading || categoriesLoading}
-                                isLoading={categoriesLoading}
-                                emptyMessage={categorySearch ? "No categories found" : "No categories available"}
-                                searchPlaceholder="Search categories..."
-                                icon={Tag}
-                                iconPosition="left"
-                            />
-                            {errors.category_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.category_id.message}</p>
-                            )}
-                        </div>
-
-                        {/* Location */}
-                        <div className="relative space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Location
-                            </Label>
-                            <FloatingLabelInput
-                                label="Location *"
-                                {...register("location")}
-                                error={errors.location?.message}
-                                disabled={isLoading}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Employment & Payment Type Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Employment Type */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Employment Type *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.employment_type || ""}
-                                onValueChange={(value) => {
-                                    setValue("employment_type", value.toString(), { shouldValidate: true })
-                                }}
-                                options={employmentTypes}
-                                onSearch={() => { }}
-                                placeholder="Select employment type"
-                                disabled={isLoading}
-                                emptyMessage="No employment types available"
-                                searchPlaceholder="Search..."
-                                icon={Briefcase}
-                                iconPosition="left"
-                            />
-                            {errors.employment_type && (
-                                <p className="text-sm text-red-500 mt-1">{errors.employment_type.message}</p>
-                            )}
-                        </div>
-
-                        {/* Payment Type */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Payment Type *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.payment_type || ""}
-                                onValueChange={(value) => {
-                                    setValue("payment_type", value.toString(), { shouldValidate: true })
-                                }}
-                                options={paymentTypes}
-                                onSearch={() => { }}
-                                placeholder="Select payment type"
-                                disabled={isLoading}
-                                emptyMessage="No payment types available"
-                                searchPlaceholder="Search..."
-                                icon={DollarSign}
-                                iconPosition="left"
-                            />
-                            {errors.payment_type && (
-                                <p className="text-sm text-red-500 mt-1">{errors.payment_type.message}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Pay Rate Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Min Pay Rate */}
-                        <div className="relative">
-                            <FloatingLabelInput
-                                label="Min Pay Rate *"
-                                type="number"
-                                step="0.01"
-                                {...register("min_pay_rate")}
-                                error={errors.min_pay_rate?.message}
-                                disabled={isLoading}
-                            />
-                        </div>
-
-                        {/* Max Pay Rate */}
-                        <div className="relative">
-                            <FloatingLabelInput
-                                label="Max Pay Rate *"
-                                type="number"
-                                step="0.01"
-                                {...register("max_pay_rate")}
-                                error={errors.max_pay_rate?.message}
-                                disabled={isLoading}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Vacancies & Deadline Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Vacancies */}
-                        <div className="relative space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Number of Vacancies *
-                            </Label>
-                            <FloatingLabelInput
-                                label="Number of Vacancies *"
-                                type="number"
-                                {...register("vacancies")}
-                                error={errors.vacancies?.message}
-                                disabled={isLoading}
-                            />
-                        </div>
-
-                        {/* Deadline */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Application Deadline *
-                            </Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full justify-start text-left font-normal h-11",
-                                            !deadlineDate && "text-muted-foreground"
-                                        )}
-                                        disabled={isLoading}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {formatDateDisplay(deadlineDate)}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                    <Calendar
-                                        mode="single"
-                                        selected={deadlineDate}
-                                        onSelect={setDeadlineDate}
-                                        initialFocus
-                                        disabled={{ before: new Date() }}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            {errors.deadline && (
-                                <p className="text-sm text-red-500 mt-1">{errors.deadline.message}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Job Description with TinyMCE */}
-                    <div className="w-full">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                            Job Description
-                        </Label>
-                        {mounted && (
-                            <TiptapEditor
-                                content={watch("description") || ""}
-                                onChange={(content) => {
-                                    setValue("description", content, { shouldValidate: true })
-                                }}
-                                editable={!isLoading}
-                                placeholder="Write job description..."
-                            />
-                        )}
-                        {!mounted && (
-                            <textarea
-                                rows={4}
-                                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm"
-                                placeholder="Loading editor..."
-                                disabled
-                            />
-                        )}
-                    </div>
-
-                    {/* Requirements with TinyMCE */}
-                    <div className="w-full">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                            Requirements
-                        </Label>
-                        {mounted && (
-                            <TiptapEditor
-                                content={watch("requirements") || ""}
-                                onChange={(content) => {
-                                    setValue("requirements", content, { shouldValidate: true })
-                                }}
-                                editable={!isLoading}
-                                placeholder="Write job requirements..."
-                            />
-                        )}
-                        {!mounted && (
-                            <textarea
-                                rows={4}
-                                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm"
-                                placeholder="Loading editor..."
-                                disabled
-                            />
-                        )}
-                    </div>
-
-                    {/* Footer Actions */}
-                    <DialogActionFooter
-                        cancelText="Cancel"
-                        submitText="Create Job"
-                        isSubmitting={isLoading}
-                        onSubmit={handleSubmit(onSubmit)}
+    // Custom render for Category dropdown with plus icon
+    const renderCategoryDropdown = () => (
+        <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Category *
+            </Label>
+            <div className="flex gap-2">
+                <div className="flex-1">
+                    <SearchableDropdownWithIcon
+                        value={formValues.category_id || ""}
+                        onValueChange={(value) => {
+                            setValue("category_id", Number(value), { shouldValidate: true })
+                        }}
+                        options={categories.map((cat: JobCategory) => ({
+                            value: cat.id,
+                            label: cat.name,
+                            ...cat
+                        }))}
+                        onSearch={(search) => {
+                            setCategorySearch(search)
+                            dispatch(fetchJobCategories({
+                                page: 1,
+                                per_page: 10,
+                                search: search,
+                            }))
+                        }}
+                        placeholder="Select category"
+                        disabled={isLoading || categoriesLoading}
+                        isLoading={categoriesLoading}
+                        emptyMessage={categorySearch ? "No categories found" : "No categories available"}
+                        searchPlaceholder="Search categories..."
+                        icon={Tag}
+                        iconPosition="left"
                     />
-                </form>
-            </DialogContent>
-        </Dialog>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10"
+                    onClick={() => setCategoryCreateDialogOpen(true)}
+                    disabled={isLoading}
+                    title="Create new category"
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </div>
+            {errors.category_id && (
+                <p className="text-sm text-red-500 mt-1">{errors.category_id.message}</p>
+            )}
+        </div>
+    )
+
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+
+                <DialogContent className="sm:max-w-[700px] w-[90vw] max-w-[90vw] mx-auto max-h-[85vh] overflow-y-auto dark:bg-gray-900 p-6">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
+                        <Image src="/images/logo.png" alt="" width={24} height={24} />
+                        <span className="whitespace-nowrap">Create New Job</span>
+                    </div>
+
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        {/* Job Title */}
+                        <div className="w-full">
+                            <FloatingLabelInput
+                                label="Job Title *"
+                                {...register("title")}
+                                error={errors.title?.message}
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        {/* Category & Location Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Category with Plus Button */}
+                            <div className="space-y-2">
+                                {renderCategoryDropdown()}
+                            </div>
+
+                            {/* Location */}
+                            <div className="relative space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Location
+                                </Label>
+                                <FloatingLabelInput
+                                    label="Location *"
+                                    {...register("location")}
+                                    error={errors.location?.message}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Employment & Payment Type Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Employment Type */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Employment Type *
+                                </Label>
+                                <SearchableDropdownWithIcon
+                                    value={formValues.employment_type || ""}
+                                    onValueChange={(value) => {
+                                        setValue("employment_type", value.toString(), { shouldValidate: true })
+                                    }}
+                                    options={employmentTypes}
+                                    onSearch={() => { }}
+                                    placeholder="Select employment type"
+                                    disabled={isLoading}
+                                    emptyMessage="No employment types available"
+                                    searchPlaceholder="Search..."
+                                    icon={Briefcase}
+                                    iconPosition="left"
+                                />
+                                {errors.employment_type && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.employment_type.message}</p>
+                                )}
+                            </div>
+
+                            {/* Payment Type */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Payment Type *
+                                </Label>
+                                <SearchableDropdownWithIcon
+                                    value={formValues.payment_type || ""}
+                                    onValueChange={(value) => {
+                                        setValue("payment_type", value.toString(), { shouldValidate: true })
+                                    }}
+                                    options={paymentTypes}
+                                    onSearch={() => { }}
+                                    placeholder="Select payment type"
+                                    disabled={isLoading}
+                                    emptyMessage="No payment types available"
+                                    searchPlaceholder="Search..."
+                                    icon={DollarSign}
+                                    iconPosition="left"
+                                />
+                                {errors.payment_type && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.payment_type.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Pay Rate Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Min Pay Rate */}
+                            <div className="relative">
+                                <FloatingLabelInput
+                                    label="Min Pay Rate *"
+                                    type="number"
+                                    step="0.01"
+                                    {...register("min_pay_rate")}
+                                    error={errors.min_pay_rate?.message}
+                                    disabled={isLoading}
+                                />
+                            </div>
+
+                            {/* Max Pay Rate */}
+                            <div className="relative">
+                                <FloatingLabelInput
+                                    label="Max Pay Rate *"
+                                    type="number"
+                                    step="0.01"
+                                    {...register("max_pay_rate")}
+                                    error={errors.max_pay_rate?.message}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Vacancies & Deadline Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Vacancies */}
+                            <div className="relative space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Number of Vacancies *
+                                </Label>
+                                <FloatingLabelInput
+                                    label="Number of Vacancies *"
+                                    type="number"
+                                    {...register("vacancies")}
+                                    error={errors.vacancies?.message}
+                                    disabled={isLoading}
+                                />
+                            </div>
+
+                            {/* Deadline */}
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Application Deadline *
+                                </Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal h-11",
+                                                !deadlineDate && "text-muted-foreground"
+                                            )}
+                                            disabled={isLoading}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {formatDateDisplay(deadlineDate)}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={deadlineDate}
+                                            onSelect={setDeadlineDate}
+                                            initialFocus
+                                            disabled={{ before: new Date() }}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {errors.deadline && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.deadline.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Job Description with TinyMCE */}
+                        <div className="w-full">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                                Job Description
+                            </Label>
+                            {mounted && (
+                                <TiptapEditor
+                                    content={watch("description") || ""}
+                                    onChange={(content) => {
+                                        setValue("description", content, { shouldValidate: true })
+                                    }}
+                                    editable={!isLoading}
+                                    placeholder="Write job description..."
+                                />
+                            )}
+                            {!mounted && (
+                                <textarea
+                                    rows={4}
+                                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm"
+                                    placeholder="Loading editor..."
+                                    disabled
+                                />
+                            )}
+                        </div>
+
+                        {/* Requirements with TinyMCE */}
+                        <div className="w-full">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                                Requirements
+                            </Label>
+                            {mounted && (
+                                <TiptapEditor
+                                    content={watch("requirements") || ""}
+                                    onChange={(content) => {
+                                        setValue("requirements", content, { shouldValidate: true })
+                                    }}
+                                    editable={!isLoading}
+                                    placeholder="Write job requirements..."
+                                />
+                            )}
+                            {!mounted && (
+                                <textarea
+                                    rows={4}
+                                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm"
+                                    placeholder="Loading editor..."
+                                    disabled
+                                />
+                            )}
+                        </div>
+
+                        {/* Footer Actions */}
+                        <DialogActionFooter
+                            cancelText="Cancel"
+                            submitText="Create Job"
+                            isSubmitting={isLoading}
+                            onSubmit={handleSubmit(onSubmit)}
+                        />
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Job Category Create Dialog */}
+            <JobCategoryCreateForm
+                trigger={<div />}
+                isOpen={categoryCreateDialogOpen}
+                onOpenChange={setCategoryCreateDialogOpen}
+                onSuccess={handleCategoryCreated}
+            />
+        </>
     )
 }

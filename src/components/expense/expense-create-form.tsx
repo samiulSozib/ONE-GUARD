@@ -11,7 +11,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, UploadCloud, DollarSign, Tag, Building, Users } from "lucide-react"
+import { CalendarIcon, UploadCloud, DollarSign, Tag, Building, Users, Plus } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
@@ -32,6 +32,9 @@ import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
 import { fetchExpenseCategorys } from "@/store/slices/expenseCategorySlice"
+import { ExpenseCategoryCreateForm } from "../expense-category/expense-category-create-form"
+import { CreateSiteWithClientForm } from '@/components/clients/create-site-with-client-form'
+import { Input } from "@/components/ui/input"
 
 // Currency options
 const currencyOptions = [
@@ -89,12 +92,16 @@ export function ExpenseCreateForm({
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
 
+    // Dialog states for create forms
+    const [categoryCreateDialogOpen, setCategoryCreateDialogOpen] = useState(false)
+    const [siteCreateDialogOpen, setSiteCreateDialogOpen] = useState(false)
+
     // Redux states for dropdown data
-    const { expenseCategories, pagination: categoriesPagination, isLoading: categoriesLoading } = 
+    const { expenseCategories, isLoading: categoriesLoading } =
         useAppSelector((state) => state.expenseCategory)
-    const { sites, pagination: sitesPagination, isLoading: sitesLoading } = 
+    const { sites, isLoading: sitesLoading } =
         useAppSelector((state) => state.site)
-    const { guards, pagination: guardsPagination, isLoading: guardsLoading } = 
+    const { guards, isLoading: guardsLoading } =
         useAppSelector((state) => state.guard)
 
     // Search states for comboboxes
@@ -131,15 +138,17 @@ export function ExpenseCreateForm({
 
     // Initial fetch on mount
     useEffect(() => {
-        dispatch(fetchExpenseCategorys({ page: 1, per_page: 10 }))
-        dispatch(fetchSites({ page: 1, per_page: 10 }))
-        dispatch(fetchGuards({ page: 1, per_page: 10 }))
-    }, [dispatch])
+        if (isOpen) {
+            dispatch(fetchExpenseCategorys({ page: 1, per_page: 10 }))
+            dispatch(fetchSites({ page: 1, per_page: 10, is_active: true }))
+            dispatch(fetchGuards({ page: 1, per_page: 10 }))
+        }
+    }, [dispatch, isOpen])
 
     // Fetch categories when search changes
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (categorySearch.trim() || categorySearch === "") {
+            if (isOpen) {
                 dispatch(fetchExpenseCategorys({
                     page: 1,
                     per_page: 10,
@@ -149,12 +158,12 @@ export function ExpenseCreateForm({
         }, 300)
 
         return () => clearTimeout(timer)
-    }, [categorySearch, dispatch])
+    }, [categorySearch, dispatch, isOpen])
 
     // Fetch sites when search changes
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (siteSearch.trim() || siteSearch === "") {
+            if (isOpen) {
                 dispatch(fetchSites({
                     page: 1,
                     per_page: 10,
@@ -165,12 +174,12 @@ export function ExpenseCreateForm({
         }, 300)
 
         return () => clearTimeout(timer)
-    }, [siteSearch, dispatch])
+    }, [siteSearch, dispatch, isOpen])
 
     // Fetch guards when search changes
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (guardSearch.trim() || guardSearch === "") {
+            if (isOpen) {
                 dispatch(fetchGuards({
                     page: 1,
                     per_page: 10,
@@ -180,7 +189,7 @@ export function ExpenseCreateForm({
         }, 300)
 
         return () => clearTimeout(timer)
-    }, [guardSearch, dispatch])
+    }, [guardSearch, dispatch, isOpen])
 
     // Update expense_date when date changes
     useEffect(() => {
@@ -188,6 +197,31 @@ export function ExpenseCreateForm({
             setValue('expense_date', format(expenseDate, 'yyyy-MM-dd'), { shouldValidate: true })
         }
     }, [expenseDate, setValue])
+
+    // Handle category creation success
+    const handleCategoryCreated = () => {
+        dispatch(fetchExpenseCategorys({
+            page: 1,
+            per_page: 10,
+            search: categorySearch.trim()
+        }))
+        setCategoryCreateDialogOpen(false)
+    }
+
+    // Handle site creation success
+    const handleSiteCreated = (site: Site) => {
+        dispatch(fetchSites({
+            page: 1,
+            per_page: 10,
+            is_active: true,
+            search: siteSearch.trim()
+        }))
+        setSiteCreateDialogOpen(false)
+        // Optionally auto-select the newly created site
+        if (site && site.id) {
+            setValue("site_id", site.id, { shouldValidate: true })
+        }
+    }
 
     // Get selected items for display
     const selectedCategory = expenseCategories.find((cat: ExpenseCategory) => cat.id === formValues.expense_category_id)
@@ -274,277 +308,336 @@ export function ExpenseCreateForm({
         }
     }
 
-    return (
-        <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild>
-                {trigger}
-            </DialogTrigger>
-
-            <DialogContent className="sm:max-w-[900px] w-[90vw] max-w-[90vw] mx-auto max-h-[85vh] overflow-y-auto dark:bg-gray-900 p-6">
-                {/* Header */}
-                <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
-                    <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Add New Expense</span>
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    {/* Title - Full width */}
-                    <div className="w-full">
-                        <FloatingLabelInput
-                            label="Expense Title *"
-                            {...register("title")}
-                            error={errors.title?.message}
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    {/* First Row: Category, Site, Guard - 3 columns */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Expense Category */}
-                        <div className="space-y-2">
-                            <Label htmlFor="category" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Category *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.expense_category_id || ""}
-                                onValueChange={(value) => {
-                                    setValue("expense_category_id", Number(value), { shouldValidate: true })
-                                }}
-                                options={expenseCategories.map((cat: ExpenseCategory) => ({
-                                    value: cat?.id,
-                                    label: cat?.name || '',
-                                    ...cat
-                                }))}
-                                onSearch={(search) => {
-                                    setCategorySearch(search)
-                                    dispatch(fetchExpenseCategorys({
-                                        page: 1,
-                                        per_page: 10,
-                                        search: search
-                                    }))
-                                }}
-                                placeholder="Select category"
-                                disabled={isLoading || categoriesLoading}
-                                isLoading={categoriesLoading}
-                                emptyMessage={categorySearch ? "No categories found" : "No categories available"}
-                                searchPlaceholder="Search categories..."
-                                icon={Tag}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
-                                    if (!value) return "Select category"
-                                    const option = options.find(opt => opt.value === value)
-                                    return option?.label || "Select category"
-                                }}
-                            />
-                            {errors.expense_category_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.expense_category_id.message}</p>
-                            )}
-                        </div>
-
-                        {/* Site */}
-                        <div className="space-y-2">
-                            <Label htmlFor="site" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Site *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.site_id || ""}
-                                onValueChange={(value) => {
-                                    setValue("site_id", Number(value), { shouldValidate: true })
-                                }}
-                                options={sites.map((site: Site) => ({
-                                    value: site.id,
-                                    label: site.site_name || site.title || `Site ${site.id}`,
-                                    ...site
-                                }))}
-                                onSearch={(search) => {
-                                    setSiteSearch(search)
-                                    dispatch(fetchSites({
-                                        page: 1,
-                                        per_page: 10,
-                                        is_active: true,
-                                        search: search
-                                    }))
-                                }}
-                                placeholder="Select site"
-                                disabled={isLoading || sitesLoading}
-                                isLoading={sitesLoading}
-                                emptyMessage={siteSearch ? "No sites found" : "No sites available"}
-                                searchPlaceholder="Search sites..."
-                                icon={Building}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
-                                    if (!value) return "Select site"
-                                    const option = options.find(opt => opt.value === value)
-                                    return option?.label || "Select site"
-                                }}
-                            />
-                            {errors.site_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.site_id.message}</p>
-                            )}
-                        </div>
-
-                        {/* Guard */}
-                        <div className="space-y-2">
-                            <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Officer *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.guard_id || ""}
-                                onValueChange={(value) => {
-                                    setValue("guard_id", Number(value), { shouldValidate: true })
-                                }}
-                                options={guards.map((guard: Guard) => ({
-                                    value: guard.id,
-                                    label: `${guard.full_name} (${guard.guard_code})`,
-                                    ...guard
-                                }))}
-                                onSearch={(search) => {
-                                    setGuardSearch(search)
-                                    dispatch(fetchGuards({
-                                        page: 1,
-                                        per_page: 10,
-                                        search: search
-                                    }))
-                                }}
-                                placeholder="Select guard"
-                                disabled={isLoading || guardsLoading}
-                                isLoading={guardsLoading}
-                                emptyMessage={guardSearch ? "No officers found" : "No officers available"}
-                                searchPlaceholder="Search officers..."
-                                icon={Users}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
-                                    if (!value) return "Select officer"
-                                    const option = options.find(opt => opt.value === value)
-                                    return option?.label || "Select officer"
-                                }}
-                            />
-                            {errors.guard_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.guard_id.message}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Second Row: Amount, Currency, Date - 3 columns */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Amount */}
-                        <div className="space-y-2">
-                            <Label htmlFor="amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Amount *
-                            </Label>
-                            <div className="relative">
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                    <DollarSign className="h-4 w-4 text-gray-500" />
-                                </div>
-                                <Input
-                                    id="amount"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                    className="pl-9 h-11"
-                                    {...register("amount")}
-                                    disabled={isLoading}
-                                />
-                            </div>
-                            {errors.amount && (
-                                <p className="text-sm text-red-500 mt-1">{errors.amount.message}</p>
-                            )}
-                        </div>
-
-                        {/* Currency */}
-                        <div className="space-y-2">
-                            <Label htmlFor="currency" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Currency *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.currency || ""}
-                                onValueChange={(value) => {
-                                    setValue("currency", value.toString(), { shouldValidate: true })
-                                }}
-                                options={currencyOptions.map(currency => ({
-                                    value: currency.value,
-                                    label: currency.label,
-                                    symbol: currency.symbol
-                                }))}
-                                onSearch={() => {}} // No search needed for currencies
-                                placeholder="Select currency"
-                                disabled={isLoading}
-                                emptyMessage="No currencies available"
-                                searchPlaceholder="Search currencies..."
-                                icon={DollarSign}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
-                                    if (!value) return "Select currency"
-                                    const option = options.find(opt => opt.value === value)
-                                    return option?.label || "Select currency"
-                                }}
-                            />
-                            {errors.currency && (
-                                <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
-                            )}
-                        </div>
-
-                        {/* Expense Date */}
-                        <div className="space-y-2">
-                            <Label htmlFor="expense_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Expense Date *
-                            </Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full justify-start text-left font-normal h-11",
-                                            !expenseDate && "text-muted-foreground"
-                                        )}
-                                        disabled={isLoading}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                        {formatDateDisplay(expenseDate)}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                    <Calendar
-                                        mode="single"
-                                        selected={expenseDate}
-                                        onSelect={setExpenseDate}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            {errors.expense_date && (
-                                <p className="text-sm text-red-500 mt-1">{errors.expense_date.message}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Description - Full width */}
-                    <div className="w-full">
-                        <FloatingLabelTextarea
-                            label="Description (Optional)"
-                            rows={4}
-                            {...register("description")}
-                            disabled={isLoading}
-                            className="resize-none"
-                            placeholder="Enter expense description, notes, or additional details..."
-                        />
-                    </div>
-
-                    {/* Footer Actions */}
-                    <DialogActionFooter
-                        cancelText="Cancel"
-                        submitText="Create Expense"
-                        isSubmitting={isLoading}
-                        submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                        onSubmit={handleSubmit(onSubmit)}
+    // Custom render for Category dropdown with plus icon
+    const renderCategoryDropdown = () => (
+        <div className="space-y-2">
+            <Label htmlFor="category" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Category *
+            </Label>
+            <div className="flex gap-2">
+                <div className="flex-1">
+                    <SearchableDropdownWithIcon
+                        value={formValues.expense_category_id || ""}
+                        onValueChange={(value) => {
+                            setValue("expense_category_id", Number(value), { shouldValidate: true })
+                        }}
+                        options={expenseCategories.map((cat: ExpenseCategory) => ({
+                            value: cat?.id,
+                            label: cat?.name || '',
+                            ...cat
+                        }))}
+                        onSearch={(search) => {
+                            setCategorySearch(search)
+                            dispatch(fetchExpenseCategorys({
+                                page: 1,
+                                per_page: 10,
+                                search: search
+                            }))
+                        }}
+                        placeholder="Select category"
+                        disabled={isLoading || categoriesLoading}
+                        isLoading={categoriesLoading}
+                        emptyMessage={categorySearch ? "No categories found" : "No categories available"}
+                        searchPlaceholder="Search categories..."
+                        icon={Tag}
+                        iconPosition="left"
+                        displayValue={(value, options) => {
+                            if (!value) return "Select category"
+                            const option = options.find(opt => opt.value === value)
+                            return option?.label || "Select category"
+                        }}
                     />
-                </form>
-            </DialogContent>
-        </Dialog>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10"
+                    onClick={() => setCategoryCreateDialogOpen(true)}
+                    disabled={isLoading}
+                    title="Create new category"
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </div>
+            {errors.expense_category_id && (
+                <p className="text-sm text-red-500 mt-1">{errors.expense_category_id.message}</p>
+            )}
+        </div>
+    )
+
+    // Custom render for Site dropdown with plus icon
+    const renderSiteDropdown = () => (
+        <div className="space-y-2">
+            <Label htmlFor="site" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Site *
+            </Label>
+            <div className="flex gap-2">
+                <div className="flex-1">
+                    <SearchableDropdownWithIcon
+                        value={formValues.site_id || ""}
+                        onValueChange={(value) => {
+                            setValue("site_id", Number(value), { shouldValidate: true })
+                        }}
+                        options={sites.map((site: Site) => ({
+                            value: site.id,
+                            label: site.site_name || site.title || `Site ${site.id}`,
+                            ...site
+                        }))}
+                        onSearch={(search) => {
+                            setSiteSearch(search)
+                            dispatch(fetchSites({
+                                page: 1,
+                                per_page: 10,
+                                is_active: true,
+                                search: search
+                            }))
+                        }}
+                        placeholder="Select site"
+                        disabled={isLoading || sitesLoading}
+                        isLoading={sitesLoading}
+                        emptyMessage={siteSearch ? "No sites found" : "No sites available"}
+                        searchPlaceholder="Search sites..."
+                        icon={Building}
+                        iconPosition="left"
+                        displayValue={(value, options) => {
+                            if (!value) return "Select site"
+                            const option = options.find(opt => opt.value === value)
+                            return option?.label || "Select site"
+                        }}
+                    />
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10"
+                    onClick={() => setSiteCreateDialogOpen(true)}
+                    disabled={isLoading}
+                    title="Create new site"
+                >
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </div>
+            {errors.site_id && (
+                <p className="text-sm text-red-500 mt-1">{errors.site_id.message}</p>
+            )}
+        </div>
+    )
+
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+
+                <DialogContent className="sm:max-w-[900px] w-[90vw] max-w-[90vw] mx-auto max-h-[85vh] overflow-y-auto dark:bg-gray-900 p-6">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
+                        <Image src="/images/logo.png" alt="" width={24} height={24} />
+                        <span className="whitespace-nowrap">Add New Expense</span>
+                    </div>
+
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        {/* Title - Full width */}
+                        <div className="w-full">
+                            <FloatingLabelInput
+                                label="Expense Title *"
+                                {...register("title")}
+                                error={errors.title?.message}
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        {/* First Row: Category, Site, Guard - 3 columns */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Expense Category with Plus Button */}
+                            <div className="space-y-2">
+                                {renderCategoryDropdown()}
+                            </div>
+
+                            {/* Site with Plus Button */}
+                            <div className="space-y-2">
+                                {renderSiteDropdown()}
+                            </div>
+
+                            {/* Guard */}
+                            <div className="space-y-2">
+                                <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Officer *
+                                </Label>
+                                <SearchableDropdownWithIcon
+                                    value={formValues.guard_id || ""}
+                                    onValueChange={(value) => {
+                                        setValue("guard_id", Number(value), { shouldValidate: true })
+                                    }}
+                                    options={guards.map((guard: Guard) => ({
+                                        value: guard.id,
+                                        label: `${guard.full_name} (${guard.guard_code})`,
+                                        ...guard
+                                    }))}
+                                    onSearch={(search) => {
+                                        setGuardSearch(search)
+                                        dispatch(fetchGuards({
+                                            page: 1,
+                                            per_page: 10,
+                                            search: search
+                                        }))
+                                    }}
+                                    placeholder="Select guard"
+                                    disabled={isLoading || guardsLoading}
+                                    isLoading={guardsLoading}
+                                    emptyMessage={guardSearch ? "No officers found" : "No officers available"}
+                                    searchPlaceholder="Search officers..."
+                                    icon={Users}
+                                    iconPosition="left"
+                                    displayValue={(value, options) => {
+                                        if (!value) return "Select officer"
+                                        const option = options.find(opt => opt.value === value)
+                                        return option?.label || "Select officer"
+                                    }}
+                                />
+                                {errors.guard_id && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.guard_id.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Second Row: Amount, Currency, Date - 3 columns */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Amount */}
+                            <div className="space-y-2">
+                                <Label htmlFor="amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Amount *
+                                </Label>
+                                <div className="relative">
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                        <DollarSign className="h-4 w-4 text-gray-500" />
+                                    </div>
+                                    <Input
+                                        id="amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        className="pl-9 h-11"
+                                        {...register("amount")}
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                                {errors.amount && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.amount.message}</p>
+                                )}
+                            </div>
+
+                            {/* Currency */}
+                            <div className="space-y-2">
+                                <Label htmlFor="currency" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Currency *
+                                </Label>
+                                <SearchableDropdownWithIcon
+                                    value={formValues.currency || ""}
+                                    onValueChange={(value) => {
+                                        setValue("currency", value.toString(), { shouldValidate: true })
+                                    }}
+                                    options={currencyOptions.map(currency => ({
+                                        value: currency.value,
+                                        label: currency.label,
+                                        symbol: currency.symbol
+                                    }))}
+                                    onSearch={() => {}} // No search needed for currencies
+                                    placeholder="Select currency"
+                                    disabled={isLoading}
+                                    emptyMessage="No currencies available"
+                                    searchPlaceholder="Search currencies..."
+                                    icon={DollarSign}
+                                    iconPosition="left"
+                                    displayValue={(value, options) => {
+                                        if (!value) return "Select currency"
+                                        const option = options.find(opt => opt.value === value)
+                                        return option?.label || "Select currency"
+                                    }}
+                                />
+                                {errors.currency && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
+                                )}
+                            </div>
+
+                            {/* Expense Date */}
+                            <div className="space-y-2">
+                                <Label htmlFor="expense_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Expense Date *
+                                </Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal h-11",
+                                                !expenseDate && "text-muted-foreground"
+                                            )}
+                                            disabled={isLoading}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
+                                            {formatDateDisplay(expenseDate)}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={expenseDate}
+                                            onSelect={setExpenseDate}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {errors.expense_date && (
+                                    <p className="text-sm text-red-500 mt-1">{errors.expense_date.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Description - Full width */}
+                        <div className="w-full">
+                            <FloatingLabelTextarea
+                                label="Description (Optional)"
+                                rows={4}
+                                {...register("description")}
+                                disabled={isLoading}
+                                className="resize-none"
+                                placeholder="Enter expense description, notes, or additional details..."
+                            />
+                        </div>
+
+                        {/* Footer Actions */}
+                        <DialogActionFooter
+                            cancelText="Cancel"
+                            submitText="Create Expense"
+                            isSubmitting={isLoading}
+                            submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                            onSubmit={handleSubmit(onSubmit)}
+                        />
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Expense Category Create Dialog */}
+            <ExpenseCategoryCreateForm
+                trigger={<div />}
+                isOpen={categoryCreateDialogOpen}
+                onOpenChange={setCategoryCreateDialogOpen}
+                onSuccess={handleCategoryCreated}
+            />
+
+            {/* Site Create Dialog */}
+            <CreateSiteWithClientForm
+                trigger={<div />}
+                isOpen={siteCreateDialogOpen}
+                onOpenChange={setSiteCreateDialogOpen}
+                onSuccess={handleSiteCreated}
+            />
+        </>
     )
 }
-
-// Add missing Input import
-import { Input } from "@/components/ui/input"
