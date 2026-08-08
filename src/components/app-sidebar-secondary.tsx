@@ -214,7 +214,7 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
 
       {/* ── Footer ── */}
       <SidebarFooter className="border-t border-zinc-100 p-2">
-        <NavUser user={data.user} />
+        {/* <NavUser user={data.user} /> */}
       </SidebarFooter>
 
       <SidebarRail />

@@ -41,7 +41,7 @@ import { NavUser } from "@/components/nav-user"
 const data = {
   user: {
     name: "OGS",
-    
+
   },
 }
 
@@ -219,7 +219,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* ── Footer ── */}
       <SidebarFooter className="border-t border-white/[0.06] p-2">
-        <NavUser user={data.user} />
+        {/* <NavUser user={data.user} /> */}
       </SidebarFooter>
 
       <SidebarRail />
