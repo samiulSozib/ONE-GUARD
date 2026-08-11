@@ -58,12 +58,18 @@ const navGroups = [
       { title: "Security Officers", url: "/guards", icon: Shield },
       { title: "Client Accounts", url: "/clients", icon: Users },
       { title: "Client Contracts", url: "/client-contracts", icon: MessageSquareWarning },
+      { title: "Client Contract Services", url: "/client-contract-services", icon: MessageSquareWarning },
+      { title: "Contract Services Components", url: "/client-contract-service-components", icon: MessageSquareWarning },
+
+
+
 
       { title: "Time Off", url: "/leave", icon: CalendarCheck },
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
       { title: "Contacts", url: "/contacts", icon: Phone },
-            { title: "Location Tracking", url: "/location-tracking", icon: LocateIcon },
+
+      { title: "Location Tracking", url: "/location-tracking", icon: LocateIcon },
 
     ],
   },
@@ -96,15 +102,15 @@ const navGroups = [
 
   },
   {
-      label: "Jobs",
-      items: [
+    label: "Jobs",
+    items: [
 
-        { title: "Job Categories", url: "/job-categories", icon: MessageSquareWarning },
-        { title: "Jobs", url: "/jobs", icon: AlertTriangle },
-        { title: "Job Applications", url: "/job-applications", icon: AlertTriangle },
-      ],
-    },
-    {
+      { title: "Job Categories", url: "/job-categories", icon: MessageSquareWarning },
+      { title: "Jobs", url: "/jobs", icon: AlertTriangle },
+      { title: "Job Applications", url: "/job-applications", icon: AlertTriangle },
+    ],
+  },
+  {
     label: "Email Templates",
     items: [
 
@@ -117,10 +123,10 @@ const navGroups = [
     items: [
 
       { title: "Service Category", url: "/company-service-categories", icon: MessageSquareWarning },
-       { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
-             { title: "Billing Methods", url: "/company-service-billing-method", icon: MessageSquareWarning },
-                   { title: "Company Service", url: "/company-service", icon: MessageSquareWarning },
-                         { title: "Service Component", url: "/company-service-component", icon: MessageSquareWarning },
+      { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
+      { title: "Billing Methods", url: "/company-service-billing-method", icon: MessageSquareWarning },
+      { title: "Company Service", url: "/company-service", icon: MessageSquareWarning },
+      { title: "Service Component", url: "/company-service-component", icon: MessageSquareWarning },
 
 
 

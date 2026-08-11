@@ -32,6 +32,8 @@ import companyServiceUnitTypeReducer from './slices/company-service-unit-type.sl
 import companyServiceBillingMethodReducer from './slices/company-service-billing-method.slice';
 import companyServiceReducer from './slices/company-service.slice';
 import companyServiceComponentReducer from './slices/company-service-component.slice';
+import clientContractServiceReducer from './slices/client-contract-service.slice';
+import clientContractServiceComponentReducer from './slices/client-contract-service-component.slice';
 
 export const store = configureStore({
   reducer: {
@@ -68,6 +70,9 @@ export const store = configureStore({
     companyServiceBillingMethod: companyServiceBillingMethodReducer,
     companyService: companyServiceReducer,
     companyServiceComponent: companyServiceComponentReducer,
+    clientContractService: clientContractServiceReducer,
+    clientContractServiceComponent: clientContractServiceComponentReducer,
+
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
