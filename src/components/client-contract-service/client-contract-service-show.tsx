@@ -27,7 +27,9 @@ import {
   Percent,
   Hash,
   MapPin,
-  Users
+  Users,
+  Layers,
+  Tag
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -111,6 +113,34 @@ export function ClientContractServiceShow({
       <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-0">
         <XCircle className="h-3 w-3 mr-1" />
         Inactive
+      </Badge>
+    );
+  };
+
+  // Get discount type badge
+  const getDiscountTypeBadge = (type: string | null) => {
+    if (!type) return <Badge variant="outline">None</Badge>;
+    const colors: Record<string, string> = {
+      percentage: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      fixed: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    };
+    return (
+      <Badge className={`${colors[type] || "bg-gray-100"} border-0`}>
+        {type.charAt(0).toUpperCase() + type.slice(1)}
+      </Badge>
+    );
+  };
+
+  // Get pricing type badge
+  const getPricingTypeBadge = (type: string) => {
+    const colors: Record<string, string> = {
+      hourly: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      quantity_rate: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      fixed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    };
+    return (
+      <Badge className={`${colors[type] || "bg-gray-100"} border-0`}>
+        {type.replace('_', ' ')}
       </Badge>
     );
   };
@@ -218,6 +248,16 @@ export function ClientContractServiceShow({
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Code: <code>{item.company_service?.code || "N/A"}</code>
               </p>
+              <div className="flex gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  {item.company_service?.service_kind || "N/A"}
+                </Badge>
+                {item.company_service?.is_package && (
+                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-0 text-xs">
+                    Package
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -226,12 +266,25 @@ export function ClientContractServiceShow({
                 Contract Site
               </div>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {item.contract_site?.site_id || "N/A"}
+                Site ID: {item.contract_site?.site_id || "N/A"}
               </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Guards Required: {item.contract_site?.guards_required || "N/A"}
+              </p>
+              <div className="flex gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  Contract ID: {item.contract_site?.client_contract_id || "N/A"}
+                </Badge>
+                {item.contract_site?.is_primary && (
+                  <Badge className="bg-gold-100 text-gold-800 border-0 text-xs">
+                    Primary
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Billing & Pricing */}
+          {/* Billing & Currency */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -242,87 +295,206 @@ export function ClientContractServiceShow({
                 {item.billing_method?.name || "N/A"}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Type: <Badge variant="outline" className="text-xs">{item.billing_method?.calculation_type || "N/A"}</Badge>
+                Code: <code>{item.billing_method?.code || "N/A"}</code>
               </p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  {item.billing_method?.calculation_type || "N/A"}
+                </Badge>
+                {item.billing_method?.is_recurring && (
+                  <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-0 text-xs">
+                    Recurring
+                  </Badge>
+                )}
+                {item.billing_method?.requires_attendance && (
+                  <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-0 text-xs">
+                    Requires Attendance
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
                 <DollarSign className="h-4 w-4" />
-                Pricing
+                Currency
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-xs text-gray-500">Selling Rate</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(item.selling_rate)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Internal Cost</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(item.internal_cost)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Pricing Type</p>
-                  <Badge variant="outline" className="text-xs">
-                    {item.pricing_type?.replace('_', ' ')}
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {item.currency?.name || "N/A"}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Code: <code>{item.currency?.code || "N/A"}</code>
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Symbol: <span className="font-semibold">{item.currency?.symbol || "N/A"}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Pricing Configuration */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Percent className="h-4 w-4" />
+              Pricing Configuration
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Pricing Type</p>
+                {getPricingTypeBadge(item.pricing_type)}
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Quantity</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {item.quantity}
+                </p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Minimum Billable Quantity</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {item.minimum_billable_quantity || "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Rates */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Rates
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Selling Rate</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(item.selling_rate)}
+                </p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Internal Cost</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(item.internal_cost)}
+                </p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Fixed Amount</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(item.fixed_amount)}
+                </p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Is Package</p>
+                {item.is_package ? (
+                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-0">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Yes
                   </Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Quantity</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {item.quantity}
-                  </p>
-                </div>
+                ) : (
+                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-0">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    No
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Additional Rates */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-xs text-gray-500">Overtime Rate</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {formatCurrency(item.overtime_rate)}
-              </p>
-            </div>
-            <div className="space-y-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-xs text-gray-500">Holiday Rate</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {formatCurrency(item.holiday_rate)}
-              </p>
-            </div>
-            <div className="space-y-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-xs text-gray-500">Night Rate</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {formatCurrency(item.night_rate)}
-              </p>
+          {/* Overtime, Holiday, Night Rates */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Special Rates
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Overtime Rate</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(item.overtime_rate)}
+                </p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Holiday Rate</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(item.holiday_rate)}
+                </p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Night Rate</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatCurrency(item.night_rate)}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                <Calendar className="h-4 w-4" />
-                Start Date
+          {/* Discount & Attendance */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Percent className="h-4 w-4" />
+              Discount & Attendance
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Discount Type</p>
+                {getDiscountTypeBadge(item.discount_type)}
               </div>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {formatDate(item.start_date)}
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                <Calendar className="h-4 w-4" />
-                End Date
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Discount Value</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {item.discount_value ? `${item.discount_value}%` : "N/A"}
+                </p>
               </div>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {formatDate(item.end_date) || "Ongoing"}
-              </p>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Requires Attendance</p>
+                {item.requires_attendance ? (
+                  <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-0">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Yes
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-0">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    No
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Date Range */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Date Range
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Start Date</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatDate(item.start_date)}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">End Date</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatDate(item.end_date) || "Ongoing"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Components Count */}
+          {item.components_count !== undefined && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                <Layers className="h-4 w-4" />
+                Components
+              </div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {item.components_count} component{item.components_count !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
 
           {/* Notes */}
           {item.notes && (
@@ -334,6 +506,26 @@ export function ClientContractServiceShow({
               <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                 {item.notes}
               </p>
+            </div>
+          )}
+
+          {/* Metadata */}
+          {item.metadata && Object.keys(item.metadata).length > 0 && (
+            <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                <Tag className="h-4 w-4" />
+                Metadata
+              </div>
+              <div className="space-y-1">
+                {Object.entries(item.metadata).map(([key, value]) => (
+                  <div key={key} className="flex items-start gap-2 text-sm">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">{key}:</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {typeof value === 'string' ? value : JSON.stringify(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

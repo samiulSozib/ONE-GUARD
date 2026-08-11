@@ -1,3 +1,4 @@
+// store/slices/clientContractSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
 import {
@@ -51,6 +52,23 @@ export const fetchContract = createAsyncThunk(
         error instanceof Error
           ? error.message
           : "Failed to fetch client contract";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Add this thunk for fetching contract sites - MAKE SURE THIS EXISTS
+export const fetchContractSites = createAsyncThunk(
+  "clientContract/fetchContractSites",
+  async (contractId: number, { rejectWithValue }) => {
+    try {
+      const response = await clientContractService.getContractSites(contractId);
+      return response;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch contract sites";
       return rejectWithValue(message);
     }
   }
@@ -322,6 +340,21 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
+      // Fetch contract sites - ADD THIS REDUCER
+      .addCase(fetchContractSites.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchContractSites.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // The sites are stored in action.payload.items
+        // You can add a contractSites property to state if needed
+      })
+      .addCase(fetchContractSites.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
       // Create contract
       .addCase(createContract.pending, (state) => {
         state.isLoading = true;
@@ -338,7 +371,7 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Update contract
+      // ... (rest of the reducers remain the same)
       .addCase(updateContract.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -360,7 +393,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Delete contract
       .addCase(deleteContract.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -383,7 +415,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Activate contract
       .addCase(activateContract.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -405,7 +436,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Suspend contract
       .addCase(suspendContract.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -427,7 +457,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Terminate contract
       .addCase(terminateContract.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -449,7 +478,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Renew contract
       .addCase(renewContract.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -471,7 +499,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Toggle status
       .addCase(toggleContractStatus.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -493,7 +520,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Add contract site
       .addCase(addContractSite.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -515,7 +541,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Remove contract site
       .addCase(removeContractSite.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -536,7 +561,6 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Update contract site
       .addCase(updateContractSite.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -558,14 +582,13 @@ const clientContractSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Fetch contract stats
       .addCase(fetchContractStats.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchContractStats.fulfilled, (state) => {
         state.isLoading = false;
-        // Handle stats if needed - you might want to add a stats property to state
+        // Handle stats if needed
       })
       .addCase(fetchContractStats.rejected, (state, action) => {
         state.isLoading = false;

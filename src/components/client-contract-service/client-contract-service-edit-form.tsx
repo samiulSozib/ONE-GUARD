@@ -20,13 +20,13 @@ import {
 } from "@/store/slices/client-contract-service.slice";
 import { fetchCompanyServices } from "@/store/slices/company-service.slice";
 import { fetchSites } from "@/store/slices/siteSlice";
-import { fetchSiteLocations } from "@/store/slices/siteLocationSlice";
 import { fetchCompanyServiceBillingMethods } from "@/store/slices/company-service-billing-method.slice";
+import { fetchContracts } from "@/store/slices/clientContractSlice";
 import { ClientContractService, UpdateClientContractServiceDto } from "@/app/types/client-contract-service";
 import { CompanyService } from "@/app/types/company-service";
 import { Site } from "@/app/types/site";
-import { SiteLocation } from "@/app/types/siteLocation.types";
 import { CompanyServiceBillingMethod } from "@/app/types/company-service-billing-method";
+import { ClientContract } from "@/app/types/clientContract";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -36,15 +36,15 @@ import { Switch } from "../ui/switch";
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon";
 import {
   Building,
-  Tag,
   CreditCard,
   DollarSign,
   Package,
-  MapPin,
-  Users,
   Percent,
+  Calendar,
+  FileText
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { clientContractService } from "@/service/clientContract.service";
 
 // Pricing types
 const pricingTypes = [
@@ -61,15 +61,14 @@ const discountTypes = [
 
 // Zod schema
 const contractServiceSchema = z.object({
+  contract_id: z.number()
+    .min(1, { message: "Contract is required" }),
+
   client_contract_site_id: z.number()
     .min(1, { message: "Contract site is required" }),
 
   company_service_id: z.number()
     .min(1, { message: "Company service is required" }),
-
-  site_location_id: z.number()
-    .optional()
-    .nullable(),
 
   company_service_billing_method_id: z.number()
     .min(1, { message: "Billing method is required" }),
@@ -94,7 +93,7 @@ const contractServiceSchema = z.object({
   fixed_amount: z.string()
     .optional()
     .nullable()
-       .refine(
+    .refine(
   (val) =>
     val === undefined ||
     val === null ||
@@ -111,7 +110,7 @@ const contractServiceSchema = z.object({
   overtime_rate: z.string()
     .optional()
     .nullable()
-       .refine(
+    .refine(
   (val) =>
     val === undefined ||
     val === null ||
@@ -123,7 +122,7 @@ const contractServiceSchema = z.object({
   holiday_rate: z.string()
     .optional()
     .nullable()
-       .refine(
+    .refine(
   (val) =>
     val === undefined ||
     val === null ||
@@ -135,7 +134,7 @@ const contractServiceSchema = z.object({
   night_rate: z.string()
     .optional()
     .nullable()
-       .refine(
+    .refine(
   (val) =>
     val === undefined ||
     val === null ||
@@ -156,7 +155,7 @@ const contractServiceSchema = z.object({
     val === undefined ||
     val === null ||
     val === '' ||
-    /^\d+(\.\d{1,2})?$/.test(val),  {
+    /^\d+(\.\d{1,2})?$/.test(val), {
       message: "Please enter a valid amount",
     }),
 
@@ -187,17 +186,19 @@ export function ClientContractServiceEditForm({
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [contractSites, setContractSites] = useState<any[]>([]);
+  const [isLoadingSites, setIsLoadingSites] = useState(false);
 
   // Redux states for dropdown data
   const { companyServices } = useAppSelector((state) => state.companyService);
   const { sites } = useAppSelector((state) => state.site);
-  const { siteLocations } = useAppSelector((state) => state.siteLocation);
   const { companyServiceBillingMethods } = useAppSelector((state) => state.companyServiceBillingMethod);
+  const { contracts } = useAppSelector((state) => state.clientContract);
 
   // Search states for comboboxes
+  const [contractSearch, setContractSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
-  const [locationSearch, setLocationSearch] = useState("");
   const [billingMethodSearch, setBillingMethodSearch] = useState("");
 
   const {
@@ -210,9 +211,9 @@ export function ClientContractServiceEditForm({
   } = useForm<ContractServiceFormData>({
     resolver: zodResolver(contractServiceSchema),
     defaultValues: {
-      client_contract_site_id: undefined,
+      contract_id: undefined,
+      client_contract_site_id: 0,
       company_service_id: undefined,
-      site_location_id: null,
       company_service_billing_method_id: undefined,
       currency_id: 1,
       pricing_type: "hourly",
@@ -247,13 +248,54 @@ export function ClientContractServiceEditForm({
   // Fetch dropdown data when dialog opens
   useEffect(() => {
     if (isOpen) {
+      dispatch(fetchContracts({ page: 1, per_page: 100 }));
       dispatch(fetchCompanyServices({ page: 1, per_page: 100, is_active: true }));
       dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
       dispatch(fetchCompanyServiceBillingMethods({ page: 1, per_page: 100, is_active: true }));
     }
   }, [isOpen, dispatch]);
 
+  // Load contract sites when contract is selected
+  useEffect(() => {
+    const contractId = formValues.contract_id;
+    if (contractId && contractId > 0) {
+      loadContractSites(contractId);
+    } else {
+      setContractSites([]);
+      setValue("client_contract_site_id", 0);
+    }
+  }, [formValues.contract_id]);
+
+  // Simple function to load contract sites
+  const loadContractSites = async (contractId: number) => {
+    setIsLoadingSites(true);
+    try {
+      const response = await clientContractService.getContractSites(contractId);
+      if (response.items) {
+        setContractSites(response.items);
+      }
+    } catch (error) {
+      console.error("Failed to fetch contract sites:", error);
+      SweetAlertService.error('Error', 'Failed to load contract sites');
+    } finally {
+      setIsLoadingSites(false);
+    }
+  };
+
   // Search effects
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (contractSearch.trim() || contractSearch === "") {
+        dispatch(fetchContracts({
+          page: 1,
+          per_page: 10,
+          search: contractSearch.trim()
+        }));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [contractSearch, dispatch]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (serviceSearch.trim() || serviceSearch === "") {
@@ -305,10 +347,26 @@ export function ClientContractServiceEditForm({
 
       if (fetchClientContractService.fulfilled.match(result)) {
         const data = result.payload.item;
+
+        // Get the contract ID from the contract_site
+        const contractId = data.contract_site?.client_contract_id || 0;
+
+        // If contract ID exists, load contract sites and set values
+        if (contractId > 0) {
+          // Set contract ID
+          setValue("contract_id", contractId, { shouldValidate: true });
+
+          // Load contract sites
+          await loadContractSites(contractId);
+
+          // Set the contract site ID (pivot.id)
+          setValue("client_contract_site_id", data.client_contract_site_id || 0, { shouldValidate: true });
+        }
+
         reset({
-          client_contract_site_id: data.client_contract_site_id,
+          contract_id: contractId || undefined,
+          client_contract_site_id: data.client_contract_site_id || 0,
           company_service_id: data.company_service_id,
-          site_location_id: data.site_location_id || null,
           company_service_billing_method_id: data.company_service_billing_method_id,
           currency_id: data.currency_id || 1,
           pricing_type: data.pricing_type || "hourly",
@@ -345,7 +403,6 @@ export function ClientContractServiceEditForm({
       const submitData: UpdateClientContractServiceDto = {
         client_contract_site_id: data.client_contract_site_id,
         company_service_id: data.company_service_id,
-        site_location_id: data.site_location_id || null,
         company_service_billing_method_id: data.company_service_billing_method_id,
         currency_id: data.currency_id || 1,
         pricing_type: data.pricing_type,
@@ -407,9 +464,9 @@ export function ClientContractServiceEditForm({
     } else {
       // Check for unsaved changes
       const originalData = {
+        contract_id: item?.contract_site?.client_contract_id,
         client_contract_site_id: item?.client_contract_site_id,
         company_service_id: item?.company_service_id,
-        site_location_id: item?.site_location_id || null,
         company_service_billing_method_id: item?.company_service_billing_method_id,
         currency_id: item?.currency_id || 1,
         pricing_type: item?.pricing_type || "hourly",
@@ -431,9 +488,9 @@ export function ClientContractServiceEditForm({
       };
 
       const currentData = {
+        contract_id: formValues.contract_id,
         client_contract_site_id: formValues.client_contract_site_id,
         company_service_id: formValues.company_service_id,
-        site_location_id: formValues.site_location_id || null,
         company_service_billing_method_id: formValues.company_service_billing_method_id,
         currency_id: formValues.currency_id || 1,
         pricing_type: formValues.pricing_type,
@@ -467,6 +524,7 @@ export function ClientContractServiceEditForm({
         ).then((result) => {
           if (result.isConfirmed) {
             reset();
+            setContractSites([]);
             onOpenChange?.(false);
           } else {
             onOpenChange?.(true);
@@ -476,13 +534,19 @@ export function ClientContractServiceEditForm({
     }
   };
 
+  // Get site name
+  const getSiteName = (siteId: number) => {
+    const site = sites.find(s => s.id === siteId);
+    return site?.site_name || site?.title || `Site ${siteId}`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
+      <DialogContent className="sm:max-w-[800px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
         {/* Header */}
         <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
           <Image src="/images/logo.png" alt="" width={24} height={24} />
@@ -498,40 +562,41 @@ export function ClientContractServiceEditForm({
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Service Selection */}
+            {/* Contract & Contract Site */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Company Service *
+                  Contract *
                 </Label>
                 <SearchableDropdownWithIcon
-                  value={formValues.company_service_id || ""}
+                  value={formValues.contract_id || ""}
                   onValueChange={(value) => {
-                    setValue("company_service_id", Number(value), { shouldValidate: true });
+                    const contractId = Number(value);
+                    setValue("contract_id", contractId, { shouldValidate: true });
+                    setValue("client_contract_site_id", 0);
                   }}
-                  options={companyServices.map((service: CompanyService) => ({
-                    value: service.id,
-                    label: `${service.name} (${service.code})`,
-                    ...service
+                  options={contracts.map((contract: ClientContract) => ({
+                    value: contract.id,
+                    label: `${contract.contract_number} - ${contract.name}`,
+                    ...contract
                   }))}
                   onSearch={(search) => {
-                    setServiceSearch(search);
-                    dispatch(fetchCompanyServices({
+                    setContractSearch(search);
+                    dispatch(fetchContracts({
                       page: 1,
                       per_page: 10,
-                      is_active: true,
                       search: search
                     }));
                   }}
-                  placeholder="Select service"
+                  placeholder="Select contract"
                   disabled={isLoading || isFetching}
-                  emptyMessage={serviceSearch ? "No services found" : "No services available"}
-                  searchPlaceholder="Search services..."
-                  icon={Package}
+                  emptyMessage={contractSearch ? "No contracts found" : "No contracts available"}
+                  searchPlaceholder="Search contracts..."
+                  icon={FileText}
                   iconPosition="left"
                 />
-                {errors.company_service_id && (
-                  <p className="text-sm text-red-500 mt-1">{errors.company_service_id.message}</p>
+                {errors.contract_id && (
+                  <p className="text-sm text-red-500 mt-1">{errors.contract_id.message}</p>
                 )}
               </div>
 
@@ -544,23 +609,20 @@ export function ClientContractServiceEditForm({
                   onValueChange={(value) => {
                     setValue("client_contract_site_id", Number(value), { shouldValidate: true });
                   }}
-                  options={sites.map((site: Site) => ({
-                    value: site.id,
-                    label: site.site_name || site.title || `Site ${site.id}`,
-                    ...site
+                  options={contractSites.map((item: any) => ({
+                    value: item.pivot?.id || item.id,
+                    label: `${getSiteName(item.site?.id || item.site_id)} (Guard Required: ${item.pivot?.guards_required || item.guards_required || 'N/A'})`,
                   }))}
-                  onSearch={(search) => {
-                    setSiteSearch(search);
-                    dispatch(fetchSites({
-                      page: 1,
-                      per_page: 10,
-                      is_active: true,
-                      search: search
-                    }));
-                  }}
-                  placeholder="Select contract site"
-                  disabled={isLoading || isFetching}
-                  emptyMessage={siteSearch ? "No sites found" : "No sites available"}
+                  placeholder={formValues.contract_id ? "Select contract site" : "Select contract first"}
+                  disabled={isLoading || isFetching || !formValues.contract_id || isLoadingSites}
+                  isLoading={isLoadingSites}
+                  emptyMessage={
+                    !formValues.contract_id
+                      ? "Select a contract first"
+                      : contractSites.length === 0
+                        ? "No sites found for this contract"
+                        : "No sites available"
+                  }
                   searchPlaceholder="Search sites..."
                   icon={Building}
                   iconPosition="left"
@@ -568,10 +630,51 @@ export function ClientContractServiceEditForm({
                 {errors.client_contract_site_id && (
                   <p className="text-sm text-red-500 mt-1">{errors.client_contract_site_id.message}</p>
                 )}
+                {formValues.contract_id && contractSites.length === 0 && !isLoadingSites && (
+                  <p className="text-xs text-amber-500">
+                    No sites are assigned to this contract. Please add sites to the contract first.
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Billing Method & Currency */}
+            {/* Company Service */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Company Service *
+              </Label>
+              <SearchableDropdownWithIcon
+                value={formValues.company_service_id || ""}
+                onValueChange={(value) => {
+                  setValue("company_service_id", Number(value), { shouldValidate: true });
+                }}
+                options={companyServices.map((service: CompanyService) => ({
+                  value: service.id,
+                  label: `${service.name} (${service.code})`,
+                  ...service
+                }))}
+                onSearch={(search) => {
+                  setServiceSearch(search);
+                  dispatch(fetchCompanyServices({
+                    page: 1,
+                    per_page: 10,
+                    is_active: true,
+                    search: search
+                  }));
+                }}
+                placeholder="Select service"
+                disabled={isLoading || isFetching}
+                emptyMessage={serviceSearch ? "No services found" : "No services available"}
+                searchPlaceholder="Search services..."
+                icon={Package}
+                iconPosition="left"
+              />
+              {errors.company_service_id && (
+                <p className="text-sm text-red-500 mt-1">{errors.company_service_id.message}</p>
+              )}
+            </div>
+
+            {/* Billing & Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -633,199 +736,224 @@ export function ClientContractServiceEditForm({
               </div>
             </div>
 
-            {/* Pricing */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Pricing Type *
-                </Label>
-                <Select
-                  value={formValues.pricing_type}
-                  onValueChange={(value) => setValue("pricing_type", value, { shouldValidate: true })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select pricing type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pricingTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.pricing_type && (
-                  <p className="text-sm text-red-500 mt-1">{errors.pricing_type.message}</p>
-                )}
+            {/* Pricing Configuration */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Percent className="h-4 w-4" />
+                Pricing Configuration
               </div>
 
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Quantity *"
-                  type="number"
-                  min="1"
-                  {...register("quantity", { valueAsNumber: true })}
-                  error={errors.quantity?.message}
-                  disabled={isLoading || isFetching}
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Pricing Type *
+                  </Label>
+                  <Select
+                    value={formValues.pricing_type}
+                    onValueChange={(value) => setValue("pricing_type", value, { shouldValidate: true })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select pricing type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pricingTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.pricing_type && (
+                    <p className="text-sm text-red-500 mt-1">{errors.pricing_type.message}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Minimum Billable Quantity"
-                  type="number"
-                  min="0"
-                  {...register("minimum_billable_quantity", { valueAsNumber: true })}
-                  error={errors.minimum_billable_quantity?.message}
-                  disabled={isLoading || isFetching}
-                />
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Quantity *"
+                    type="number"
+                    min="1"
+                    {...register("quantity", { valueAsNumber: true })}
+                    error={errors.quantity?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Minimum Billable Quantity"
+                    type="number"
+                    min="0"
+                    {...register("minimum_billable_quantity", { valueAsNumber: true })}
+                    error={errors.minimum_billable_quantity?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Rates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Selling Rate *"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("selling_rate")}
-                  error={errors.selling_rate?.message}
-                  disabled={isLoading || isFetching}
-                />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <DollarSign className="h-4 w-4" />
+                Rates
               </div>
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Internal Cost *"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("internal_cost")}
-                  error={errors.internal_cost?.message}
-                  disabled={isLoading || isFetching}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Selling Rate *"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("selling_rate")}
+                    error={errors.selling_rate?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Internal Cost *"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("internal_cost")}
+                    error={errors.internal_cost?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Fixed Amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("fixed_amount")}
+                    error={errors.fixed_amount?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Overtime Rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("overtime_rate")}
+                    error={errors.overtime_rate?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Holiday Rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("holiday_rate")}
+                    error={errors.holiday_rate?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Fixed Amount */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Fixed Amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("fixed_amount")}
-                  error={errors.fixed_amount?.message}
-                  disabled={isLoading || isFetching}
-                />
+            {/* Discount & Night Rate */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Percent className="h-4 w-4" />
+                Discount & Night Rate
               </div>
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Overtime Rate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("overtime_rate")}
-                  error={errors.overtime_rate?.message}
-                  disabled={isLoading || isFetching}
-                />
-              </div>
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Holiday Rate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("holiday_rate")}
-                  error={errors.holiday_rate?.message}
-                  disabled={isLoading || isFetching}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Discount Type
+                  </Label>
+                  <Select
+                    value={formValues.discount_type || "none"}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setValue("discount_type", null, { shouldValidate: true });
+                      } else {
+                        setValue("discount_type", value, { shouldValidate: true });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select discount type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {discountTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Discount Value"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("discount_value")}
+                    error={errors.discount_value?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Night Rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("night_rate")}
+                    error={errors.night_rate?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
               </div>
             </div>
 
-
-
-{/* Discount & Night Rate */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  <div className="space-y-2">
-    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-      Discount Type
-    </Label>
-    <Select
-      value={formValues.discount_type || "none"}
-      onValueChange={(value) => {
-        if (value === "none") {
-          setValue("discount_type", null, { shouldValidate: true });
-        } else {
-          setValue("discount_type", value, { shouldValidate: true });
-        }
-      }}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder="Select discount type" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">None</SelectItem>
-        {discountTypes.map((type) => (
-          <SelectItem key={type.value} value={type.value}>
-            {type.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-
-  <div className="space-y-2">
-    <FloatingLabelInput
-      label="Discount Value"
-      type="number"
-      step="0.01"
-      min="0"
-      {...register("discount_value")}
-      error={errors.discount_value?.message}
-      disabled={isLoading || isFetching}
-    />
-  </div>
-
-  <div className="space-y-2">
-    <FloatingLabelInput
-      label="Night Rate"
-      type="number"
-      step="0.01"
-      min="0"
-      {...register("night_rate")}
-      error={errors.night_rate?.message}
-      disabled={isLoading || isFetching}
-    />
-  </div>
-</div>
-
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="Start Date"
-                  type="date"
-                  {...register("start_date")}
-                  error={errors.start_date?.message}
-                  disabled={isLoading || isFetching}
-                />
+            {/* Date Range */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Calendar className="h-4 w-4" />
+                Date Range
               </div>
-              <div className="space-y-2">
-                <FloatingLabelInput
-                  label="End Date"
-                  type="date"
-                  {...register("end_date")}
-                  error={errors.end_date?.message}
-                  disabled={isLoading || isFetching}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Start Date"
+                    type="date"
+                    {...register("start_date")}
+                    error={errors.start_date?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="End Date"
+                    type="date"
+                    {...register("end_date")}
+                    error={errors.end_date?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Notes */}
-            <div className="w-full">
+            <div className="space-y-2">
               <FloatingLabelTextarea
                 label="Notes (Optional)"
                 rows={3}
@@ -836,29 +964,36 @@ export function ClientContractServiceEditForm({
               />
             </div>
 
-            {/* Flags */}
+            {/* Status Flags */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <Switch
                   id="requires_attendance"
                   checked={formValues.requires_attendance}
                   onCheckedChange={(checked) => setValue("requires_attendance", checked)}
                   disabled={isLoading || isFetching}
                 />
-                <Label htmlFor="requires_attendance" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Requires Attendance
-                </Label>
+                <div>
+                  <Label htmlFor="requires_attendance" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                    Requires Attendance
+                  </Label>
+                  <p className="text-xs text-gray-500">Mark if attendance tracking is required</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <Switch
                   id="is_active"
                   checked={formValues.is_active}
                   onCheckedChange={(checked) => setValue("is_active", checked)}
                   disabled={isLoading || isFetching}
                 />
-                <Label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Active
-                </Label>
+                <div>
+                  <Label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                    Active
+                  </Label>
+                  <p className="text-xs text-gray-500">Enable or disable this contract service</p>
+                </div>
               </div>
             </div>
 

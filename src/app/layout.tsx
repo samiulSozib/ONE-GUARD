@@ -98,8 +98,8 @@
 // function ConditionalSidebar() {
 //   const { activeSidebar } = useSidebarToggle();
 
-//   return activeSidebar === "main" ? 
-//     <AppSidebar variant="inset" /> : 
+//   return activeSidebar === "main" ?
+//     <AppSidebar variant="inset" /> :
 //     <AppSidebarSecondary variant="inset" />;
 // }
 
@@ -111,12 +111,142 @@
 
 
 // app/layout.tsx
+// "use client";
+
+// import { Geist, Geist_Mono } from "next/font/google";
+// import "./globals.css";
+// import { usePathname } from "next/navigation";
+// import { Toaster } from "sonner";
+
+// import { ThemeProvider } from "@/components/providers/theme-provider";
+// import { AppSidebar } from "@/components/app-sidebar";
+// import { AppSidebarSecondary } from "@/components/app-sidebar-secondary";
+// import { SiteHeader } from "@/components/site-header";
+// import {
+//   SidebarInset,
+//   SidebarProvider,
+// } from "@/components/ui/sidebar";
+// import { AlertProvider } from "@/components/contexts/AlertContext";
+// import { SidebarToggleProvider } from "@/components/providers/sidebar-toggle-provider";
+// import { Provider } from "react-redux";
+// import { store } from "@/store/store";
+
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
+
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
+
+// // Public routes that don't require authentication
+// const publicRoutes = [
+//   "/auth/login",
+//   "/auth/register",
+//   "/auth/forgot-password",
+//   "/auth/reset-password",
+// ];
+
+// export default function RootLayout({
+//   children,
+// }: Readonly<{
+//   children: React.ReactNode;
+// }>) {
+//   const pathname = usePathname();
+//   const isPublicRoute = publicRoutes.includes(pathname);
+
+//   return (
+//     <html lang="en" suppressHydrationWarning>
+//       <body
+//         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+//       >
+//         <Provider store={store}>
+//           <ThemeProvider
+//             attribute="class"
+//             defaultTheme="system"
+//             enableSystem
+//             disableTransitionOnChange
+//           >
+//             <SweetAlertProvider />
+//             {isPublicRoute ? (
+//               // Public routes (login, register, etc.) - no sidebar, no protection
+//               <AlertProvider>
+//                 <main className="flex flex-1 flex-col h-full">
+//                   {children}
+//                 </main>
+//               </AlertProvider>
+//             ) : (
+//               // Protected routes - require authentication, show sidebar
+//               <GuardedRoute>
+//                 <SidebarToggleProvider>
+//                   <SidebarProvider
+//                     style={
+//                       {
+//                         "--sidebar-width": "calc(var(--spacing) * 72)",
+//                         "--header-height": "calc(var(--spacing) * 12)",
+//                       } as React.CSSProperties
+//                     }
+//                   >
+//                     <ConditionalSidebar />
+//                     <SidebarInset>
+//                       <SiteHeader />
+//                       <AlertProvider>
+//                         {/* Socket Provider for real-time updates */}
+//                         <SocketProvider>
+//                           <main className="flex flex-1 flex-col h-full">
+//                             {children}
+//                           </main>
+//                         </SocketProvider>
+//                       </AlertProvider>
+//                     </SidebarInset>
+//                   </SidebarProvider>
+//                 </SidebarToggleProvider>
+//               </GuardedRoute>
+//             )}
+//             <Toaster
+//               position="top-right"
+//               richColors
+//               closeButton
+//               toastOptions={{
+//                 duration: 4000,
+//                 style: {
+//                   background: 'var(--background)',
+//                   color: 'var(--foreground)',
+//                   border: '1px solid var(--border)',
+//                 },
+//               }}
+//             />
+//           </ThemeProvider>
+//         </Provider>
+//       </body>
+//     </html>
+//   );
+// }
+
+// function ConditionalSidebar() {
+//   const { activeSidebar } = useSidebarToggle();
+
+//   return activeSidebar === "main" ?
+//     <AppSidebar variant="inset" /> :
+//     <AppSidebarSecondary variant="inset" />;
+// }
+
+// import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider";
+// import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";
+// import GuardedRoute from "@/components/authGuardedRoute";
+// import { SocketProvider } from "@/components/contexts/SocketContext";
+
+
+// app/layout.tsx
 "use client";
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { usePathname } from "next/navigation";
 import { Toaster } from "sonner";
+import { useState, useEffect } from "react";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -149,6 +279,21 @@ const publicRoutes = [
   "/auth/reset-password",
 ];
 
+// ClientOnly component to prevent hydration mismatches
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -156,11 +301,17 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isPublicRoute = publicRoutes.includes(pathname);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <Provider store={store}>
           <ThemeProvider
@@ -168,8 +319,11 @@ export default function RootLayout({
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
+            storageKey="ogs-theme"
           >
-            <SweetAlertProvider />
+            {/* Only render SweetAlertProvider on client */}
+            {mounted && <SweetAlertProvider />}
+
             {isPublicRoute ? (
               // Public routes (login, register, etc.) - no sidebar, no protection
               <AlertProvider>
@@ -205,9 +359,9 @@ export default function RootLayout({
                 </SidebarToggleProvider>
               </GuardedRoute>
             )}
-            <Toaster 
-              position="top-right" 
-              richColors 
+            <Toaster
+              position="top-right"
+              richColors
               closeButton
               toastOptions={{
                 duration: 4000,
@@ -228,8 +382,8 @@ export default function RootLayout({
 function ConditionalSidebar() {
   const { activeSidebar } = useSidebarToggle();
 
-  return activeSidebar === "main" ? 
-    <AppSidebar variant="inset" /> : 
+  return activeSidebar === "main" ?
+    <AppSidebar variant="inset" /> :
     <AppSidebarSecondary variant="inset" />;
 }
 
