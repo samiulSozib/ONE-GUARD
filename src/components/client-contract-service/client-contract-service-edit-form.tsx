@@ -151,7 +151,12 @@ const contractServiceSchema = z.object({
   discount_value: z.string()
     .optional()
     .nullable()
-    .refine((val) => val === null || val === '' || /^\d+(\.\d{1,2})?$/.test(val), {
+    .refine(
+  (val) =>
+    val === undefined ||
+    val === null ||
+    val === '' ||
+    /^\d+(\.\d{1,2})?$/.test(val),  {
       message: "Please enter a valid amount",
     }),
 
