@@ -10,8 +10,6 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { Clock } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { updateDutyTimeType, fetchDutyTimeType } from "@/store/slices/dutyTimeTypesSlice"
 import { DutyTimeType } from "@/app/types/dutyTimeType"
@@ -21,6 +19,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import SweetAlertService from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
+import { CustomTimePicker } from "../ui/custom-time-picker"
 
 interface DutyTimeTypeEditFormProps {
     trigger: ReactNode
@@ -42,13 +41,6 @@ const dutyTimeTypeSchema = z.object({
         .min(1, { message: "End time is required" })
         .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:mm)" }),
     is_active: z.boolean()
-}).refine((data) => {
-    const [startHour, startMinute] = data.start_time.split(':').map(Number)
-    const [endHour, endMinute] = data.end_time.split(':').map(Number)
-    return (endHour * 60 + endMinute) > (startHour * 60 + startMinute)
-}, {
-    message: "End time must be after start time",
-    path: ["end_time"]
 })
 
 type DutyTimeTypeFormData = z.infer<typeof dutyTimeTypeSchema>
@@ -63,8 +55,6 @@ export function DutyTimeTypeEditForm({
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
     const [isFetching, setIsFetching] = useState(false)
-    const [startTimeOpen, setStartTimeOpen] = useState(false)
-    const [endTimeOpen, setEndTimeOpen] = useState(false)
 
     const {
         register,
@@ -96,17 +86,16 @@ export function DutyTimeTypeEditForm({
 
     const loadDutyTimeType = async () => {
         if (!dutyTimeType?.id) return
-        
+
         setIsFetching(true)
         try {
-            const result = await dispatch(fetchDutyTimeType({ 
-                id: dutyTimeType.id, 
-                params: {} 
+            const result = await dispatch(fetchDutyTimeType({
+                id: dutyTimeType.id,
+                params: {}
             }))
 
             if (fetchDutyTimeType.fulfilled.match(result)) {
                 const data = result.payload
-                console.log(data)
                 // Populate form with existing data
                 reset({
                     title: data.item.title || "",
@@ -123,13 +112,6 @@ export function DutyTimeTypeEditForm({
         }
     }
 
-    // Generate time options
-    const timeOptions = Array.from({ length: 48 }, (_, i) => {
-        const hour = Math.floor(i / 2)
-        const minute = (i % 2) * 30
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-    })
-
     const formatTimeDisplay = (time: string) => {
         if (!time) return "Select time"
         const [hours, minutes] = time.split(':')
@@ -139,15 +121,9 @@ export function DutyTimeTypeEditForm({
         return `${displayHour}:${minutes} ${period}`
     }
 
-    const handleTimeSelect = (field: 'start_time' | 'end_time', time: string) => {
-        setValue(field, time, { shouldValidate: true })
-        if (field === 'start_time') setStartTimeOpen(false)
-        else setEndTimeOpen(false)
-    }
-
     const onSubmit = async (data: DutyTimeTypeFormData) => {
         if (!dutyTimeType?.id) return
-        
+
         setIsLoading(true)
         try {
             const submitData: Partial<DutyTimeType> = {
@@ -197,7 +173,6 @@ export function DutyTimeTypeEditForm({
     // Handle dialog open/close
     const handleDialogOpenChange = (open: boolean) => {
         if (open) {
-            // Opening the dialog
             onOpenChange?.(true)
         } else {
             // Check if form has been modified
@@ -217,7 +192,7 @@ export function DutyTimeTypeEditForm({
                 is_active: formValues.is_active
             }
 
-            const hasChanges = 
+            const hasChanges =
                 currentData.title !== originalData.title ||
                 currentData.description !== originalData.description ||
                 currentData.start_time !== originalData.start_time ||
@@ -225,11 +200,9 @@ export function DutyTimeTypeEditForm({
                 currentData.is_active !== originalData.is_active
 
             if (!hasChanges) {
-                // No changes, just close
                 reset()
                 onOpenChange?.(false)
             } else {
-                // Has unsaved changes, show confirmation
                 SweetAlertService.confirm(
                     'Discard Changes?',
                     'You have unsaved changes. Are you sure you want to close?',
@@ -240,7 +213,6 @@ export function DutyTimeTypeEditForm({
                         reset()
                         onOpenChange?.(false)
                     } else {
-                        // User cancelled, keep dialog open
                         onOpenChange?.(true)
                     }
                 })
@@ -272,17 +244,17 @@ export function DutyTimeTypeEditForm({
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
-                        <div className="grid grid-cols-2 xs:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 mb-4">
-                            <div className="col-span-2">
-                                <FloatingLabelInput
-                                    label="Title *"
-                                    {...register("title")}
-                                    error={errors.title?.message}
-                                    disabled={isLoading || isFetching}
-                                />
-                            </div>
+                        {/* Title */}
+                        <div className="col-span-2">
+                            <FloatingLabelInput
+                                label="Title *"
+                                {...register("title")}
+                                error={errors.title?.message}
+                                disabled={isLoading || isFetching}
+                            />
                         </div>
 
+                        {/* Description */}
                         <div>
                             <FloatingLabelTextarea
                                 label="Description"
@@ -292,107 +264,43 @@ export function DutyTimeTypeEditForm({
                             />
                         </div>
 
+                        {/* Time Pickers */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="start_time" className="text-sm font-medium">
-                                    Start Time *
-                                </Label>
-                                <Popover open={startTimeOpen} onOpenChange={setStartTimeOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className={cn(
-                                                "w-full justify-start text-left font-normal h-11",
-                                                !formValues.start_time && "text-muted-foreground",
-                                                errors.start_time && "border-red-500"
-                                            )}
-                                            disabled={isLoading || isFetching}
-                                        >
-                                            <Clock className="mr-2 h-4 w-4" />
-                                            {formatTimeDisplay(formValues.start_time)}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <div className="max-h-[300px] overflow-y-auto p-2">
-                                            <div className="grid grid-cols-3 gap-1">
-                                                {timeOptions.map((time) => (
-                                                    <Button
-                                                        key={`start-${time}`}
-                                                        type="button"
-                                                        variant={formValues.start_time === time ? "default" : "ghost"}
-                                                        className="justify-center text-xs py-2 h-8"
-                                                        onClick={() => handleTimeSelect('start_time', time)}
-                                                        disabled={isLoading || isFetching}
-                                                    >
-                                                        {formatTimeDisplay(time)}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                {errors.start_time && (
-                                    <p className="text-sm text-red-500">{errors.start_time.message}</p>
-                                )}
-                                <input type="hidden" {...register("start_time")} />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="end_time" className="text-sm font-medium">
-                                    End Time *
-                                </Label>
-                                <Popover open={endTimeOpen} onOpenChange={setEndTimeOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className={cn(
-                                                "w-full justify-start text-left font-normal h-11",
-                                                !formValues.end_time && "text-muted-foreground",
-                                                errors.end_time && "border-red-500"
-                                            )}
-                                            disabled={isLoading || isFetching}
-                                        >
-                                            <Clock className="mr-2 h-4 w-4" />
-                                            {formatTimeDisplay(formValues.end_time)}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <div className="max-h-[300px] overflow-y-auto p-2">
-                                            <div className="grid grid-cols-3 gap-1">
-                                                {timeOptions.map((time) => (
-                                                    <Button
-                                                        key={`end-${time}`}
-                                                        type="button"
-                                                        variant={formValues.end_time === time ? "default" : "ghost"}
-                                                        className="justify-center text-xs py-2 h-8"
-                                                        onClick={() => handleTimeSelect('end_time', time)}
-                                                        disabled={isLoading || isFetching}
-                                                    >
-                                                        {formatTimeDisplay(time)}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                {errors.end_time && (
-                                    <p className="text-sm text-red-500">{errors.end_time.message}</p>
-                                )}
-                                <input type="hidden" {...register("end_time")} />
-                            </div>
+                            <CustomTimePicker
+                                value={formValues.start_time}
+                                onChange={(time) => setValue('start_time', time, { shouldValidate: true })}
+                                label="Start Time"
+                                error={errors.start_time?.message}
+                                disabled={isLoading || isFetching}
+                                required={true}
+                                minuteInterval={30}
+                                format12h={true}
+                            />
+                            <CustomTimePicker
+                                value={formValues.end_time}
+                                onChange={(time) => setValue('end_time', time, { shouldValidate: true })}
+                                label="End Time"
+                                error={errors.end_time?.message}
+                                disabled={isLoading || isFetching}
+                                required={true}
+                                minuteInterval={30}
+                                format12h={true}
+                            />
                         </div>
 
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {/* Selected Time Slot Display */}
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">Selected Time Slot:</span>
-                                <span className="font-semibold">
+                                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Selected Time Slot:
+                                </span>
+                                <span className="font-semibold text-blue-900 dark:text-blue-100">
                                     {formatTimeDisplay(formValues.start_time)} - {formatTimeDisplay(formValues.end_time)}
                                 </span>
                             </div>
                         </div>
 
+                        {/* Active Checkbox */}
                         <div className="flex items-center gap-3">
                             <input
                                 type="checkbox"

@@ -11,7 +11,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Clock, MapPin, Building, Clock as ClockIcon } from "lucide-react"
+import { CalendarIcon, MapPin, Building, Clock as ClockIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
@@ -32,6 +32,7 @@ import { Site } from "@/app/types/site"
 import { SiteLocation } from "@/app/types/siteLocation.types"
 import { DutyTimeType } from "@/app/types/dutyTimeType"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
+import { CustomTimePicker } from "../ui/custom-time-picker"
 
 interface DutyEditFormProps {
     trigger: ReactNode
@@ -175,65 +176,62 @@ export function DutyEditForm({
     }, [formValues.site_id, dispatch])
 
     const loadDuty = async () => {
-    if (!duty?.id) return
+        if (!duty?.id) return
 
-    setIsFetching(true)
-    try {
-        const result = await dispatch(fetchDuty({
-            id: duty.id,
-            params: {}
-        }))
+        setIsFetching(true)
+        try {
+            const result = await dispatch(fetchDuty({
+                id: duty.id,
+                params: {}
+            }))
 
-        if (fetchDuty.fulfilled.match(result)) {
-            const data = result.payload.item
+            if (fetchDuty.fulfilled.match(result)) {
+                const data = result.payload.item
 
-            // Parse dates and times
-            const startDatetime = parseISO(data.start_datetime)
-            const endDatetime = parseISO(data.end_datetime)
-            
-            // Note: mandatory_check_in_time might not be in your response yet
-            // If it's not present, you can set a default or omit it
-            const checkInDatetime = data.mandatory_check_in_time ? parseISO(data.mandatory_check_in_time) : null
+                // Parse dates and times
+                const startDatetime = parseISO(data.start_datetime)
+                const endDatetime = parseISO(data.end_datetime)
+                const checkInDatetime = data.mandatory_check_in_time ? parseISO(data.mandatory_check_in_time) : null
 
-            // Set date states
-            setStartDate(startDatetime)
-            setEndDate(endDatetime)
-            setCheckInDate(checkInDatetime || undefined)
+                // Set date states
+                setStartDate(startDatetime)
+                setEndDate(endDatetime)
+                setCheckInDate(checkInDatetime || undefined)
 
-            // Set time states
-            setStartTime(format(startDatetime, 'HH:mm'))
-            setEndTime(format(endDatetime, 'HH:mm'))
-            setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
+                // Set time states
+                setStartTime(format(startDatetime, 'HH:mm'))
+                setEndTime(format(endDatetime, 'HH:mm'))
+                setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
 
-            // Set site search for dropdown display
-            const selectedSite = sites.find(s => s.id === data.site?.id)
-            if (selectedSite) {
-                setSiteSearch(selectedSite.site_name || "")
+                // Set site search for dropdown display
+                const selectedSite = sites.find(s => s.id === data.site?.id)
+                if (selectedSite) {
+                    setSiteSearch(selectedSite.site_name || "")
+                }
+
+                // Populate form with existing data
+                reset({
+                    title: data.title || "",
+                    site_id: data.site?.id || undefined,
+                    site_location_id: data.site_location?.id || undefined,
+                    duty_time_type_id: data.duty_time_type_id || undefined,
+                    start_datetime: data.start_datetime || "",
+                    end_datetime: data.end_datetime || "",
+                    guards_required: data.guards_required || 1,
+                    duty_type: (data.duty_type as "day" | "night") || "day",
+                    required_hours: data.required_hours || 8,
+                    mandatory_check_in_time: data.mandatory_check_in_time || "",
+                    notes: data.notes || "",
+                    status: (data.status as "pending" | "approved" | "completed") || "pending"
+                })
             }
-
-            // Populate form with existing data
-            reset({
-                title: data.title || "",
-                site_id: data.site?.id || undefined,
-                site_location_id: data.site_location?.id || undefined,
-                duty_time_type_id: data.duty_time_type_id || undefined,
-                start_datetime: data.start_datetime || "",
-                end_datetime: data.end_datetime || "",
-                guards_required: data.guards_required || 1,
-                duty_type: (data.duty_type as "day" | "night") || "day",
-                required_hours: data.required_hours || 8,
-                mandatory_check_in_time: data.mandatory_check_in_time || "",
-                notes: data.notes || "",
-                status: (data.status as "pending" | "approved" | "completed") || "pending"
-            })
+        } catch (error) {
+            console.error("Failed to load duty:", error)
+            SweetAlertService.error('Error', 'Failed to load duty details')
+        } finally {
+            setIsFetching(false)
         }
-    } catch (error) {
-        console.error("Failed to load duty:", error)
-        SweetAlertService.error('Error', 'Failed to load duty details')
-    } finally {
-        setIsFetching(false)
     }
-}
 
     // Update datetime fields when date or time changes
     useEffect(() => {
@@ -263,36 +261,9 @@ export function DutyEditForm({
         }
     }, [checkInDate, checkInTime, setValue])
 
-    // Generate time options
-    const timeOptions = Array.from({ length: 48 }, (_, i) => {
-        const hour = Math.floor(i / 2)
-        const minute = (i % 2) * 30
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-    })
-
-    const formatTimeDisplay = (time: string) => {
-        if (!time) return "Select time"
-        const [hours, minutes] = time.split(':')
-        const hour = parseInt(hours)
-        const period = hour >= 12 ? 'PM' : 'AM'
-        const displayHour = hour % 12 || 12
-        return `${displayHour}:${minutes} ${period}`
-    }
-
     const formatDateDisplay = (date: Date | undefined) => {
         if (!date) return "Select date"
         return format(date, 'MMM dd, yyyy')
-    }
-
-    // Handle time selection
-    const handleTimeSelect = (field: 'start_datetime' | 'end_datetime' | 'mandatory_check_in_time', time: string) => {
-        if (field === 'start_datetime') {
-            setStartTime(time)
-        } else if (field === 'end_datetime') {
-            setEndTime(time)
-        } else {
-            setCheckInTime(time)
-        }
     }
 
     const onSubmit = async (data: DutyFormData) => {
@@ -350,82 +321,12 @@ export function DutyEditForm({
         }
     }
 
-    // const handleDialogOpenChange = (open: boolean) => {
-    //     if (open) {
-    //         onOpenChange?.(true)
-    //     } else {
-    //         // Check if form has been modified
-    //         const originalData = {
-    //             title: duty?.title || "",
-    //             site_id: duty?.site?.id || undefined,
-    //             site_location_id: duty?.site_location?.id || undefined,
-    //             duty_time_type_id: duty?.duty_time_type_id || undefined,
-    //             start_datetime: duty?.start_datetime || "",
-    //             end_datetime: duty?.end_datetime || "",
-    //             guards_required: duty?.guards_required || 1,
-    //             duty_type: duty?.duty_type || "day",
-    //             required_hours: duty?.required_hours || 8,
-    //             mandatory_check_in_time: duty?.mandatory_check_in_time || "",
-    //             notes: duty?.notes || "",
-    //             status: duty?.status || "pending"
-    //         }
-
-    //         const currentData = {
-    //             title: formValues.title.trim(),
-    //             site_id: formValues.site_id,
-    //             site_location_id: formValues.site_location_id,
-    //             duty_time_type_id: formValues.duty_time_type_id,
-    //             start_datetime: formValues.start_datetime,
-    //             end_datetime: formValues.end_datetime,
-    //             guards_required: formValues.guards_required,
-    //             duty_type: formValues.duty_type,
-    //             required_hours: formValues.required_hours,
-    //             mandatory_check_in_time: formValues.mandatory_check_in_time,
-    //             notes: formValues.notes || "",
-    //             status: formValues.status
-    //         }
-
-    //         const hasChanges =
-    //             currentData.title !== originalData.title ||
-    //             currentData.site_id !== originalData.site_id ||
-    //             currentData.site_location_id !== originalData.site_location_id ||
-    //             currentData.duty_time_type_id !== originalData.duty_time_type_id ||
-    //             currentData.start_datetime !== originalData.start_datetime ||
-    //             currentData.end_datetime !== originalData.end_datetime ||
-    //             currentData.guards_required !== originalData.guards_required ||
-    //             currentData.duty_type !== originalData.duty_type ||
-    //             currentData.required_hours !== originalData.required_hours ||
-    //             currentData.mandatory_check_in_time !== originalData.mandatory_check_in_time ||
-    //             currentData.notes !== originalData.notes ||
-    //             currentData.status !== originalData.status
-
-    //         if (!hasChanges) {
-    //             onOpenChange?.(false)
-    //         } 
-    //         else {
-    //             SweetAlertService.confirm(
-    //                 'Discard Changes?',
-    //                 'You have unsaved changes. Are you sure you want to close?',
-    //                 'Yes, discard',
-    //                 'No, keep'
-    //             ).then((result) => {
-    //                 if (result.isConfirmed) {
-    //                     reset()
-    //                     onOpenChange?.(false)
-    //                 } else {
-    //                     onOpenChange?.(true)
-    //                 }
-    //             })
-    //         }
-    //     }
-    // }
-
     const handleDialogOpenChange = (open: boolean) => {
-    if (!open) {
-        reset()
+        if (!open) {
+            reset()
+        }
+        onOpenChange?.(open)
     }
-    onOpenChange?.(open)
-}
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
@@ -479,7 +380,7 @@ export function DutyEditForm({
                                         }}
                                         options={sites.map((site: Site) => ({
                                             value: site.id,
-                                            label: site.title||site.site_name ,
+                                            label: site.title || site.site_name,
                                             ...site
                                         }))}
                                         onSearch={(search) => {
@@ -754,37 +655,14 @@ export function DutyEditForm({
                                         <Label htmlFor="start_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                    disabled={isLoading || isFetching}
-                                                >
-                                                    <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatTimeDisplay(startTime)}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <div className="max-h-[200px] overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                        {timeOptions.map((time) => (
-                                                            <Button
-                                                                key={`start-${time}`}
-                                                                type="button"
-                                                                variant={startTime === time ? "default" : "ghost"}
-                                                                className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                                onClick={() => handleTimeSelect('start_datetime', time)}
-                                                                disabled={isLoading || isFetching}
-                                                            >
-                                                                {formatTimeDisplay(time)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <CustomTimePicker
+                                            value={startTime}
+                                            onChange={setStartTime}
+                                            placeholder="Select time"
+                                            disabled={isLoading || isFetching}
+                                            minuteInterval={30}
+                                            format12h={true}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -829,37 +707,14 @@ export function DutyEditForm({
                                         <Label htmlFor="end_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                    disabled={isLoading || isFetching}
-                                                >
-                                                    <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatTimeDisplay(endTime)}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <div className="max-h-[200px] overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                        {timeOptions.map((time) => (
-                                                            <Button
-                                                                key={`end-${time}`}
-                                                                type="button"
-                                                                variant={endTime === time ? "default" : "ghost"}
-                                                                className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                                onClick={() => handleTimeSelect('end_datetime', time)}
-                                                                disabled={isLoading || isFetching}
-                                                            >
-                                                                {formatTimeDisplay(time)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <CustomTimePicker
+                                            value={endTime}
+                                            onChange={setEndTime}
+                                            placeholder="Select time"
+                                            disabled={isLoading || isFetching}
+                                            minuteInterval={30}
+                                            format12h={true}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -904,37 +759,14 @@ export function DutyEditForm({
                                         <Label htmlFor="checkin_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                    disabled={isLoading || isFetching}
-                                                >
-                                                    <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatTimeDisplay(checkInTime)}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <div className="max-h-[200px] overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                        {timeOptions.map((time) => (
-                                                            <Button
-                                                                key={`checkin-${time}`}
-                                                                type="button"
-                                                                variant={checkInTime === time ? "default" : "ghost"}
-                                                                className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                                onClick={() => handleTimeSelect('mandatory_check_in_time', time)}
-                                                                disabled={isLoading || isFetching}
-                                                            >
-                                                                {formatTimeDisplay(time)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <CustomTimePicker
+                                            value={checkInTime}
+                                            onChange={setCheckInTime}
+                                            placeholder="Select time"
+                                            disabled={isLoading || isFetching}
+                                            minuteInterval={30}
+                                            format12h={true}
+                                        />
                                     </div>
                                 </div>
                             </div>

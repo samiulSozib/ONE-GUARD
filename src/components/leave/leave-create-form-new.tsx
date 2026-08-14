@@ -11,7 +11,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Clock, User, Briefcase } from "lucide-react"
+import { CalendarIcon, User, Briefcase } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
@@ -30,6 +30,7 @@ import { useAppSelector } from "@/hooks/useAppSelector"
 import { Site } from "@/app/types/site"
 import { Guard } from "@/app/types/guard"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
+import { CustomTimePicker } from "../ui/custom-time-picker"
 import {
     Select,
     SelectContent,
@@ -68,8 +69,6 @@ const leaveSchema = z.object({
         .min(1, { message: "Reason is required" })
         .max(500, { message: "Reason must be less than 500 characters" }),
 
-    
-
     start_time: z.string().optional(),
     end_time: z.string().optional(),
 
@@ -96,21 +95,6 @@ const leaveTypes = [
     { value: "bereavement", label: "Bereavement Leave" },
 ]
 
-// Calculation unit options
-const calculationUnits = [
-    { value: "days", label: "Days" },
-    { value: "hours", label: "Hours" },
-    { value: "half_day", label: "Half Day" },
-]
-
-// Status options
-const statusOptions = [
-    { value: "pending", label: "Pending" },
-    { value: "approved", label: "Approved" },
-    { value: "rejected", label: "Rejected" },
-    { value: "completed", label: "Completed" },
-]
-
 export function LeaveCreateForm({
     trigger,
     isOpen,
@@ -124,7 +108,7 @@ export function LeaveCreateForm({
     const { guards, isLoading: guardsLoading } = useAppSelector((state) => state.guard)
     const { sites, isLoading: sitesLoading } = useAppSelector((state) => state.site)
 
-    // Search states for comboboxes - exactly like complaint form
+    // Search states for comboboxes
     const [guardSearch, setGuardSearch] = useState("")
     const [siteSearch, setSiteSearch] = useState("")
 
@@ -150,7 +134,6 @@ export function LeaveCreateForm({
             start_date: "",
             end_date: "",
             reason: "",
-            
             start_time: "09:00",
             end_time: "17:00",
         },
@@ -159,7 +142,7 @@ export function LeaveCreateForm({
 
     const formValues = watch()
 
-    // Fetch initial data when dialog opens - exactly like complaint form
+    // Fetch initial data when dialog opens
     useEffect(() => {
         if (isOpen) {
             dispatch(fetchGuards({ page: 1, per_page: 100 }))
@@ -167,7 +150,7 @@ export function LeaveCreateForm({
         }
     }, [isOpen, dispatch])
 
-    // Search effects for all dropdowns - exactly like complaint form
+    // Search effects for all dropdowns
     useEffect(() => {
         const timer = setTimeout(() => {
             if (guardSearch.trim() || guardSearch === "") {
@@ -195,7 +178,7 @@ export function LeaveCreateForm({
         return () => clearTimeout(timer)
     }, [siteSearch, dispatch])
 
-    // Format functions for display - exactly like complaint form pattern
+    // Format functions for display
     const formatGuardDisplay = (guard: Partial<Guard>) => {
         if (!guard) return ""
         return `${guard.full_name || 'Unknown'} (${guard.guard_code || 'No Code'})`
@@ -226,34 +209,9 @@ export function LeaveCreateForm({
         }
     }, [endDate, endTime, setValue])
 
-    // Generate time options
-    const timeOptions = Array.from({ length: 48 }, (_, i) => {
-        const hour = Math.floor(i / 2)
-        const minute = (i % 2) * 30
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-    })
-
-    const formatTimeDisplay = (time: string) => {
-        if (!time) return "Select time"
-        const [hours, minutes] = time.split(':')
-        const hour = parseInt(hours)
-        const period = hour >= 12 ? 'PM' : 'AM'
-        const displayHour = hour % 12 || 12
-        return `${displayHour}:${minutes} ${period}`
-    }
-
     const formatDateDisplay = (date: Date | undefined) => {
         if (!date) return "Select date"
         return format(date, 'MMM dd, yyyy')
-    }
-
-    // Handle time selection
-    const handleTimeSelect = (field: 'start_date' | 'end_date', time: string) => {
-        if (field === 'start_date') {
-            setStartTime(time)
-        } else {
-            setEndTime(time)
-        }
     }
 
     const onSubmit = async (data: LeaveFormData) => {
@@ -288,7 +246,6 @@ export function LeaveCreateForm({
                     setSiteSearch("")
                     onSuccess?.()
                     onOpenChange?.(false)
-                    
                 })
             } else {
                 throw result.payload
@@ -318,7 +275,7 @@ export function LeaveCreateForm({
             formValues.leave_type ||
             startDate ||
             endDate ||
-            formValues.reason.trim() 
+            formValues.reason.trim()
 
         if (!hasData) {
             reset()
@@ -352,7 +309,7 @@ export function LeaveCreateForm({
                 formValues.leave_type ||
                 startDate ||
                 endDate ||
-                formValues.reason.trim() 
+                formValues.reason.trim()
             if (!hasData) {
                 reset()
                 setStartDate(undefined)
@@ -397,7 +354,7 @@ export function LeaveCreateForm({
                             Leave Information
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                            {/* Guard Selection - Exactly like complaint form pattern */}
+                            {/* Guard Selection */}
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Guard <span className="text-red-500">*</span>
@@ -507,11 +464,6 @@ export function LeaveCreateForm({
                                     <p className="text-sm text-red-500 mt-1">{errors.leave_type.message}</p>
                                 )}
                             </div>
-
-                            
-                            
-
-                            
                         </div>
                     </div>
 
@@ -561,37 +513,14 @@ export function LeaveCreateForm({
                                     <Label htmlFor="start_time" className="text-sm font-medium">
                                         Time *
                                     </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="w-full justify-start text-left font-normal h-11"
-                                                disabled={isLoading}
-                                            >
-                                                <Clock className="mr-2 h-4 w-4" />
-                                                {formatTimeDisplay(startTime)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <div className="max-h-[200px] overflow-y-auto p-3">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    {timeOptions.map((time) => (
-                                                        <Button
-                                                            key={`start-${time}`}
-                                                            type="button"
-                                                            variant={startTime === time ? "default" : "ghost"}
-                                                            className="justify-center text-xs py-2 h-8"
-                                                            onClick={() => handleTimeSelect('start_date', time)}
-                                                            disabled={isLoading}
-                                                        >
-                                                            {formatTimeDisplay(time)}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <CustomTimePicker
+                                        value={startTime}
+                                        onChange={setStartTime}
+                                        placeholder="Select time"
+                                        disabled={isLoading}
+                                        minuteInterval={30}
+                                        format12h={true}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -636,37 +565,14 @@ export function LeaveCreateForm({
                                     <Label htmlFor="end_time" className="text-sm font-medium">
                                         Time *
                                     </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="w-full justify-start text-left font-normal h-11"
-                                                disabled={isLoading}
-                                            >
-                                                <Clock className="mr-2 h-4 w-4" />
-                                                {formatTimeDisplay(endTime)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <div className="max-h-[200px] overflow-y-auto p-3">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    {timeOptions.map((time) => (
-                                                        <Button
-                                                            key={`end-${time}`}
-                                                            type="button"
-                                                            variant={endTime === time ? "default" : "ghost"}
-                                                            className="justify-center text-xs py-2 h-8"
-                                                            onClick={() => handleTimeSelect('end_date', time)}
-                                                            disabled={isLoading}
-                                                        >
-                                                            {formatTimeDisplay(time)}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <CustomTimePicker
+                                        value={endTime}
+                                        onChange={setEndTime}
+                                        placeholder="Select time"
+                                        disabled={isLoading}
+                                        minuteInterval={30}
+                                        format12h={true}
+                                    />
                                 </div>
                             </div>
                         </div>

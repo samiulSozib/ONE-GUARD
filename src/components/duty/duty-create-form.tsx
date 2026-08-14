@@ -11,7 +11,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Clock, Plus } from "lucide-react"
+import { CalendarIcon, Plus } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
@@ -37,6 +37,7 @@ import { MapPin, Building, Clock as ClockIcon } from "lucide-react"
 import { DutyTimeTypeCreateForm } from "../duty-time-type/duty-time-type-create-form"
 import { CreateSiteWithClientForm } from '@/components/clients/create-site-with-client-form'
 import { Client } from "@/app/types/client"
+import { CustomTimePicker } from "../ui/custom-time-picker"
 
 interface DutyCreateFormProps {
     trigger: ReactNode
@@ -236,13 +237,6 @@ export function DutyCreateForm({
         }
     }, [checkInDate, checkInTime, setValue])
 
-    // Generate time options
-    const timeOptions = Array.from({ length: 48 }, (_, i) => {
-        const hour = Math.floor(i / 2)
-        const minute = (i % 2) * 30
-        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-    })
-
     const formatTimeDisplay = (time: string) => {
         if (!time) return "Select time"
         const [hours, minutes] = time.split(':')
@@ -255,17 +249,6 @@ export function DutyCreateForm({
     const formatDateDisplay = (date: Date | undefined) => {
         if (!date) return "Select date"
         return format(date, 'MMM dd, yyyy')
-    }
-
-    // Handle time selection
-    const handleTimeSelect = (field: 'start_datetime' | 'end_datetime' | 'mandatory_check_in_time', time: string) => {
-        if (field === 'start_datetime') {
-            setStartTime(time)
-        } else if (field === 'end_datetime') {
-            setEndTime(time)
-        } else {
-            setCheckInTime(time)
-        }
     }
 
     // Handle site creation success - Refresh sites list and clear location
@@ -780,37 +763,14 @@ export function DutyCreateForm({
                                         <Label htmlFor="start_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                    disabled={isLoading}
-                                                >
-                                                    <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatTimeDisplay(startTime)}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <div className="max-h-[200px] overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                        {timeOptions.map((time) => (
-                                                            <Button
-                                                                key={`start-${time}`}
-                                                                type="button"
-                                                                variant={startTime === time ? "default" : "ghost"}
-                                                                className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                                onClick={() => handleTimeSelect('start_datetime', time)}
-                                                                disabled={isLoading}
-                                                            >
-                                                                {formatTimeDisplay(time)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <CustomTimePicker
+                                            value={startTime}
+                                            onChange={setStartTime}
+                                            placeholder="Select time"
+                                            disabled={isLoading}
+                                            minuteInterval={30}
+                                            format12h={true}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -855,37 +815,14 @@ export function DutyCreateForm({
                                         <Label htmlFor="end_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                    disabled={isLoading}
-                                                >
-                                                    <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatTimeDisplay(endTime)}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <div className="max-h-[200px] overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                        {timeOptions.map((time) => (
-                                                            <Button
-                                                                key={`end-${time}`}
-                                                                type="button"
-                                                                variant={endTime === time ? "default" : "ghost"}
-                                                                className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                                onClick={() => handleTimeSelect('end_datetime', time)}
-                                                                disabled={isLoading}
-                                                            >
-                                                                {formatTimeDisplay(time)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <CustomTimePicker
+                                            value={endTime}
+                                            onChange={setEndTime}
+                                            placeholder="Select time"
+                                            disabled={isLoading}
+                                            minuteInterval={30}
+                                            format12h={true}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -930,37 +867,14 @@ export function DutyCreateForm({
                                         <Label htmlFor="checkin_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                    disabled={isLoading}
-                                                >
-                                                    <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatTimeDisplay(checkInTime)}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <div className="max-h-[200px] overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                        {timeOptions.map((time) => (
-                                                            <Button
-                                                                key={`checkin-${time}`}
-                                                                type="button"
-                                                                variant={checkInTime === time ? "default" : "ghost"}
-                                                                className="justify-center text-xs py-2 h-8 transition-all duration-150 hover:scale-[1.02]"
-                                                                onClick={() => handleTimeSelect('mandatory_check_in_time', time)}
-                                                                disabled={isLoading}
-                                                            >
-                                                                {formatTimeDisplay(time)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <CustomTimePicker
+                                            value={checkInTime}
+                                            onChange={setCheckInTime}
+                                            placeholder="Select time"
+                                            disabled={isLoading}
+                                            minuteInterval={30}
+                                            format12h={true}
+                                        />
                                     </div>
                                 </div>
                             </div>

@@ -260,7 +260,7 @@ export function LoginForm({
                   )}
                 </Field>
 
-                {/* Remember Me and Clear Credentials Section */}
+                {/* Remember Me and Clear Credentials Section *********************/}
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
