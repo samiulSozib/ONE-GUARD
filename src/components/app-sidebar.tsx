@@ -20,6 +20,7 @@ import {
   BarChart3,
   AlertTriangle,
   LocateIcon,
+  AudioWaveform,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -76,7 +77,9 @@ const navGroups = [
   {
     label: "Operations",
     items: [
-      { title: "Shift List", url: "/duty", icon: ClipboardList },
+       { title: "Shift List", url: "/duty", icon: ClipboardList },
+            { title: "Site Schedules", url: "/duty-schedules", icon: AudioWaveform },
+
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
       { title: "Time & Attendance", url: "/duty-attendance", icon: UserCheck },
       { title: "Shift Status Reports", url: "/duty-status-report", icon: BarChart3 },

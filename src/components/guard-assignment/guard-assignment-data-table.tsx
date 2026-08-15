@@ -1,3 +1,5 @@
+// components/guard-assignment/guard-assignment-data-table.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,7 +21,6 @@ import {
   Shield,
   Calendar,
   MapPin,
-  AlertCircle,
   CheckCheck,
   Ban,
   PlayCircle,
@@ -73,8 +74,10 @@ import {
   fetchAssignments,
   deleteAssignment,
   updateAssignmentStatus,
+  getStatusDisplay,
+  getStatusColor,
 } from "@/store/slices/guardAssignmentSlice";
-import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignment";
+import { GuardAssignment, GuardAssignmentParams, GuardAssignmentStatus } from "@/app/types/guardAssignment";
 
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
@@ -83,45 +86,50 @@ import { GuardAssignmentEditForm } from "./guard-assignment-edit-form";
 import Swal from 'sweetalert2';
 import { useRouter } from "next/navigation";
 
-// Define the status type
-type AssignmentStatus = 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
-// Define the action type
-interface StatusAction {
-  status: AssignmentStatus;
-  label: string;
-  icon: React.ElementType;
-  color: string;
-}
-
-// Status colors mapping
-const assignmentStatusColors: Record<AssignmentStatus, string> = {
-  "assigned": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "accepted": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "checked_in": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  "on_duty": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-  "completed": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-  "late": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  "no_show": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  "cancelled": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  "replaced": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
-};
-
-const defaultStatusColor = "bg-gray-100 text-gray-800";
-
 interface GuardAssignmentDataTableProps {
   onAddClick?: () => void;
   onViewClick?: (assignment: GuardAssignment) => void;
 }
 
+// Status action configuration
+interface StatusAction {
+  status: GuardAssignmentStatus;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+// All available statuses with their display info
+const ALL_STATUSES: GuardAssignmentStatus[] = [
+  'assigned',
+  'accepted',
+  'checked_in',
+  'on_duty',
+  'completed',
+  'late',
+  'no_show',
+  'cancelled',
+  'replaced'
+];
+
+const statusActionConfig: Record<GuardAssignmentStatus, { label: string; icon: React.ElementType; color: string }> = {
+  assigned: { label: 'Mark as Assigned', icon: Flag, color: 'text-blue-600' },
+  accepted: { label: 'Accept Assignment', icon: CheckCircle, color: 'text-green-600' },
+  checked_in: { label: 'Check In', icon: MapPin, color: 'text-purple-600' },
+  on_duty: { label: 'Start Duty', icon: PlayCircle, color: 'text-emerald-600' },
+  completed: { label: 'Mark Completed', icon: CheckCheck, color: 'text-gray-600' },
+  late: { label: 'Mark Late', icon: Clock, color: 'text-yellow-600' },
+  no_show: { label: 'No Show', icon: XCircle, color: 'text-red-600' },
+  cancelled: { label: 'Cancel Assignment', icon: Ban, color: 'text-orange-600' },
+  replaced: { label: 'Replace Guard', icon: RefreshCw, color: 'text-indigo-600' },
+};
+
 export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssignmentDataTableProps) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
-  // Redux state
   const { assignments, pagination, isLoading, error } = useAppSelector((state) => state.guardAssignment);
 
-  const router = useRouter()
-
-  // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [titleSearch, setTitleSearch] = useState("");
   const [filters, setFilters] = useState<GuardAssignmentParams>({
@@ -134,10 +142,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<GuardAssignment | null>(null);
 
-  // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
   // Fetch assignments on mount and filter changes
@@ -150,12 +155,10 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
       include_duty: true,
     };
 
-    // Add status filter
     if (statusFilter !== "all") {
       fetchParams.status = statusFilter;
     }
 
-    // Add date filter
     if (dateFilter) {
       const formattedDate = format(dateFilter, 'yyyy-MM-dd');
       fetchParams.start_date = formattedDate;
@@ -165,7 +168,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     dispatch(fetchAssignments(fetchParams));
   }, [dispatch, filters.page, searchTerm, statusFilter, dateFilter]);
 
-  // Handle search
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitleSearch(e.target.value);
   };
@@ -175,19 +177,16 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     setFilters(prev => ({ ...prev, page: 1 }));
   };
 
-  // Handle filter changes
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
 
-  // Handle date filter
   const handleDateChange = (date: Date | undefined) => {
     setDateFilter(date);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
 
-  // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
     setTitleSearch("");
@@ -200,7 +199,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     setSelectedAssignments([]);
   };
 
-  // Handle assignment selection
   const handleSelectAssignment = (assignmentId: number, checked: boolean) => {
     if (checked) {
       setSelectedAssignments(prev => [...prev, assignmentId]);
@@ -217,7 +215,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     }
   };
 
-  // Handle delete
   const handleDeleteClick = (e: React.MouseEvent, assignment: GuardAssignment) => {
     e.stopPropagation();
     setAssignmentToDelete(assignment);
@@ -242,7 +239,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         setDeleteDialogOpen(false);
         setAssignmentToDelete(null);
 
-        // Refresh list
         const fetchParams: GuardAssignmentParams = {
           page: filters.page || 1,
           per_page: filters.per_page || 10,
@@ -264,29 +260,26 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     }
   };
 
-  // Handle assignment status update
-  const handleStatusUpdate = async (e: React.MouseEvent, assignment: GuardAssignment, newStatus: AssignmentStatus) => {
+  const handleStatusUpdate = async (e: React.MouseEvent, assignment: GuardAssignment, newStatus: GuardAssignmentStatus) => {
     e.stopPropagation();
 
-    const statusDisplay = newStatus.charAt(0).toUpperCase() + newStatus.slice(1).replace('_', ' ');
+    const statusDisplay = getStatusDisplay(newStatus);
 
-    // Confirmation dialog with 5 second timer
     const result = await Swal.fire({
       title: `Mark Assignment as ${statusDisplay}`,
-      text: `Are you sure you want to mark this assignment as ${statusDisplay}? This confirmation will expire in 5 seconds.`,
+      text: `Are you sure you want to mark this assignment as ${statusDisplay}? This action will be confirmed in 5 seconds.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor:
-        newStatus === 'assigned' ? '#3b82f6' :      // blue
-          newStatus === 'accepted' ? '#22c55e' :      // green
-            newStatus === 'checked_in' ? '#a855f7' :    // purple
-              newStatus === 'on_duty' ? '#10b981' :       // emerald
-                newStatus === 'completed' ? '#6b7280' :     // gray
-                  newStatus === 'late' ? '#eab308' :          // yellow
-                    newStatus === 'no_show' ? '#ef4444' :       // red
-                      newStatus === 'cancelled' ? '#f97316' :     // orange
-                        newStatus === 'replaced' ? '#8b5cf6' :      // indigo
-                          '#6b7280',                                   // default gray
+        newStatus === 'assigned' ? '#3b82f6' :
+        newStatus === 'accepted' ? '#22c55e' :
+        newStatus === 'checked_in' ? '#a855f7' :
+        newStatus === 'on_duty' ? '#10b981' :
+        newStatus === 'completed' ? '#6b7280' :
+        newStatus === 'late' ? '#eab308' :
+        newStatus === 'no_show' ? '#ef4444' :
+        newStatus === 'cancelled' ? '#f97316' :
+        newStatus === 'replaced' ? '#8b5cf6' : '#6b7280',
       cancelButtonColor: '#6b7280',
       confirmButtonText: `Yes, mark as ${statusDisplay}`,
       cancelButtonText: 'Cancel',
@@ -333,7 +326,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         );
       }
     } else if (result.dismiss === Swal.DismissReason.timer) {
-      // Handle timer expiration
       await SweetAlertService.info(
         'Confirmation Expired',
         'The confirmation dialog timed out. Please try again.',
@@ -346,7 +338,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     }
   };
 
-  // Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedAssignments.length === 0) {
       await SweetAlertService.warning(
@@ -363,7 +354,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
     const result = await Swal.fire({
       title: 'Bulk Delete Confirmation',
-      text: `Are you sure you want to delete ${selectedAssignments.length} selected assignment(s)? This action cannot be undone. This confirmation will expire in 5 seconds.`,
+      text: `Are you sure you want to delete ${selectedAssignments.length} selected assignment(s)? This action cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#6b0016',
@@ -377,15 +368,12 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
     if (result.isConfirmed) {
       try {
-        // Show loading state
         await SweetAlertService.loading('Processing...', 'Please wait while we delete the assignments.');
 
-        // Delete all selected assignments
         for (const assignmentId of selectedAssignments) {
           await dispatch(deleteAssignment(assignmentId)).unwrap();
         }
 
-        // Close loading alert
         SweetAlertService.close();
 
         await SweetAlertService.success(
@@ -400,7 +388,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
         setSelectedAssignments([]);
 
-        // Refresh the assignment list
         const fetchParams: GuardAssignmentParams = {
           page: filters.page || 1,
           per_page: filters.per_page || 10,
@@ -410,9 +397,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         };
         dispatch(fetchAssignments(fetchParams));
       } catch (error) {
-        // Close loading alert if open
         SweetAlertService.close();
-
         await SweetAlertService.error(
           'Delete Failed',
           'There was an error deleting the assignments. Please try again.',
@@ -435,63 +420,39 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     }
   };
 
-  // Handle view details
   const handleViewDetails = (assignment: GuardAssignment) => {
-    router.push(`/guard-assignment/${assignment.id}`)
+    router.push(`/guard-assignment/${assignment.id}`);
   };
 
-  // Handle edit
   const handleEdit = (e: React.MouseEvent, assignment: GuardAssignment) => {
     e.stopPropagation();
     setSelectedAssignment(assignment);
     setEditDialogOpen(true);
   };
 
-  // Check if status can be changed to target status - NOW ALLOWING ALL TRANSITIONS
-  const canChangeTo = (currentStatus: AssignmentStatus, targetStatus: AssignmentStatus): boolean => {
+  const canChangeTo = (currentStatus: GuardAssignmentStatus, targetStatus: GuardAssignmentStatus): boolean => {
     if (currentStatus === targetStatus) return false;
-    
-    // Allow all status transitions - you can change from any status to any other status
-    return true;
+    return true; // Allow all transitions
   };
 
-  // Get available actions based on current status
-  const getAvailableActions = (currentStatus: AssignmentStatus): StatusAction[] => {
+  const getAvailableActions = (currentStatus: GuardAssignmentStatus): StatusAction[] => {
     const actions: StatusAction[] = [];
 
-    // Add all possible status actions
-    if (canChangeTo(currentStatus, 'assigned')) {
-      actions.push({ status: 'assigned', label: 'Mark as Assigned', icon: Flag, color: 'text-blue-600' });
-    }
-    if (canChangeTo(currentStatus, 'accepted')) {
-      actions.push({ status: 'accepted', label: 'Accept Assignment', icon: CheckCircle, color: 'text-green-600' });
-    }
-    if (canChangeTo(currentStatus, 'checked_in')) {
-      actions.push({ status: 'checked_in', label: 'Check In', icon: MapPin, color: 'text-purple-600' });
-    }
-    if (canChangeTo(currentStatus, 'on_duty')) {
-      actions.push({ status: 'on_duty', label: 'Start Duty', icon: PlayCircle, color: 'text-emerald-600' });
-    }
-    if (canChangeTo(currentStatus, 'completed')) {
-      actions.push({ status: 'completed', label: 'Mark Completed', icon: CheckCheck, color: 'text-gray-600' });
-    }
-    if (canChangeTo(currentStatus, 'late')) {
-      actions.push({ status: 'late', label: 'Mark Late', icon: Clock, color: 'text-yellow-600' });
-    }
-    if (canChangeTo(currentStatus, 'no_show')) {
-      actions.push({ status: 'no_show', label: 'No Show', icon: XCircle, color: 'text-red-600' });
-    }
-    if (canChangeTo(currentStatus, 'cancelled')) {
-      actions.push({ status: 'cancelled', label: 'Cancel Assignment', icon: Ban, color: 'text-orange-600' });
-    }
-    if (canChangeTo(currentStatus, 'replaced')) {
-      actions.push({ status: 'replaced', label: 'Replace Guard', icon: RefreshCw, color: 'text-indigo-600' });
+    for (const status of ALL_STATUSES) {
+      if (canChangeTo(currentStatus, status)) {
+        const config = statusActionConfig[status];
+        actions.push({
+          status,
+          label: config.label,
+          icon: config.icon,
+          color: config.color,
+        });
+      }
     }
 
     return actions;
   };
 
-  // Format date and time
   const formatDateTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'MMM dd, yyyy HH:mm');
@@ -508,7 +469,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     }
   };
 
-  // Calculate duration in days
   const calculateDurationDays = (start: string, end: string) => {
     try {
       const startTime = new Date(start);
@@ -520,33 +480,10 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     }
   };
 
-  // Get status display text
-  const getStatusDisplay = (status: string = 'assigned'): string => {
-    const statusMap: Record<string, string> = {
-      'assigned': 'Assigned',
-      'accepted': 'Accepted',
-      'checked_in': 'Checked In',
-      'on_duty': 'On Duty',
-      'completed': 'Completed',
-      'late': 'Late',
-      'no_show': 'No Show',
-      'cancelled': 'Cancelled',
-      'replaced': 'Replaced',
-    };
-    return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
-  };
-
-  // Get status color
-  const getStatusColor = (status: string = 'assigned'): string => {
-    return assignmentStatusColors[status as AssignmentStatus] || defaultStatusColor;
-  };
-
-  // Pagination handlers
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  // Export functionality
   const handleExport = async () => {
     await SweetAlertService.success(
       'Export Started',
@@ -559,7 +496,20 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     );
   };
 
-  // Loading skeleton
+  // Status select options
+  const statusOptions = [
+    { value: "all", label: "All Status" },
+    { value: "assigned", label: "Assigned" },
+    { value: "accepted", label: "Accepted" },
+    { value: "checked_in", label: "Checked In" },
+    { value: "on_duty", label: "On Duty" },
+    { value: "completed", label: "Completed" },
+    { value: "late", label: "Late" },
+    { value: "no_show", label: "No Show" },
+    { value: "cancelled", label: "Cancelled" },
+    { value: "replaced", label: "Replaced" },
+  ];
+
   if (isLoading && assignments.length === 0) {
     return (
       <Card className="shadow-sm rounded-2xl">
@@ -624,7 +574,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         <CardContent className="p-0">
           {/* Filters Section */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
-            {/* Guard Search Input */}
             <div className="sm:col-span-4">
               <InputGroup>
                 <InputGroupInput
@@ -639,7 +588,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               </InputGroup>
             </div>
 
-            {/* Status Filter - Updated with all statuses */}
             <div className="sm:col-span-4">
               <Select value={statusFilter} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-full">
@@ -648,22 +596,16 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Status</SelectLabel>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="checked_in">Checked In</SelectItem>
-                    <SelectItem value="on_duty">On Duty</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="late">Late</SelectItem>
-                    <SelectItem value="no_show">No Show</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="replaced">Replaced</SelectItem>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Date Filter */}
             <div className="sm:col-span-4">
               <Popover>
                 <PopoverTrigger asChild>
@@ -686,7 +628,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               </Popover>
             </div>
 
-            {/* Clear Filters Button */}
             <div className="sm:col-span-12 flex justify-end">
               <Button
                 variant="outline"
@@ -698,7 +639,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
             </div>
           </div>
 
-          {/* Error State */}
           {error && !isLoading && (
             <div className="p-4 text-center text-red-600">
               Error loading assignments: {error}
@@ -719,9 +659,8 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                   <TableHead>Duration</TableHead>
                   <TableHead>Guard Code</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Duty Type</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created Date</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -729,7 +668,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               <TableBody>
                 {assignments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12">
+                    <TableCell colSpan={10} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -750,7 +689,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                   </TableRow>
                 ) : (
                   assignments.map((assignment: GuardAssignment) => {
-                    const currentStatus = (assignment.status || 'assigned') as AssignmentStatus;
+                    const currentStatus = (assignment.status || 'assigned') as GuardAssignmentStatus;
                     const availableActions = getAvailableActions(currentStatus);
 
                     return (
@@ -759,7 +698,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                         className="hover:bg-gray-50 dark:hover:bg-black cursor-pointer"
                         onClick={() => handleViewDetails(assignment)}
                       >
-                        {/* Select Checkbox */}
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedAssignments.includes(assignment.id)}
@@ -769,7 +707,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           />
                         </TableCell>
 
-                        {/* Guard */}
                         <TableCell className="font-medium text-gray-900 dark:text-white">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-gray-500" />
@@ -777,7 +714,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           </div>
                         </TableCell>
 
-                        {/* Duty */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           {assignment.duty ? (
                             <div className="flex items-center gap-2">
@@ -791,7 +727,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           )}
                         </TableCell>
 
-                        {/* Assignment Period */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1">
@@ -805,7 +740,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           </div>
                         </TableCell>
 
-                        {/* Duration */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-gray-500" />
@@ -813,7 +747,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           </div>
                         </TableCell>
 
-                        {/* Guard Code */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           {assignment.guard?.guard_code ? (
                             <Badge variant="outline" className="border-gray-300">
@@ -824,7 +757,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           )}
                         </TableCell>
 
-                        {/* Contact */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           {assignment.guard ? (
                             <div className="flex flex-col text-xs">
@@ -836,47 +768,27 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           )}
                         </TableCell>
 
-                        {/* Duty Type */}
-                        <TableCell className="text-gray-700 dark:text-gray-300">
-                          {assignment.duty?.duty_type ? (
-                            <Badge
-                              variant="outline"
-                              className={`${assignment.duty.duty_type === 'day'
-                                  ? "bg-sky-100 text-sky-800 border-sky-300"
-                                  : "bg-indigo-100 text-indigo-800 border-indigo-300"
-                                }`}
-                            >
-                              {assignment.duty.duty_type.charAt(0).toUpperCase() + assignment.duty.duty_type.slice(1)}
-                            </Badge>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-
-                        {/* Status */}
                         <TableCell>
                           <span
                             className={`
                               inline-block
                               min-w-24
                               text-center
-                              px-2 py-1 
-                              rounded-full 
-                              text-xs 
+                              px-2 py-1
+                              rounded-full
+                              text-xs
                               font-medium
-                              ${getStatusColor(assignment.status)}
+                              ${getStatusColor(currentStatus)}
                             `}
                           >
-                            {getStatusDisplay(assignment.status)}
+                            {getStatusDisplay(currentStatus)}
                           </span>
                         </TableCell>
 
-                        {/* Created Date */}
                         <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
                           {assignment.created_at ? formatDate(assignment.created_at) : "-"}
                         </TableCell>
 
-                        {/* Actions */}
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -884,7 +796,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                                 <EllipsisVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuContent align="end" className="w-56 max-h-[400px] overflow-y-auto">
                               <DropdownMenuItem onClick={() => handleViewDetails(assignment)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View details
@@ -895,20 +807,17 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                               </DropdownMenuItem>
 
                               <DropdownMenuSeparator />
-                              
-                              {/* Status Update Options - All statuses now available */}
-                              <div className="max-h-96 overflow-y-auto">
-                                {availableActions.map((action: StatusAction, index: number) => (
-                                  <DropdownMenuItem
-                                    key={index}
-                                    onClick={(e) => handleStatusUpdate(e, assignment, action.status)}
-                                    className={action.color}
-                                  >
-                                    <action.icon className="mr-2 h-4 w-4" />
-                                    {action.label}
-                                  </DropdownMenuItem>
-                                ))}
-                              </div>
+
+                              {availableActions.map((action: StatusAction, index: number) => (
+                                <DropdownMenuItem
+                                  key={index}
+                                  onClick={(e) => handleStatusUpdate(e, assignment, action.status)}
+                                  className={action.color}
+                                >
+                                  <action.icon className="mr-2 h-4 w-4" />
+                                  {action.label}
+                                </DropdownMenuItem>
+                              ))}
 
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -929,7 +838,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
             </Table>
           </div>
 
-          {/* Pagination */}
           {assignments.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t">
               <div className="text-sm text-gray-700">
@@ -983,7 +891,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
           isOpen={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
-            // Refresh the list after successful edit
             const fetchParams: GuardAssignmentParams = {
               page: filters.page || 1,
               per_page: filters.per_page || 10,

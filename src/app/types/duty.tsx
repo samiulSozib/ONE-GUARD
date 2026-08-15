@@ -1,3 +1,4 @@
+import { DutySchedule } from '@/app/types/duty-schedule';
 import { Site } from "./site";
 
 export interface Duty {
@@ -52,6 +53,9 @@ export interface Duty {
     deleted_at?: string | null;
     site?:Site
   };
+  duty_date?: string;
+  duty_schedule?: DutySchedule,
+  assigned_guards_count?: number|null;
 }
 
 

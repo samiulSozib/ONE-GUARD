@@ -1,598 +1,382 @@
-'use client'
+// components/guard-assignment/guard-assignment-edit-form.tsx
+
+"use client";
 
 import {
-    Dialog,
-    DialogContent,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { ReactNode, useState, useEffect } from 'react'
-import Image from "next/image"
-import { CalendarIcon } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
-import { Calendar } from "../ui/calender"
-import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { fetchGuards } from "@/store/slices/guardSlice"
-import { fetchDuties } from "@/store/slices/dutySlice"
-import { updateAssignment, fetchAssignment } from "@/store/slices/guardAssignmentSlice"
-import { cn } from "@/lib/utils"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
-import { format, parseISO } from "date-fns"
-import { DialogActionFooter } from "../shared/dialog-action-footer"
-import { useAppSelector } from "@/hooks/useAppSelector"
-import { Guard } from "@/app/types/guard"
-import { Duty, DutyParams } from "@/app/types/duty"
-import { GuardAssignment } from "@/app/types/guardAssignment"
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
-import { User, Briefcase } from "lucide-react"
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectLabel,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { ReactNode, useState, useEffect } from 'react';
+import Image from "next/image";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { fetchGuards } from "@/store/slices/guardSlice";
+import { fetchDuties } from "@/store/slices/dutySlice";
+import { updateAssignment, fetchAssignment } from "@/store/slices/guardAssignmentSlice";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import SweetAlertService from "@/lib/sweetAlert";
+import { DialogActionFooter } from "../shared/dialog-action-footer";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { Guard } from "@/app/types/guard";
+import { Duty, DutyParams } from "@/app/types/duty";
+import { GuardAssignment } from "@/app/types/guardAssignment";
+import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon";
+import { User, Briefcase } from "lucide-react";
 
 interface GuardAssignmentEditFormProps {
-    trigger: ReactNode
-    assignment: GuardAssignment
-    isOpen?: boolean
-    onOpenChange?: (open: boolean) => void
-    onSuccess?: () => void
+  trigger: ReactNode;
+  assignment: GuardAssignment;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-// Zod schema for guard assignment validation - UPDATED STATUS LIST
+// Zod schema for update - only guard_id and duty_id are editable
 const guardAssignmentSchema = z.object({
-    guard_id: z.number()
-        .min(1, { message: "Guard is required" }),
+  guard_id: z.number()
+    .min(1, { message: "Guard is required" }),
+  duty_id: z.number()
+    .min(1, { message: "Duty is required" }),
+});
 
-    duty_id: z.number()
-        .min(1, { message: "Duty is required" }),
-
-    start_date: z.string()
-        .min(1, { message: "Start date is required" }),
-
-    end_date: z.string()
-        .min(1, { message: "End date is required" }),
-
-    status: z.enum(["assigned", "accepted", "checked_in", "on_duty", "completed", "late", "no_show", "cancelled", "replaced"])
-}).refine((data) => {
-    const start = new Date(data.start_date)
-    const end = new Date(data.end_date)
-    return end >= start
-}, {
-    message: "End date must be after or equal to start date",
-    path: ["end_date"]
-})
-
-type GuardAssignmentFormData = z.infer<typeof guardAssignmentSchema>
-
-// Status options - UPDATED WITH FULL LIST
-const statusOptions = [
-    { value: "assigned", label: "Assigned" },
-    { value: "accepted", label: "Accepted" },
-    { value: "checked_in", label: "Checked In" },
-    { value: "on_duty", label: "On Duty" },
-    { value: "completed", label: "Completed" },
-    { value: "late", label: "Late" },
-    { value: "no_show", label: "No Show" },
-    { value: "cancelled", label: "Cancelled" },
-    { value: "replaced", label: "Replaced" },
-]
-
-// Helper function to map old status format to new format if needed
-const mapStatusToApi = (status: GuardAssignmentFormData['status']): string => {
-    // If your API still expects the old status format, map it here
-    // For example, if API expects 'active' but we use 'on_duty'
-    const statusMap: Record<string, string> = {
-        'on_duty': 'active', // Map 'on_duty' to 'active' if API expects 'active'
-        // Add other mappings as needed
-    };
-    
-    return statusMap[status] || status;
-};
+type GuardAssignmentFormData = z.infer<typeof guardAssignmentSchema>;
 
 export function GuardAssignmentEditForm({
-    trigger,
-    assignment,
-    isOpen,
-    onOpenChange,
-    onSuccess
+  trigger,
+  assignment,
+  isOpen,
+  onOpenChange,
+  onSuccess
 }: GuardAssignmentEditFormProps) {
-    const dispatch = useAppDispatch()
-    const [isLoading, setIsLoading] = useState(false)
-    const [isFetching, setIsFetching] = useState(false)
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
-    // Redux states for dropdown data
-    const { guards, isLoading: guardsLoading } = useAppSelector((state) => state.guard)
-    const { duties, isLoading: dutiesLoading } = useAppSelector((state) => state.duty)
+  const { guards, isLoading: guardsLoading } = useAppSelector((state) => state.guard);
+  const { duties, isLoading: dutiesLoading } = useAppSelector((state) => state.duty);
 
-    // Search states for comboboxes
-    const [guardSearch, setGuardSearch] = useState("")
-    const [dutySearch, setDutySearch] = useState("")
+  const [guardSearch, setGuardSearch] = useState("");
+  const [dutySearch, setDutySearch] = useState("");
 
-    // Date states
-    const [startDate, setStartDate] = useState<Date | undefined>(undefined)
-    const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  const {
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<GuardAssignmentFormData>({
+    resolver: zodResolver(guardAssignmentSchema),
+    defaultValues: {
+      guard_id: 0,
+      duty_id: 0,
+    },
+    mode: "onBlur"
+  });
 
-    const {
-        handleSubmit,
-        formState: { errors },
-        setValue,
-        watch,
-        reset,
-    } = useForm<GuardAssignmentFormData>({
-        resolver: zodResolver(guardAssignmentSchema),
-        defaultValues: {
-            guard_id: 0,
-            duty_id: 0,
-            start_date: "",
-            end_date: "",
-            status: "assigned"
-        },
-        mode: "onBlur"
-    })
+  const formValues = watch();
 
-    const formValues = watch()
+  useEffect(() => {
+    if (isOpen && assignment?.id) {
+      loadAssignment();
+    }
+  }, [isOpen, assignment?.id]);
 
-    // Fetch assignment details when dialog opens
-    useEffect(() => {
-        if (isOpen && assignment?.id) {
-            loadAssignment()
-        }
-    }, [isOpen, assignment?.id])
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(fetchGuards({ page: 1, per_page: 100, is_active: true }));
+      dispatch(fetchDuties({ page: 1, per_page: 100, is_active: true }));
+    }
+  }, [isOpen, dispatch]);
 
-    // Fetch initial data when dialog opens
-    useEffect(() => {
-        if (isOpen) {
-            dispatch(fetchGuards({ page: 1, per_page: 100 }))
-            dispatch(fetchDuties({ page: 1, per_page: 100 }))
-        }
-    }, [isOpen, dispatch])
+  useEffect(() => {
+    if (formValues.guard_id && formValues.guard_id > 0) {
+      const params: DutyParams = {
+        page: 1,
+        per_page: 100,
+        guard_id: formValues.guard_id,
+        is_active: true,
+      };
+      dispatch(fetchDuties(params));
+    }
+  }, [formValues.guard_id, dispatch]);
 
-    // Fetch duties when guard is selected
-    useEffect(() => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (guardSearch.trim() || guardSearch === "") {
+        dispatch(fetchGuards({
+          page: 1,
+          per_page: 10,
+          search: guardSearch.trim(),
+          is_active: true,
+        }));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [guardSearch, dispatch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (dutySearch.trim() || dutySearch === "") {
+        const params: DutyParams = {
+          page: 1,
+          per_page: 10,
+          search: dutySearch.trim(),
+          is_active: true,
+        };
         if (formValues.guard_id && formValues.guard_id > 0) {
-            const params: DutyParams = {
-                page: 1,
-                per_page: 100,
-                guard_id: formValues.guard_id
-            }
-            dispatch(fetchDuties(params))
+          params.guard_id = formValues.guard_id;
         }
-    }, [formValues.guard_id, dispatch])
+        dispatch(fetchDuties(params));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [dutySearch, formValues.guard_id, dispatch]);
 
-    // Search effects for dropdowns
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (guardSearch.trim() || guardSearch === "") {
-                dispatch(fetchGuards({
-                    page: 1,
-                    per_page: 10,
-                    search: guardSearch.trim()
-                }))
-            }
-        }, 300)
-        return () => clearTimeout(timer)
-    }, [guardSearch, dispatch])
+  const loadAssignment = async () => {
+    if (!assignment?.id) return;
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (dutySearch.trim() || dutySearch === "") {
-                const params: DutyParams = {
-                    page: 1,
-                    per_page: 10,
-                    status: 'approved',
-                    search: dutySearch.trim()
-                }
+    setIsFetching(true);
+    try {
+      const result = await dispatch(fetchAssignment({
+        id: assignment.id,
+      }));
 
-                if (formValues.guard_id && formValues.guard_id > 0) {
-                    params.guard_id = formValues.guard_id
-                }
+      if (fetchAssignment.fulfilled.match(result)) {
+        const data = result.payload.item;
 
-                dispatch(fetchDuties(params))
-            }
-        }, 300)
-        return () => clearTimeout(timer)
-    }, [dutySearch, formValues.guard_id, dispatch])
+        reset({
+          guard_id: data.guard_id || 0,
+          duty_id: data.duty_id || 0,
+        });
 
-    // Update start_date field when date changes
-    useEffect(() => {
-        if (startDate) {
-            setValue('start_date', format(startDate, 'yyyy-MM-dd'), { shouldValidate: true })
+        if (data.guard_id) {
+          dispatch(fetchDuties({
+            page: 1,
+            per_page: 100,
+            guard_id: data.guard_id,
+            is_active: true,
+          }));
         }
-    }, [startDate, setValue])
+      }
+    } catch (error) {
+      console.error("Failed to load assignment:", error);
+      SweetAlertService.error('Error', 'Failed to load assignment details');
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
-    // Update end_date field when date changes
-    useEffect(() => {
-        if (endDate) {
-            setValue('end_date', format(endDate, 'yyyy-MM-dd'), { shouldValidate: true })
+  const formatGuardDisplay = (guard: Partial<Guard>) => {
+    if (!guard) return "";
+    return `${guard.full_name || 'Unknown'} (${guard.guard_code || 'No Code'})`;
+  };
+
+  const formatDutyDisplay = (duty: Partial<Duty>) => {
+    if (!duty) return "";
+    const siteName = duty.site?.site_name || 'No Site';
+    const date = duty.duty_date ? new Date(duty.duty_date).toLocaleDateString() : '';
+    return `${duty.title || 'Untitled Duty'} - ${siteName}${date ? ` (${date})` : ''}`;
+  };
+
+  const onSubmit = async (data: GuardAssignmentFormData) => {
+    if (!assignment?.id) return;
+
+    setIsLoading(true);
+    try {
+      const submitData = {
+        guard_id: data.guard_id,
+        duty_id: data.duty_id,
+      };
+
+      const result = await dispatch(updateAssignment({
+        id: assignment.id,
+        data: submitData
+      }));
+
+      if (updateAssignment.fulfilled.match(result)) {
+        SweetAlertService.success(
+          'Assignment Updated',
+          'Guard assignment has been updated successfully.'
+        ).then(() => {
+          onSuccess?.();
+          onOpenChange?.(false);
+        });
+      } else {
+        throw result.payload;
+      }
+    } catch (error: unknown) {
+      let errorMessage = "Failed to update guard assignment. Please try again.";
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object') {
+        if ('message' in error && typeof error.message === 'string') {
+          errorMessage = error.message;
         }
-    }, [endDate, setValue])
+      }
+      SweetAlertService.error('Update Failed', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const loadAssignment = async () => {
-        if (!assignment?.id) return
+  const handleDialogOpenChange = (open: boolean) => {
+    onOpenChange?.(open);
+    if (!open) {
+      reset();
+      setGuardSearch("");
+      setDutySearch("");
+    }
+  };
 
-        setIsFetching(true)
-        try {
-            const result = await dispatch(fetchAssignment({
-                id: assignment.id,
-                //params: { include_guard: true, include_duty: true }
-            }))
+  return (
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+      <DialogTrigger asChild>
+        {trigger}
+      </DialogTrigger>
 
-            if (fetchAssignment.fulfilled.match(result)) {
-                const data = result.payload.item
+      <DialogContent className="sm:max-w-[600px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
+        <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6 sticky top-0 bg-white dark:bg-gray-900 z-10 pb-2 border-b">
+          <Image src="/images/logo.png" alt="" width={24} height={24} />
+          <span className="whitespace-nowrap">Edit Guard Assignment</span>
+        </div>
 
-                // Parse dates
-                const startDateObj = parseISO(data.start_date)
-                const endDateObj = parseISO(data.end_date)
-
-                // Set date states
-                setStartDate(startDateObj)
-                setEndDate(endDateObj)
-
-                // Map the status from API to form status if needed
-                let formStatus: GuardAssignmentFormData['status'] = data.status as GuardAssignmentFormData['status'];
-                
-                // If API returns 'active' but we use 'on_duty', map it
-                if (data.status === 'on_duty') {
-                    formStatus = 'on_duty';
-                }
-
-                // Populate form with existing data
-                reset({
-                    guard_id: data.guard_id || 0,
-                    duty_id: data.duty_id || 0,
-                    start_date: data.start_date || "",
-                    end_date: data.end_date || "",
-                    status: formStatus || "assigned"
-                })
-
-                // Fetch duties for this guard
-                if (data.guard_id) {
-                    dispatch(fetchDuties({
+        {isFetching ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading assignment details...</p>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Assignment Information
+              </h3>
+              <div className="grid grid-cols-1 gap-4 md:gap-6">
+                {/* Guard Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Guard <span className="text-red-500">*</span>
+                  </Label>
+                  <SearchableDropdownWithIcon
+                    value={formValues.guard_id || 0}
+                    onValueChange={(value) => {
+                      setValue("guard_id", Number(value), { shouldValidate: true });
+                      setValue("duty_id", 0);
+                      setDutySearch("");
+                    }}
+                    options={guards.map((guard: Guard) => ({
+                      value: guard.id,
+                      label: formatGuardDisplay(guard),
+                      ...guard
+                    }))}
+                    onSearch={(search) => {
+                      setGuardSearch(search);
+                      dispatch(fetchGuards({
                         page: 1,
-                        per_page: 100,
-                        guard_id: data.guard_id
-                    }))
-                }
-            }
-        } catch (error) {
-            console.error("Failed to load assignment:", error)
-            SweetAlertService.error('Error', 'Failed to load assignment details')
-        } finally {
-            setIsFetching(false)
-        }
-    }
-
-    // Format functions for display
-    const formatGuardDisplay = (guard: Partial<Guard>) => {
-        if (!guard) return ""
-        return `${guard.full_name || 'Unknown'} (${guard.guard_code || 'No Code'})`
-    }
-
-    const formatDutyDisplay = (duty: Partial<Duty>) => {
-        if (!duty) return ""
-        return `${duty.title || 'Untitled Duty'} (${duty.duty_type || 'N/A'})`
-    }
-
-    const formatDateDisplay = (date: Date | undefined) => {
-        if (!date) return "Select date"
-        return format(date, 'MMM dd, yyyy')
-    }
-
-    const onSubmit = async (data: GuardAssignmentFormData) => {
-        if (!assignment?.id) return
-
-        setIsLoading(true)
-        try {
-            // Prepare data for API - map status if needed
-            const submitData = {
-                guard_id: data.guard_id,
-                duty_id: data.duty_id,
-                start_date: data.start_date,
-                end_date: data.end_date,
-                // If your API expects the old status format, map it here
-                status: mapStatusToApi(data.status)
-            }
-
-            const result = await dispatch(updateAssignment({
-                id: assignment.id,
-                data: submitData
-            }))
-
-            if (updateAssignment.fulfilled.match(result)) {
-                SweetAlertService.success(
-                    'Assignment Updated',
-                    'Guard assignment has been updated successfully.'
-                ).then(() => {
-                    onSuccess?.()
-                    onOpenChange?.(false)
-                })
-            } else {
-                throw result.payload
-            }
-        } catch (error: unknown) {
-            let errorMessage = "Failed to update guard assignment. Please try again."
-
-            if (typeof error === 'string') {
-                errorMessage = error
-            } else if (error instanceof Error) {
-                errorMessage = error.message
-            } else if (error && typeof error === 'object') {
-                if ('message' in error && typeof error.message === 'string') {
-                    errorMessage = error.message
-                }
-            }
-
-            SweetAlertService.error('Update Failed', errorMessage)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const handleDialogOpenChange = (open: boolean) => {
-        onOpenChange?.(open)
-        if (!open) {
-            reset()
-            setStartDate(undefined)
-            setEndDate(undefined)
-            setGuardSearch("")
-            setDutySearch("")
-        }
-    }
-
-    return (
-        <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild>
-                {trigger}
-            </DialogTrigger>
-
-            <DialogContent className="sm:max-w-[600px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
-                {/* Header */}
-                <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6 sticky top-0 bg-white dark:bg-gray-900 z-10 pb-2">
-                    <Image src="/images/logo.png" alt="" width={24} height={24} />
-                    <span className="whitespace-nowrap">Edit Guard Assignment</span>
+                        per_page: 10,
+                        search: search,
+                        is_active: true,
+                      }));
+                    }}
+                    placeholder="Select guard"
+                    disabled={isLoading || isFetching || guardsLoading}
+                    isLoading={guardsLoading}
+                    emptyMessage={guardSearch ? "No guards found" : "No guards available"}
+                    searchPlaceholder="Search guards by name or code..."
+                    icon={User}
+                    iconPosition="left"
+                    displayValue={(value, options) => {
+                      if (!value || value === 0) return "Select guard";
+                      const option = options.find(opt => opt.value === value);
+                      return option?.label || "Select guard";
+                    }}
+                  />
+                  {errors.guard_id && (
+                    <p className="text-sm text-red-500 mt-1">{errors.guard_id.message}</p>
+                  )}
                 </div>
 
-                {isFetching ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading assignment details...</p>
-                        </div>
-                    </div>
-                ) : (
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                Assignment Information
-                            </h3>
-                            <div className="grid grid-cols-1 gap-4 md:gap-6">
-                                {/* Guard Selection */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Guard <span className="text-red-500">*</span>
-                                    </Label>
-                                    <SearchableDropdownWithIcon
-                                        value={formValues.guard_id || 0}
-                                        onValueChange={(value) => {
-                                            setValue("guard_id", Number(value), { shouldValidate: true })
-                                            // Reset duty when guard changes
-                                            setValue("duty_id", 0)
-                                            setDutySearch("")
-                                        }}
-                                        options={guards.map((guard: Guard) => ({
-                                            value: guard.id,
-                                            label: formatGuardDisplay(guard),
-                                            ...guard
-                                        }))}
-                                        onSearch={(search) => {
-                                            setGuardSearch(search)
-                                            dispatch(fetchGuards({
-                                                page: 1,
-                                                per_page: 10,
-                                                search: search
-                                            }))
-                                        }}
-                                        placeholder="Select guard"
-                                        disabled={isLoading || isFetching || guardsLoading}
-                                        isLoading={guardsLoading}
-                                        emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                        searchPlaceholder="Search guards by name or code..."
-                                        icon={User}
-                                        iconPosition="left"
-                                        displayValue={(value, options) => {
-                                            if (!value || value === 0) return "Select guard"
-                                            const option = options.find(opt => opt.value === value)
-                                            return option?.label || "Select guard"
-                                        }}
-                                    />
-                                    {errors.guard_id && (
-                                        <p className="text-sm text-red-500 mt-1">{errors.guard_id.message}</p>
-                                    )}
-                                </div>
+                {/* Duty Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Duty <span className="text-red-500">*</span>
+                  </Label>
+                  <SearchableDropdownWithIcon
+                    value={formValues.duty_id || 0}
+                    onValueChange={(value) => {
+                      setValue("duty_id", Number(value), { shouldValidate: true });
+                    }}
+                    options={duties.map((duty: Duty) => ({
+                      value: duty.id,
+                      label: formatDutyDisplay(duty),
+                      ...duty
+                    }))}
+                    onSearch={(search) => {
+                      setDutySearch(search);
+                      const params: DutyParams = {
+                        page: 1,
+                        per_page: 10,
+                        search: search,
+                        is_active: true,
+                      };
+                      if (formValues.guard_id && formValues.guard_id > 0) {
+                        params.guard_id = formValues.guard_id;
+                      }
+                      dispatch(fetchDuties(params));
+                    }}
+                    placeholder={formValues.guard_id && formValues.guard_id > 0 ? "Select duty" : "Select guard first"}
+                    disabled={isLoading || isFetching || dutiesLoading || !formValues.guard_id || formValues.guard_id === 0}
+                    isLoading={dutiesLoading}
+                    emptyMessage={
+                      !formValues.guard_id || formValues.guard_id === 0
+                        ? "Select a guard first"
+                        : dutySearch
+                          ? "No duties found for this guard"
+                          : "No duties available for this guard"
+                    }
+                    searchPlaceholder="Search duties..."
+                    icon={Briefcase}
+                    iconPosition="left"
+                    displayValue={(value, options) => {
+                      if (!value || value === 0) {
+                        return formValues.guard_id && formValues.guard_id > 0
+                          ? "Select duty"
+                          : "Select guard first";
+                      }
+                      const option = options.find(opt => opt.value === value);
+                      return option?.label || "Select duty";
+                    }}
+                  />
+                  {errors.duty_id && (
+                    <p className="text-sm text-red-500 mt-1">{errors.duty_id.message}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formValues.guard_id && formValues.guard_id > 0
+                      ? "Showing duties assigned to selected guard"
+                      : "Select a guard to see available duties"}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                                {/* Duty Selection */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Duty <span className="text-red-500">*</span>
-                                    </Label>
-                                    <SearchableDropdownWithIcon
-                                        value={formValues.duty_id || 0}
-                                        onValueChange={(value) => {
-                                            setValue("duty_id", Number(value), { shouldValidate: true })
-                                        }}
-                                        options={duties.map((duty: Duty) => ({
-                                            value: duty.id,
-                                            label: formatDutyDisplay(duty),
-                                            ...duty
-                                        }))}
-                                        onSearch={(search) => {
-                                            setDutySearch(search)
-                                            const params: DutyParams = {
-                                                page: 1,
-                                                per_page: 10,
-                                                status: 'approved',
-                                                search: search
-                                            }
-                                            if (formValues.guard_id && formValues.guard_id > 0) {
-                                                params.guard_id = formValues.guard_id
-                                            }
-                                            dispatch(fetchDuties(params))
-                                        }}
-                                        placeholder={formValues.guard_id && formValues.guard_id > 0 ? "Select duty" : "Select guard first"}
-                                        disabled={isLoading || isFetching || dutiesLoading || !formValues.guard_id || formValues.guard_id === 0}
-                                        isLoading={dutiesLoading}
-                                        emptyMessage={
-                                            !formValues.guard_id || formValues.guard_id === 0
-                                                ? "Select a guard first"
-                                                : dutySearch
-                                                    ? "No duties found for this guard"
-                                                    : "No duties available for this guard"
-                                        }
-                                        searchPlaceholder="Search duties..."
-                                        icon={Briefcase}
-                                        iconPosition="left"
-                                        displayValue={(value, options) => {
-                                            if (!value || value === 0) {
-                                                return formValues.guard_id && formValues.guard_id > 0
-                                                    ? "Select duty"
-                                                    : "Select guard first"
-                                            }
-                                            const option = options.find(opt => opt.value === value)
-                                            return option?.label || "Select duty"
-                                        }}
-                                    />
-                                    {errors.duty_id && (
-                                        <p className="text-sm text-red-500 mt-1">{errors.duty_id.message}</p>
-                                    )}
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {formValues.guard_id && formValues.guard_id > 0
-                                            ? "Showing duties assigned to selected guard"
-                                            : "Select a guard to see available duties"}
-                                    </p>
-                                </div>
-
-                                {/* Start Date */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="start_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Start Date <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-11",
-                                                    !startDate && "text-muted-foreground"
-                                                )}
-                                                disabled={isLoading || isFetching}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {formatDateDisplay(startDate)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={startDate}
-                                                onSelect={setStartDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    {errors.start_date && (
-                                        <p className="text-sm text-red-500 mt-1">{errors.start_date.message}</p>
-                                    )}
-                                </div>
-
-                                {/* End Date */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="end_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        End Date <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal h-11",
-                                                    !endDate && "text-muted-foreground"
-                                                )}
-                                                disabled={isLoading || isFetching}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {formatDateDisplay(endDate)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={endDate}
-                                                onSelect={setEndDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    {errors.end_date && (
-                                        <p className="text-sm text-red-500 mt-1">{errors.end_date.message}</p>
-                                    )}
-                                </div>
-
-                                {/* Status Dropdown - UPDATED WITH FULL LIST */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Status <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Select
-                                        value={formValues.status}
-                                        onValueChange={(value: "assigned" | "accepted" | "checked_in" | "on_duty" | "completed" | "late" | "no_show" | "cancelled" | "replaced") =>
-                                            setValue("status", value, { shouldValidate: true })
-                                        }
-                                        disabled={isLoading || isFetching}
-                                    >
-                                        <SelectTrigger className="w-full h-11">
-                                            <SelectValue placeholder="Select status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectLabel>Status</SelectLabel>
-                                                {statusOptions.map((status) => (
-                                                    <SelectItem key={status.value} value={status.value}>
-                                                        {status.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.status && (
-                                        <p className="text-sm text-red-500 mt-1">{errors.status.message}</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer Actions */}
-                        <DialogActionFooter
-                            cancelText="Cancel"
-                            submitText="Update Assignment"
-                            isSubmitting={isLoading}
-                            submitColor="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                            onSubmit={handleSubmit(onSubmit)}
-                            //onCancel={() => handleDialogOpenChange(false)}
-                        />
-                    </form>
-                )}
-            </DialogContent>
-        </Dialog>
-    )
+            <DialogActionFooter
+              cancelText="Cancel"
+              submitText="Update Assignment"
+              isSubmitting={isLoading}
+              submitColor="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+              onSubmit={handleSubmit(onSubmit)}
+            />
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }

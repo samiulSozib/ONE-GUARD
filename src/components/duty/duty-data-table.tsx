@@ -98,10 +98,10 @@ interface DutyDataTableProps {
 
 export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const dispatch = useAppDispatch();
-  
+
   // Redux state
   const { duties, pagination, isLoading, error } = useAppSelector((state) => state.duty);
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [titleSearch, setTitleSearch] = useState("");
@@ -115,12 +115,12 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedDuty, setSelectedDuty] = useState<Duty | null>(null);
-  
+
   // Filter states
   const [siteFilter, setSiteFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dutyTypeFilter, setDutyTypeFilter] = useState("all");
-  
+
   // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
@@ -156,20 +156,20 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       // fetchParams.start_date = formattedDate;
       // fetchParams.end_date = formattedDate;
     }
-    
+
     dispatch(fetchDuties(fetchParams));
   }, [dispatch, filters.page, searchTerm, siteFilter, statusFilter, dutyTypeFilter, dateFilter]);
-  
+
   // Handle search
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitleSearch(e.target.value);
   };
-  
+
   const handleTitleSearchSubmit = () => {
     setSearchTerm(titleSearch);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -184,7 +184,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     });
     setSelectedDuties([]);
   };
-  
+
   // Handle duty selection
   const handleSelectDuty = (dutyId: number, checked: boolean) => {
     if (checked) {
@@ -193,7 +193,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       setSelectedDuties(prev => prev.filter(id => id !== dutyId));
     }
   };
-  
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedDuties(duties.map((duty: Duty) => duty.id));
@@ -201,19 +201,19 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       setSelectedDuties([]);
     }
   };
-  
+
   // Handle delete
   const handleDeleteClick = (e: React.MouseEvent, duty: Duty) => {
     e.stopPropagation();
     setDutyToDelete(duty);
     setDeleteDialogOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     if (dutyToDelete) {
       try {
         await dispatch(deleteDuty(dutyToDelete.id)).unwrap();
-        
+
         await SweetAlertService.success(
           'Duty Deleted',
           `${dutyToDelete.title} has been deleted successfully.`,
@@ -223,10 +223,10 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             timerProgressBar: true,
           }
         );
-        
+
         setDeleteDialogOpen(false);
         setDutyToDelete(null);
-        
+
         // Refresh list
         const fetchParams: DutyParams = {
           page: filters.page || 1,
@@ -248,7 +248,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       }
     }
   };
-  
+
   // Handle duty status update (pending/approved/completed)
   const handleDutyStatusUpdate = async (e: React.MouseEvent, duty: Duty, newStatus: 'pending' | 'approved' | 'completed') => {
     e.stopPropagation();
@@ -272,9 +272,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
     if (result.isConfirmed) {
       try {
-        const resultAction = await dispatch(toggleDutyStatus({ 
-          id: duty.id, 
-          status: newStatus 
+        const resultAction = await dispatch(toggleDutyStatus({
+          id: duty.id,
+          status: newStatus
         }));
 
         if (toggleDutyStatus.fulfilled.match(resultAction)) {
@@ -320,7 +320,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       );
     }
   };
-  
+
   // Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedDuties.length === 0) {
@@ -409,20 +409,20 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       );
     }
   };
-  
+
   // Handle view details
   const handleViewDetails = (duty: Duty) => {
     setSelectedDuty(duty);
     setViewDialogOpen(true);
     if (onViewClick) onViewClick(duty);
   };
-  
+
   // Handle edit
   const handleEdit = (duty: Duty) => {
     setSelectedDuty(duty);
     setEditDialogOpen(true);
   };
-  
+
   // Format date and time
   const formatDateTime = (dateString: string) => {
     try {
@@ -431,7 +431,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       return dateString;
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'MMM dd, yyyy');
@@ -439,7 +439,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       return dateString;
     }
   };
-  
+
   const formatTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'HH:mm');
@@ -447,7 +447,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       return dateString;
     }
   };
-  
+
   // Calculate duration in hours
   const calculateDuration = (start: string, end: string) => {
     try {
@@ -459,7 +459,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       return "N/A";
     }
   };
-  
+
   // Get status display text
   const getStatusDisplay = (status: string) => {
     const statusMap: Record<string, string> = {
@@ -469,26 +469,26 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     };
     return statusMap[status] || status;
   };
-  
+
   // Check if status can be changed to target status
   const canChangeTo = (currentStatus: string, targetStatus: string) => {
     if (currentStatus === targetStatus) return false;
-    
+
     // Define valid transitions
     const validTransitions: Record<string, string[]> = {
       'pending': ['approved', 'completed'],
       'approved': ['completed'],
       'completed': [], // Cannot change from completed
     };
-    
+
     return validTransitions[currentStatus]?.includes(targetStatus) || false;
   };
-  
+
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
-  
+
   // Export functionality
   const handleExport = async () => {
     await SweetAlertService.success(
@@ -501,7 +501,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       }
     );
   };
-  
+
   // Loading skeleton
   if (isLoading && duties.length === 0) {
     return (
@@ -523,7 +523,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       </Card>
     );
   }
-  
+
   return (
     <>
       <Card className="shadow-sm rounded-2xl">
@@ -534,7 +534,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             Filters
           </CardTitle>
 
-          <CardTitle 
+          <CardTitle
             className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80"
             onClick={handleExport}
           >
@@ -570,8 +570,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             {/* Title Search Input */}
             <div className="sm:col-span-3">
               <InputGroup>
-                <InputGroupInput 
-                  placeholder="Duty Title..." 
+                <InputGroupInput
+                  placeholder="Duty Title..."
                   value={titleSearch}
                   onChange={handleTitleSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSearchSubmit()}
@@ -581,7 +581,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                 </InputGroupAddon>
               </InputGroup>
             </div>
-            
+
             {/* Site Filter */}
             <div className="sm:col-span-2">
               <Select value={siteFilter} onValueChange={setSiteFilter}>
@@ -784,7 +784,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           variant="outline"
                           className={`${dutyTypeColors[duty.duty_type] || dutyTypeColors.default} border-0`}
                         >
-                          {duty.duty_type.charAt(0).toUpperCase() + duty.duty_type.slice(1)}
+                          {/* {duty.duty_type.charAt(0).toUpperCase() + duty.duty_type.slice(1)} */}
+                          {duty.duty_type}
                         </Badge>
                       </TableCell>
 
@@ -826,9 +827,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                             inline-block
                             w-28
                             text-center
-                            px-2 py-1 
-                            rounded-full 
-                            text-xs 
+                            px-2 py-1
+                            rounded-full
+                            text-xs
                             font-medium
                             ${dutyStatusColors[duty.status] || "bg-gray-100 text-gray-800"}
                           `}
@@ -854,7 +855,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit duty
                             </DropdownMenuItem>
-                            
+
                             {/* Duty Status Update Options */}
                             {canChangeTo(duty.status, 'approved') && (
                               <DropdownMenuItem
@@ -865,7 +866,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 Approve Duty
                               </DropdownMenuItem>
                             )}
-                            
+
                             {canChangeTo(duty.status, 'completed') && (
                               <DropdownMenuItem
                                 onClick={(e) => handleDutyStatusUpdate(e, duty, 'completed')}
@@ -875,14 +876,14 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 Mark Completed
                               </DropdownMenuItem>
                             )}
-                            
+
                             {duty.status === 'completed' && (
                               <DropdownMenuItem disabled className="text-gray-400">
                                 <AlertCircle className="mr-2 h-4 w-4" />
                                 Cannot change completed duty
                               </DropdownMenuItem>
                             )}
-                            
+
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={(e) => handleDeleteClick(e, duty)}
@@ -937,7 +938,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
           )}
         </CardContent>
       </Card>
-      
+
       {/* Delete Dialog */}
       <DeleteDialog
         isOpen={deleteDialogOpen}
