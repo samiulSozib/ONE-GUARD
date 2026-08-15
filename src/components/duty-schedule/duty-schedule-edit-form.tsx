@@ -638,7 +638,10 @@ export function DutyScheduleEditForm({
                     }}
                     options={clientContractServices.map((service: ClientContractService) => ({
                       value: service.id,
-                      label: service.title || service.name || `Service ${service.id}`,
+                      label: (service.company_service?.name || '') +
+                        (service.pricing_type ? ` ${service.pricing_type}` : '') +
+                        (service.billing_method?.name ? ` (${service.billing_method.name})` : '') ||
+                        `Service ${service.id}`,
                       ...service
                     }))}
                     onSearch={(search) => {
