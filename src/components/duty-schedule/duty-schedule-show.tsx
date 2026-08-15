@@ -360,7 +360,7 @@ export function DutyScheduleShow({
                 Contract Service
               </div>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {item.client_contract_service?.name || "N/A"}
+                {item.client_contract_service?.company_service?.name || "N/A"}
               </p>
             </div>
           )}
