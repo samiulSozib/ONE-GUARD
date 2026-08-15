@@ -56,6 +56,7 @@ export interface Duty {
   duty_date?: string;
   duty_schedule?: DutySchedule,
   assigned_guards_count?: number|null;
+  duty_schedule_id?: number|null;
 }
 
 

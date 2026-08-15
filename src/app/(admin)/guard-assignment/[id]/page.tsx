@@ -79,6 +79,7 @@ import {
 import SweetAlertService from '@/lib/sweetAlert';
 import { format } from 'date-fns';
 import { GuardAssignmentEditForm } from '@/components/guard-assignment/guard-assignment-edit-form';
+import { ReplaceGuardDialog } from '@/components/guard-assignment/replace-guard-dialog';
 import Swal from 'sweetalert2';
 
 // Define the status type
@@ -119,6 +120,7 @@ export default function GuardAssignmentViewPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -258,6 +260,13 @@ export default function GuardAssignmentViewPage() {
                 'The confirmation dialog timed out. Please try again.',
                 { timer: 2000 }
             );
+        }
+    };
+
+    const handleReplaceSuccess = () => {
+        loadAssignment();
+        if (currentAssignment?.id) {
+            loadShiftLogs(currentAssignment.id);
         }
     };
 
@@ -425,6 +434,15 @@ export default function GuardAssignmentViewPage() {
                     >
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setReplaceDialogOpen(true)}
+                        disabled={isDeleting || isUpdating}
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                    >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Replace Guard
                     </Button>
                     <Button
                         variant="destructive"
@@ -1003,6 +1021,16 @@ export default function GuardAssignmentViewPage() {
                     isOpen={editDialogOpen}
                     onOpenChange={setEditDialogOpen}
                     onSuccess={loadAssignment}
+                />
+            )}
+
+            {/* Replace Guard Dialog */}
+            {currentAssignment && (
+                <ReplaceGuardDialog
+                    isOpen={replaceDialogOpen}
+                    onOpenChange={setReplaceDialogOpen}
+                    assignment={currentAssignment}
+                    onSuccess={handleReplaceSuccess}
                 />
             )}
         </div>

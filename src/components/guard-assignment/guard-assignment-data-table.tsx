@@ -81,6 +81,7 @@ import { GuardAssignment, GuardAssignmentParams, GuardAssignmentStatus } from "@
 
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
+import { ReplaceGuardDialog } from "./replace-guard-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
 import { GuardAssignmentEditForm } from "./guard-assignment-edit-form";
 import Swal from 'sweetalert2';
@@ -105,11 +106,7 @@ const ALL_STATUSES: GuardAssignmentStatus[] = [
   'accepted',
   'checked_in',
   'on_duty',
-  'completed',
-  'late',
-  'no_show',
-  'cancelled',
-  'replaced'
+  'completed'
 ];
 
 const statusActionConfig: Record<GuardAssignmentStatus, { label: string; icon: React.ElementType; color: string }> = {
@@ -141,6 +138,8 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
   const [assignmentToDelete, setAssignmentToDelete] = useState<GuardAssignment | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<GuardAssignment | null>(null);
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [assignmentToReplace, setAssignmentToReplace] = useState<GuardAssignment | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -258,6 +257,12 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         );
       }
     }
+  };
+
+  const handleReplace = (e: React.MouseEvent, assignment: GuardAssignment) => {
+    e.stopPropagation();
+    setAssignmentToReplace(assignment);
+    setReplaceDialogOpen(true);
   };
 
   const handleStatusUpdate = async (e: React.MouseEvent, assignment: GuardAssignment, newStatus: GuardAssignmentStatus) => {
@@ -432,7 +437,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
   const canChangeTo = (currentStatus: GuardAssignmentStatus, targetStatus: GuardAssignmentStatus): boolean => {
     if (currentStatus === targetStatus) return false;
-    return true; // Allow all transitions
+    return true;
   };
 
   const getAvailableActions = (currentStatus: GuardAssignmentStatus): StatusAction[] => {
@@ -496,7 +501,6 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     );
   };
 
-  // Status select options
   const statusOptions = [
     { value: "all", label: "All Status" },
     { value: "assigned", label: "Assigned" },
@@ -806,6 +810,14 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                                 Edit assignment
                               </DropdownMenuItem>
 
+                              <DropdownMenuItem
+                                onClick={(e) => handleReplace(e, assignment)}
+                                className="text-blue-600 focus:text-blue-600"
+                              >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Replace Guard
+                              </DropdownMenuItem>
+
                               <DropdownMenuSeparator />
 
                               {availableActions.map((action: StatusAction, index: number) => (
@@ -882,6 +894,26 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
         title="Delete Assignment"
         description={`Are you sure you want to delete this assignment? This action cannot be undone.`}
       />
+
+      {/* Replace Guard Dialog */}
+      {assignmentToReplace && (
+        <ReplaceGuardDialog
+          isOpen={replaceDialogOpen}
+          onOpenChange={setReplaceDialogOpen}
+          assignment={assignmentToReplace}
+          onSuccess={() => {
+            const fetchParams: GuardAssignmentParams = {
+              page: filters.page || 1,
+              per_page: filters.per_page || 10,
+              search: searchTerm || undefined,
+              include_guard: true,
+              include_duty: true,
+            };
+            dispatch(fetchAssignments(fetchParams));
+            setAssignmentToReplace(null);
+          }}
+        />
+      )}
 
       {/* Edit Form Dialog */}
       {selectedAssignment && (

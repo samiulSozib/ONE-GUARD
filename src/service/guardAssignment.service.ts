@@ -69,6 +69,8 @@
 
 // service/guardAssignment.service.ts
 
+// service/guardAssignment.service.ts
+
 import { ApiResponse } from "@/app/types/api.types";
 import api, { handleApiResponse } from "./api.service";
 import {
@@ -82,6 +84,36 @@ import {
   CancelAssignmentDto,
   GuardAssignmentStatus,
 } from "@/app/types/guardAssignment";
+
+// Define the replacement response type
+export interface ReplaceGuardResponse {
+  message: string;
+  summary: {
+    scope: string;
+    old_guard_id: number;
+    replacement_guard_id: number;
+    assignments_checked: number;
+    assignments_replaced: number;
+    assignments_skipped: number;
+  };
+  replaced: Array<{
+    duty_id: number;
+    old_assignment_id: number;
+    old_guard_id: number;
+    old_status: string;
+    new_assignment_id: number;
+    replacement_guard_id: number;
+    new_status: string;
+    start_datetime: string;
+    end_datetime: string;
+  }>;
+  skipped: Array<{
+    duty_id: number;
+    old_assignment_id: number;
+    reason: string;
+    message: string;
+  }>;
+}
 
 export const guardAssignmentService = {
   // Get all assignments
@@ -149,10 +181,10 @@ export const guardAssignmentService = {
       )
     ),
 
-  // Replace guard
+  // Replace guard - FIXED: Use the correct response type
   replaceGuard: (data: ReplaceGuardDto) =>
     handleApiResponse(
-      api.post<ApiResponse<{ item: GuardAssignment }>>(
+      api.post<ApiResponse<ReplaceGuardResponse>>(
         "/admin/guard-assignments/replace",
         data
       )

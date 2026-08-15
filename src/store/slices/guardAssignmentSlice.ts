@@ -283,7 +283,7 @@
 // store/slices/guardAssignmentSlice.ts
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { guardAssignmentService } from "@/service/guardAssignment.service";
+import { guardAssignmentService, ReplaceGuardResponse } from "@/service/guardAssignment.service";
 import {
   GuardAssignment,
   GuardAssignmentParams,
@@ -495,11 +495,19 @@ export const bulkScheduleAssignments = createAsyncThunk(
 );
 
 // Replace guard
-export const replaceGuard = createAsyncThunk(
+// store/slices/guardAssignmentSlice.ts
+
+export const replaceGuard = createAsyncThunk<
+  ReplaceGuardResponse, // Return type
+  ReplaceGuardDto, // Argument type
+  { rejectValue: string }
+>(
   "guardAssignment/replaceGuard",
   async (data: ReplaceGuardDto, { rejectWithValue }) => {
     try {
       const response = await guardAssignmentService.replaceGuard(data);
+      // The response is ApiResponse<ReplaceGuardResponse>
+      // We need to return the body which contains the replacement data
       return response;
     } catch (error: unknown) {
       const message =
@@ -702,30 +710,54 @@ const guardAssignmentSlice = createSlice({
       })
 
       // Replace guard
-      .addCase(replaceGuard.pending, (state) => {
+      // .addCase(replaceGuard.pending, (state) => {
+      //   state.isSubmitting = true;
+      //   state.error = null;
+      //   state.successMessage = null;
+      // })
+      // .addCase(replaceGuard.fulfilled, (state, action) => {
+      //   state.isSubmitting = false;
+      //   // The response contains the updated assignment
+      //   const updatedAssignment = action.payload.item;
+      //   const index = state.assignments.findIndex(
+      //     (assignment) => assignment.id === updatedAssignment.id
+      //   );
+      //   if (index !== -1) {
+      //     state.assignments[index] = updatedAssignment;
+      //   }
+      //   if (state.currentAssignment?.id === updatedAssignment.id) {
+      //     state.currentAssignment = updatedAssignment;
+      //   }
+      //   state.successMessage = "Guard replaced successfully";
+      // })
+      // .addCase(replaceGuard.rejected, (state, action) => {
+      //   state.isSubmitting = false;
+      //   state.error = action.payload as string;
+      // })
+
+      // Replace guard
+.addCase(replaceGuard.pending, (state) => {
         state.isSubmitting = true;
         state.error = null;
         state.successMessage = null;
       })
       .addCase(replaceGuard.fulfilled, (state, action) => {
         state.isSubmitting = false;
-        // The response contains the updated assignment
-        const updatedAssignment = action.payload.item;
-        const index = state.assignments.findIndex(
-          (assignment) => assignment.id === updatedAssignment.id
-        );
-        if (index !== -1) {
-          state.assignments[index] = updatedAssignment;
+        // Now action.payload is ReplaceGuardResponse
+        const data = action.payload;
+        if (data && data.replaced && data.replaced.length > 0) {
+          state.successMessage = `Guard replaced successfully: ${data.summary.assignments_replaced} assignment(s) replaced`;
+        } else if (data && data.skipped && data.skipped.length > 0 && data.replaced.length === 0) {
+          state.successMessage = `Guard replacement failed: ${data.skipped.length} assignment(s) skipped`;
+        } else {
+          state.successMessage = data?.message || "Guard replacement completed";
         }
-        if (state.currentAssignment?.id === updatedAssignment.id) {
-          state.currentAssignment = updatedAssignment;
-        }
-        state.successMessage = "Guard replaced successfully";
       })
       .addCase(replaceGuard.rejected, (state, action) => {
         state.isSubmitting = false;
         state.error = action.payload as string;
       })
+
 
       // Cancel assignment
       .addCase(cancelAssignment.pending, (state) => {
