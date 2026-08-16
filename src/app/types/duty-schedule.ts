@@ -1,4 +1,5 @@
-// types/duty-schedule.ts
+// app/types/duty-schedule.ts
+
 import { Site } from './site';
 import { SiteLocation } from './siteLocation.types';
 import { ClientContractService } from './client-contract-service';

@@ -1,4 +1,5 @@
 // components/duty-schedule/duty-schedule-data-table.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,6 +18,7 @@ import {
   Users,
   Repeat,
   Eye,
+  Timer,
 } from "lucide-react";
 import {
   Card,
@@ -72,7 +74,6 @@ import SweetAlertService from "@/lib/sweetAlert";
 import { DutyScheduleShow } from '@/components/duty-schedule/duty-schedule-show';
 import { DutyScheduleEditForm } from '@/components/duty-schedule/duty-schedule-edit-form';
 
-
 // Schedule type labels
 const scheduleTypeLabels: Record<string, string> = {
   one_time: "One Time",
@@ -101,13 +102,11 @@ interface DutyScheduleDataTableProps {
 export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps) {
   const dispatch = useAppDispatch();
 
-  // Redux state
   const { items, pagination, isLoading } = useAppSelector(
     (state) => state.dutySchedule
   );
   const { sites } = useAppSelector((state) => state.site);
 
-  // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<DutyScheduleParams>({
     page: 1,
@@ -121,12 +120,10 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
   const [showDialogOpen, setShowDialogOpen] = useState(false);
   const [itemToShow, setItemToShow] = useState<number | null>(null);
 
-  // Fetch data on mount
   useEffect(() => {
     dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
   }, [dispatch]);
 
-  // Fetch items on mount and filter changes
   useEffect(() => {
     const fetchParams = {
       ...filters,
@@ -135,7 +132,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     dispatch(fetchDutySchedules(fetchParams));
   }, [dispatch, filters, searchTerm]);
 
-  // Handle search
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
@@ -144,7 +140,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     setFilters(prev => ({ ...prev, page: 1 }));
   };
 
-  // Handle filter changes
   const handleSiteFilter = (siteId: string) => {
     setFilters(prev => ({
       ...prev,
@@ -169,7 +164,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     }));
   };
 
-  // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
     setFilters({
@@ -179,7 +173,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     setSelectedItems([]);
   };
 
-  // Handle selection
   const handleSelectItem = (itemId: number) => {
     setSelectedItems(prev =>
       prev.includes(itemId)
@@ -196,19 +189,16 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     }
   };
 
-  // Handle view
   const handleView = (id: number) => {
     setItemToShow(id);
     setShowDialogOpen(true);
   };
 
-  // Handle edit
   const handleEdit = (item: DutySchedule) => {
     setSelectedItem(item);
     setEditDialogOpen(true);
   };
 
-  // Handle delete
   const handleDeleteClick = (item: DutySchedule) => {
     setItemToDelete(item);
     setDeleteDialogOpen(true);
@@ -245,7 +235,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     }
   };
 
-  // Handle status toggle
   const handleToggleStatus = async (item: DutySchedule) => {
     try {
       const newStatus = !item.is_active;
@@ -272,18 +261,15 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     }
   };
 
-  // Pagination handlers
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  // Get site name
   const getSiteName = (id: number) => {
     const site = sites.find(s => s.id === id);
     return site?.site_name || site?.title || "N/A";
   };
 
-  // Format time
   const formatTime = (time: string) => {
     if (!time) return "-";
     const [hours, minutes] = time.split(':');
@@ -293,7 +279,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     return `${displayHour}:${minutes} ${period}`;
   };
 
-  // Format date
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
     try {
@@ -307,7 +292,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     }
   };
 
-  // Get schedule type badge
   const getScheduleTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
       one_time: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -320,7 +304,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     );
   };
 
-  // Get status badge
   const getStatusBadge = (status: string) => {
     return (
       <Badge variant="outline" className={`${statusColors[status] || "bg-gray-100"} border-0`}>
@@ -329,7 +312,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     );
   };
 
-  // Get recurrence display
   const getRecurrenceDisplay = (item: DutySchedule) => {
     if (item.schedule_type === 'one_time') return "One Time";
     if (!item.recurrence_frequency) return "N/A";
@@ -345,7 +327,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     return display;
   };
 
-  // Loading skeleton
   if (isLoading && items.length === 0) {
     return (
       <Card className="shadow-sm rounded-2xl">
@@ -370,7 +351,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
   return (
     <>
       <Card className="shadow-sm rounded-2xl">
-        {/* Top Header Section */}
         <div className="bg-[#F4F6F8] p-5 -mt-6 rounded-t-md flex flex-row items-center gap-4 w-full justify-between md:justify-start">
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
             <ListFilter size="14px" />
@@ -389,7 +369,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
         </div>
 
         <CardContent className="p-0">
-          {/* Filters Section */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 py-3">
             <div className="sm:col-span-3">
               <InputGroup>
@@ -487,7 +466,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
             </div>
           </div>
 
-          {/* Table Section */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -537,7 +515,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                       key={item.id}
                       className="hover:bg-gray-50 dark:hover:bg-black"
                     >
-                      {/* Select Checkbox */}
                       <TableCell>
                         <Checkbox
                           checked={selectedItems.includes(item.id)}
@@ -545,7 +522,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         />
                       </TableCell>
 
-                      {/* Title */}
                       <TableCell>
                         <div className="font-medium text-gray-900 dark:text-white">
                           {item.title}
@@ -557,7 +533,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         )}
                       </TableCell>
 
-                      {/* Site */}
                       <TableCell className="text-gray-700 dark:text-gray-300">
                         <div className="flex items-center gap-2">
                           <Building className="h-4 w-4 text-gray-500" />
@@ -565,12 +540,10 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         </div>
                       </TableCell>
 
-                      {/* Schedule Type */}
                       <TableCell>
                         {getScheduleTypeBadge(item.schedule_type)}
                       </TableCell>
 
-                      {/* Schedule Details */}
                       <TableCell className="text-gray-700 dark:text-gray-300">
                         <div className="flex items-center gap-1">
                           {item.schedule_type === 'recurring' && (
@@ -590,15 +563,19 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         )}
                       </TableCell>
 
-                      {/* Time */}
                       <TableCell className="text-gray-700 dark:text-gray-300 text-xs">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-gray-500" />
                           <span>{formatTime(item.start_time)} - {formatTime(item.end_time)}</span>
                         </div>
+                        {item.mandatory_check_in_time && (
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <Timer className="h-2 w-2" />
+                            <span>Check-in: {formatTime(item.mandatory_check_in_time)}</span>
+                          </div>
+                        )}
                       </TableCell>
 
-                      {/* Guards */}
                       <TableCell className="text-gray-700 dark:text-gray-300">
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4 text-gray-500" />
@@ -606,7 +583,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         </div>
                       </TableCell>
 
-                      {/* Status */}
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getStatusBadge(item.status)}
@@ -624,7 +600,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         </div>
                       </TableCell>
 
-                      {/* Actions */}
                       <TableCell className="text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -672,7 +647,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
             </Table>
           </div>
 
-          {/* Pagination */}
           {items.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t">
               <div className="text-sm text-gray-700">
@@ -711,7 +685,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
         </CardContent>
       </Card>
 
-      {/* Delete Dialog */}
       <DeleteDialog
         isOpen={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -720,7 +693,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
         description={`Are you sure you want to delete "${itemToDelete?.title}"? This action cannot be undone.`}
       />
 
-      {/* Show Dialog */}
       {itemToShow && (
         <DutyScheduleShow
           trigger={<div />}
@@ -730,7 +702,6 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
         />
       )}
 
-      {/* Edit Form Dialog */}
       {selectedItem && (
         <DutyScheduleEditForm
           trigger={<div />}

@@ -1,4 +1,5 @@
 // components/duty-schedule/duty-schedule-edit-form.tsx
+
 "use client";
 
 import {
@@ -21,10 +22,12 @@ import {
 import { fetchSites } from "@/store/slices/siteSlice";
 import { fetchSiteLocations } from "@/store/slices/siteLocationSlice";
 import { fetchClientContractServices } from "@/store/slices/client-contract-service.slice";
+import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice";
 import { DutySchedule, UpdateDutyScheduleDto } from "@/app/types/duty-schedule";
 import { Site } from "@/app/types/site";
 import { SiteLocation } from "@/app/types/siteLocation.types";
 import { ClientContractService } from "@/app/types/client-contract-service";
+import { DutyTimeType } from "@/app/types/dutyTimeType";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -69,7 +72,7 @@ const weekdays = [
   { value: "sunday", label: "Sunday" },
 ];
 
-// Zod schema (same as create but all fields optional for update)
+// Zod schema
 const dutyScheduleSchema = z.object({
   site_id: z.number()
     .min(1, { message: "Site is required" })
@@ -80,6 +83,10 @@ const dutyScheduleSchema = z.object({
     .nullable(),
 
   client_contract_service_id: z.number()
+    .optional()
+    .nullable(),
+
+  duty_time_type_id: z.number()
     .optional()
     .nullable(),
 
@@ -136,6 +143,10 @@ const dutyScheduleSchema = z.object({
     .optional()
     .nullable(),
 
+  mandatory_check_in_time: z.string()
+    .optional()
+    .nullable(),
+
   status: z.string(),
   is_active: z.boolean(),
   notes: z.string().optional().nullable(),
@@ -167,11 +178,13 @@ export function DutyScheduleEditForm({
   const { sites } = useAppSelector((state) => state.site);
   const { siteLocations } = useAppSelector((state) => state.siteLocation);
   const { items: clientContractServices } = useAppSelector((state) => state.clientContractService);
+  const { dutyTimeTypes } = useAppSelector((state) => state.dutyTimeTypes);
 
   // Search states
   const [siteSearch, setSiteSearch] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
+  const [dutyTimeTypeSearch, setDutyTimeTypeSearch] = useState("");
 
   const {
     register,
@@ -186,6 +199,7 @@ export function DutyScheduleEditForm({
       site_id: undefined,
       site_location_id: null,
       client_contract_service_id: null,
+      duty_time_type_id: null,
       title: "",
       description: "",
       schedule_type: "recurring",
@@ -199,6 +213,7 @@ export function DutyScheduleEditForm({
       end_time: "16:00",
       guards_required: 1,
       required_hours: 8,
+      mandatory_check_in_time: null,
       status: "active",
       is_active: true,
       notes: "",
@@ -220,6 +235,7 @@ export function DutyScheduleEditForm({
     if (isOpen) {
       dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
       dispatch(fetchClientContractServices({ page: 1, per_page: 100, is_active: true }));
+      dispatch(fetchDutyTimeTypes({ page: 1, per_page: 100, is_active: true }));
     }
   }, [isOpen, dispatch]);
 
@@ -264,6 +280,20 @@ export function DutyScheduleEditForm({
     return () => clearTimeout(timer);
   }, [serviceSearch, dispatch]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (dutyTimeTypeSearch.trim() || dutyTimeTypeSearch === "") {
+        dispatch(fetchDutyTimeTypes({
+          page: 1,
+          per_page: 10,
+          is_active: true,
+          search: dutyTimeTypeSearch.trim()
+        }));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [dutyTimeTypeSearch, dispatch]);
+
   const loadItem = async () => {
     if (!item?.id) return;
 
@@ -280,6 +310,7 @@ export function DutyScheduleEditForm({
           site_id: data.site_id,
           site_location_id: data.site_location_id || null,
           client_contract_service_id: data.client_contract_service_id || null,
+          duty_time_type_id: data.duty_time_type_id || null,
           title: data.title || "",
           description: data.description || "",
           schedule_type: data.schedule_type || "recurring",
@@ -293,6 +324,7 @@ export function DutyScheduleEditForm({
           end_time: data.end_time || "16:00",
           guards_required: data.guards_required || 1,
           required_hours: data.required_hours || 8,
+          mandatory_check_in_time: data.mandatory_check_in_time || null,
           status: data.status || "active",
           is_active: data.is_active !== undefined ? data.is_active : true,
           notes: data.notes || "",
@@ -325,6 +357,7 @@ export function DutyScheduleEditForm({
         site_id: data.site_id,
         site_location_id: data.site_location_id || null,
         client_contract_service_id: data.schedule_type === 'recurring' ? null : (data.client_contract_service_id || null),
+        duty_time_type_id: data.duty_time_type_id || null,
         title: data.title,
         description: data.description?.trim() || null,
         schedule_type: data.schedule_type as 'one_time' | 'recurring',
@@ -340,6 +373,7 @@ export function DutyScheduleEditForm({
         end_time: data.end_time,
         guards_required: data.guards_required,
         required_hours: data.required_hours || 0,
+        mandatory_check_in_time: data.mandatory_check_in_time || null,
         status: data.status,
         is_active: data.is_active,
         notes: data.notes?.trim() || null,
@@ -384,13 +418,13 @@ export function DutyScheduleEditForm({
     if (open) {
       onOpenChange?.(true);
     } else {
-      // Check for unsaved changes
       const originalData = {
         title: item?.title || "",
         description: item?.description || "",
         site_id: item?.site_id,
         site_location_id: item?.site_location_id || null,
         client_contract_service_id: item?.client_contract_service_id || null,
+        duty_time_type_id: item?.duty_time_type_id || null,
         schedule_type: item?.schedule_type || "recurring",
         start_date: item?.start_date || "",
         end_date: item?.end_date || "",
@@ -402,6 +436,7 @@ export function DutyScheduleEditForm({
         end_time: item?.end_time || "16:00",
         guards_required: item?.guards_required || 1,
         required_hours: item?.required_hours || 8,
+        mandatory_check_in_time: item?.mandatory_check_in_time || null,
         status: item?.status || "active",
         is_active: item?.is_active !== undefined ? item.is_active : true,
         notes: item?.notes || "",
@@ -413,6 +448,7 @@ export function DutyScheduleEditForm({
         site_id: formValues.site_id,
         site_location_id: formValues.site_location_id || null,
         client_contract_service_id: formValues.client_contract_service_id || null,
+        duty_time_type_id: formValues.duty_time_type_id || null,
         schedule_type: formValues.schedule_type || "recurring",
         start_date: formValues.start_date || "",
         end_date: formValues.end_date || "",
@@ -424,6 +460,7 @@ export function DutyScheduleEditForm({
         end_time: formValues.end_time || "16:00",
         guards_required: formValues.guards_required || 1,
         required_hours: formValues.required_hours || 8,
+        mandatory_check_in_time: formValues.mandatory_check_in_time || null,
         status: formValues.status || "active",
         is_active: formValues.is_active !== undefined ? formValues.is_active : true,
         notes: formValues.notes || "",
@@ -459,7 +496,6 @@ export function DutyScheduleEditForm({
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
-        {/* Header */}
         <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
           <Image src="/images/logo.png" alt="" width={24} height={24} />
           <span className="whitespace-nowrap">Edit Duty Schedule</span>
@@ -847,6 +883,50 @@ export function DutyScheduleEditForm({
                     {...register("required_hours", { valueAsNumber: true })}
                     error={errors.required_hours?.message}
                     disabled={isLoading || isFetching}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Mandatory Check-in Time"
+                    type="time"
+                    {...register("mandatory_check_in_time")}
+                    error={errors.mandatory_check_in_time?.message}
+                    disabled={isLoading || isFetching}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Duty Time Type (Optional)
+                  </Label>
+                  <SearchableDropdownWithIcon
+                    value={formValues.duty_time_type_id || ""}
+                    onValueChange={(value) => {
+                      setValue("duty_time_type_id", Number(value), { shouldValidate: true });
+                    }}
+                    options={dutyTimeTypes.map((type: DutyTimeType) => ({
+                      value: type.id,
+                      label: type.title || `Type ${type.id}`,
+                      ...type
+                    }))}
+                    onSearch={(search) => {
+                      setDutyTimeTypeSearch(search);
+                      dispatch(fetchDutyTimeTypes({
+                        page: 1,
+                        per_page: 10,
+                        is_active: true,
+                        search: search
+                      }));
+                    }}
+                    placeholder="Select duty time type"
+                    disabled={isLoading || isFetching}
+                    emptyMessage={dutyTimeTypeSearch ? "No types found" : "No types available"}
+                    searchPlaceholder="Search duty time types..."
+                    icon={Clock}
+                    iconPosition="left"
                   />
                 </div>
               </div>

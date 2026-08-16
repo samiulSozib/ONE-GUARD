@@ -1,4 +1,5 @@
 // components/duty-schedule/duty-schedule-show.tsx
+
 "use client";
 
 import {
@@ -25,7 +26,8 @@ import {
   MapPin,
   Package,
   User,
-  CalendarDays
+  CalendarDays,
+  Timer
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -75,7 +77,6 @@ export function DutyScheduleShow({
 
   const item = currentItem;
 
-  // Format date
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
     try {
@@ -89,7 +90,6 @@ export function DutyScheduleShow({
     }
   };
 
-  // Format time
   const formatTime = (time: string) => {
     if (!time) return "-";
     const [hours, minutes] = time.split(':');
@@ -99,7 +99,6 @@ export function DutyScheduleShow({
     return `${displayHour}:${minutes} ${period}`;
   };
 
-  // Get status badge
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -113,7 +112,6 @@ export function DutyScheduleShow({
     );
   };
 
-  // Get schedule type badge
   const getScheduleTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
       one_time: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -126,7 +124,6 @@ export function DutyScheduleShow({
     );
   };
 
-  // Get recurrence display
   const getRecurrenceDisplay = (item: DutySchedule) => {
     if (item.schedule_type === 'one_time') return "One Time";
     if (!item.recurrence_frequency) return "N/A";
@@ -142,7 +139,6 @@ export function DutyScheduleShow({
     return display;
   };
 
-  // Loading skeleton
   if (isLoading || isFetching) {
     return (
       <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
@@ -199,7 +195,6 @@ export function DutyScheduleShow({
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[800px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
-        {/* Header */}
         <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
           <Image src="/images/logo.png" alt="" width={24} height={24} />
           <span className="whitespace-nowrap">Duty Schedule Details</span>
@@ -209,7 +204,6 @@ export function DutyScheduleShow({
         </div>
 
         <div className="space-y-6">
-          {/* Status Banner */}
           <div className={`p-4 rounded-lg flex items-center gap-3 ${
             item.is_active && item.status === 'active'
               ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
@@ -232,7 +226,6 @@ export function DutyScheduleShow({
             </span>
           </div>
 
-          {/* Title & Description */}
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               {item.title}
@@ -244,7 +237,6 @@ export function DutyScheduleShow({
             )}
           </div>
 
-          {/* Main Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -272,7 +264,6 @@ export function DutyScheduleShow({
             </div>
           </div>
 
-          {/* Schedule Type & Recurrence */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -306,7 +297,6 @@ export function DutyScheduleShow({
             </div>
           </div>
 
-          {/* Date Range */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -329,7 +319,6 @@ export function DutyScheduleShow({
             </div>
           </div>
 
-          {/* Guards & Duties */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -352,7 +341,32 @@ export function DutyScheduleShow({
             </div>
           </div>
 
-          {/* Contract Service */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {item.mandatory_check_in_time && (
+              <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <Timer className="h-4 w-4" />
+                  Mandatory Check-in Time
+                </div>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatTime(item.mandatory_check_in_time)}
+                </p>
+              </div>
+            )}
+
+            {item.duty_time_type && (
+              <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <Clock className="h-4 w-4" />
+                  Duty Time Type
+                </div>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {item.duty_time_type.name || item.duty_time_type.title || "N/A"}
+                </p>
+              </div>
+            )}
+          </div>
+
           {item.client_contract_service && (
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -365,7 +379,6 @@ export function DutyScheduleShow({
             </div>
           )}
 
-          {/* Notes */}
           {item.notes && (
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -378,7 +391,6 @@ export function DutyScheduleShow({
             </div>
           )}
 
-          {/* Creator & Updater */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
             {item.creator && (
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">

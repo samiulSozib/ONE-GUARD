@@ -1,4 +1,5 @@
 // components/duty-schedule/duty-schedule-create-form.tsx
+
 "use client";
 
 import {
@@ -18,10 +19,12 @@ import { createDutySchedule } from "@/store/slices/duty-schedule.slice";
 import { fetchSites } from "@/store/slices/siteSlice";
 import { fetchSiteLocations } from "@/store/slices/siteLocationSlice";
 import { fetchClientContractServices } from "@/store/slices/client-contract-service.slice";
+import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice";
 import { CreateDutyScheduleDto } from "@/app/types/duty-schedule";
 import { Site } from "@/app/types/site";
 import { SiteLocation } from "@/app/types/siteLocation.types";
 import { ClientContractService } from "@/app/types/client-contract-service";
+import { DutyTimeType } from "@/app/types/dutyTimeType";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -80,6 +83,10 @@ const dutyScheduleSchema = z.object({
     .optional()
     .nullable(),
 
+  duty_time_type_id: z.number()
+    .optional()
+    .nullable(),
+
   title: z.string()
     .min(1, { message: "Title is required" })
     .max(200, { message: "Title must be less than 200 characters" }),
@@ -127,6 +134,10 @@ const dutyScheduleSchema = z.object({
     .optional()
     .nullable(),
 
+  mandatory_check_in_time: z.string()
+    .optional()
+    .nullable(),
+
   status: z.string(),
   is_active: z.boolean(),
   notes: z.string().optional().nullable(),
@@ -155,11 +166,13 @@ export function DutyScheduleCreateForm({
   const { sites } = useAppSelector((state) => state.site);
   const { siteLocations } = useAppSelector((state) => state.siteLocation);
   const { items: clientContractServices } = useAppSelector((state) => state.clientContractService);
+  const { dutyTimeTypes } = useAppSelector((state) => state.dutyTimeTypes);
 
   // Search states
   const [siteSearch, setSiteSearch] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
+  const [dutyTimeTypeSearch, setDutyTimeTypeSearch] = useState("");
 
   const {
     register,
@@ -174,6 +187,7 @@ export function DutyScheduleCreateForm({
       site_id: undefined,
       site_location_id: null,
       client_contract_service_id: null,
+      duty_time_type_id: null,
       title: "",
       description: "",
       schedule_type: "recurring",
@@ -187,6 +201,7 @@ export function DutyScheduleCreateForm({
       end_time: "16:00",
       guards_required: 1,
       required_hours: 8,
+      mandatory_check_in_time: null,
       status: "active",
       is_active: true,
       notes: "",
@@ -200,6 +215,7 @@ export function DutyScheduleCreateForm({
   useEffect(() => {
     if (isOpen) {
       dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
+      dispatch(fetchDutyTimeTypes({ page: 1, per_page: 100, is_active: true }));
     }
   }, [isOpen, dispatch]);
 
@@ -224,9 +240,6 @@ export function DutyScheduleCreateForm({
         is_active: true,
         client_contract_site_id: formValues.site_id
       }));
-    } else {
-      // Clear contract services when no site is selected
-      // You might want to add a clear action in your slice
     }
   }, [formValues.site_id, dispatch]);
 
@@ -260,6 +273,20 @@ export function DutyScheduleCreateForm({
     return () => clearTimeout(timer);
   }, [serviceSearch, dispatch, formValues.site_id]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (dutyTimeTypeSearch.trim() || dutyTimeTypeSearch === "") {
+        dispatch(fetchDutyTimeTypes({
+          page: 1,
+          per_page: 10,
+          is_active: true,
+          search: dutyTimeTypeSearch.trim()
+        }));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [dutyTimeTypeSearch, dispatch]);
+
   // Handle weekday toggle
   const toggleWeekday = (day: string) => {
     const current = selectedWeekdays;
@@ -278,7 +305,6 @@ export function DutyScheduleCreateForm({
       let hours = end[0] - start[0];
       const minutes = end[1] - start[1];
 
-      // Handle overnight shifts
       if (hours < 0 || (hours === 0 && minutes < 0)) {
         hours += 24;
       }
@@ -297,6 +323,7 @@ export function DutyScheduleCreateForm({
         site_id: data.site_id,
         site_location_id: data.site_location_id || null,
         client_contract_service_id: data.schedule_type === 'recurring' ? null : (data.client_contract_service_id || null),
+        duty_time_type_id: data.duty_time_type_id || null,
         title: data.title.trim(),
         description: data.description?.trim() || null,
         schedule_type: data.schedule_type as 'one_time' | 'recurring',
@@ -312,6 +339,7 @@ export function DutyScheduleCreateForm({
         end_time: data.end_time,
         guards_required: data.guards_required,
         required_hours: data.required_hours || 0,
+        mandatory_check_in_time: data.mandatory_check_in_time || null,
         status: data.status,
         is_active: data.is_active,
         notes: data.notes?.trim() || null,
@@ -387,7 +415,7 @@ export function DutyScheduleCreateForm({
               Basic Information
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <FloatingLabelInput
                   label="Title *"
@@ -396,11 +424,6 @@ export function DutyScheduleCreateForm({
                   disabled={isLoading}
                 />
               </div>
-
-            </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -467,7 +490,7 @@ export function DutyScheduleCreateForm({
                   onValueChange={(value) => {
                     setValue("site_id", Number(value), { shouldValidate: true });
                     setValue("site_location_id", null);
-                    setValue("client_contract_service_id", null); // Clear contract service when site changes
+                    setValue("client_contract_service_id", null);
                   }}
                   options={sites.map((site: Site) => ({
                     value: site.id,
@@ -538,7 +561,7 @@ export function DutyScheduleCreateForm({
             </div>
 
             {/* Contract Service - Hidden for recurring schedules */}
-            {formValues.schedule_type !== 'recurring' && formValues.site_id && (
+            { formValues.site_id && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Contract Service (Optional)
@@ -776,6 +799,50 @@ export function DutyScheduleCreateForm({
                   {...register("required_hours", { valueAsNumber: true })}
                   error={errors.required_hours?.message}
                   disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <FloatingLabelInput
+                  label="Mandatory Check-in Time"
+                  type="time"
+                  {...register("mandatory_check_in_time")}
+                  error={errors.mandatory_check_in_time?.message}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Duty Time Type (Optional)
+                </Label>
+                <SearchableDropdownWithIcon
+                  value={formValues.duty_time_type_id || ""}
+                  onValueChange={(value) => {
+                    setValue("duty_time_type_id", Number(value), { shouldValidate: true });
+                  }}
+                  options={dutyTimeTypes.map((type: DutyTimeType) => ({
+                    value: type.id,
+                    label:  type.title || `Type ${type.id}`,
+                    ...type
+                  }))}
+                  onSearch={(search) => {
+                    setDutyTimeTypeSearch(search);
+                    dispatch(fetchDutyTimeTypes({
+                      page: 1,
+                      per_page: 10,
+                      is_active: true,
+                      search: search
+                    }));
+                  }}
+                  placeholder="Select duty time type"
+                  disabled={isLoading}
+                  emptyMessage={dutyTimeTypeSearch ? "No types found" : "No types available"}
+                  searchPlaceholder="Search duty time types..."
+                  icon={Clock}
+                  iconPosition="left"
                 />
               </div>
             </div>
