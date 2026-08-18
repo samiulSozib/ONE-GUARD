@@ -14,7 +14,8 @@ export interface Site {
   site_id?:number;
   title?:string;
   description?:string;
-  
+  timezone?:string|null
+
   // Relationships
   client?: {
     id: number;
@@ -37,7 +38,7 @@ export interface SiteLocation {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  
+
   // Relationships
   //duties?: Duty[];
 }
@@ -106,6 +107,7 @@ export interface CreateSiteDto {
   site_instruction?: string;
   is_active?: boolean; // Optional, defaults to true
   locations?: CreateSiteLocationDto[];
+  timezone?:string|null
 }
 
 export interface CreateSiteLocationDto {
@@ -128,6 +130,7 @@ export interface UpdateSiteDto {
   site_instruction?: string | null;
   is_active?: boolean;
   locations?: CreateSiteLocationDto[]; // This will replace all locations
+  timezone?:string|null
 }
 
 export interface UpdateSiteLocationDto {
