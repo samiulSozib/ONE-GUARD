@@ -32,6 +32,7 @@ import {
   Cloud,
   Zap,
   Minus,
+  Timer,
 } from "lucide-react";
 import {
   Card,
@@ -160,6 +161,52 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Calculate time difference between user and site timezone - FIXED to accept null
+  const getTimeDifference = (siteTimezone: string | null | undefined): string => {
+    if (!siteTimezone) return 'N/A';
+
+    try {
+      const now = new Date();
+
+      // Get site time in hours/minutes
+      const siteTimeStr = now.toLocaleString('en-US', {
+        timeZone: siteTimezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const [siteHours, siteMinutes] = siteTimeStr.split(':').map(Number);
+      const siteTotalMinutes = siteHours * 60 + siteMinutes;
+
+      // Get user's local time in hours/minutes
+      const userHours = now.getHours();
+      const userMinutes = now.getMinutes();
+      const userTotalMinutes = userHours * 60 + userMinutes;
+
+      // Calculate difference
+      let diffMinutes = siteTotalMinutes - userTotalMinutes;
+
+      // Adjust for day wrap (if difference > 12 hours, wrap around)
+      if (diffMinutes > 720) diffMinutes -= 1440;
+      if (diffMinutes < -720) diffMinutes += 1440;
+
+      if (diffMinutes === 0) return 'Same';
+
+      const sign = diffMinutes > 0 ? '+' : '';
+      const absMinutes = Math.abs(diffMinutes);
+      const hours = Math.floor(absMinutes / 60);
+      const minutes = absMinutes % 60;
+
+      if (minutes === 0) {
+        return `${sign}${hours}h`;
+      }
+      return `${sign}${hours}h ${minutes}m`;
+    } catch (error) {
+      console.error('Error calculating time difference:', error);
+      return 'N/A';
+    }
+  };
 
   // Date shortcut handlers
   const setDateToday = () => {
@@ -402,15 +449,6 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const formatTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'HH:mm');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const formatDateWithDay = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return format(date, 'EEE, MMM dd');
     } catch {
       return dateString;
     }
@@ -786,6 +824,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
                     const dayName = getDayName(duty.start_datetime);
                     const dateLabel = getDateLabel(duty.start_datetime);
+                    const siteTimezone = duty.site?.timezone;
+                    const timeDiff = getTimeDifference(siteTimezone);
 
                     return (
                       <TableRow
@@ -950,9 +990,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           </div>
                         </TableCell>
 
-                        {/* Your Timezone Column with Current Time */}
+                        {/* Your Timezone Column with Current Time and Difference */}
                         <TableCell>
-                          <div className="flex flex-col items-start gap-0.5">
+                          <div className="flex flex-col items-start gap-1">
                             <div className="flex items-center gap-1.5">
                               <User className="h-3 w-3 text-blue-400" />
                               <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
@@ -965,6 +1005,19 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 {currentTime}
                               </span>
                             </div>
+                            {duty.site?.timezone && (
+                              <div className="flex items-center gap-1.5 ml-5 mt-0.5">
+                                <Timer className="h-3 w-3 text-amber-400" />
+                                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                                  timeDiff === 'Same' ? 'border-emerald-300 text-emerald-600 bg-emerald-50' :
+                                  timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
+                                  timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
+                                  'border-gray-300 text-gray-500'
+                                }`}>
+                                  {timeDiff === 'Same' ? 'Same time' : `${timeDiff}`}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
 
