@@ -114,9 +114,55 @@ interface SiteType {
     longitude: number
     status: string
     useCurrentLocation: boolean
+    timezone?: string | null  // Add this
+
     locations: LocationType[]
     site_document_types: string[]
 }
+const TIMEZONES = [
+    "America/Adak",
+    "America/Anchorage",
+    "America/Boise",
+    "America/Chicago",
+    "America/Denver",
+    "America/Detroit",
+    "America/Indiana/Indianapolis",
+    "America/Indiana/Knox",
+    "America/Indiana/Marengo",
+    "America/Indiana/Petersburg",
+    "America/Indiana/Tell_City",
+    "America/Indiana/Vevay",
+    "America/Indiana/Vincennes",
+    "America/Indiana/Winamac",
+    "America/Juneau",
+    "America/Kentucky/Louisville",
+    "America/Kentucky/Monticello",
+    "America/Los_Angeles",
+    "America/Menominee",
+    "America/Metlakatla",
+    "America/New_York",
+    "America/Nome",
+    "America/North_Dakota/Beulah",
+    "America/North_Dakota/Center",
+    "America/North_Dakota/New_Salem",
+    "America/Phoenix",
+    "America/Puerto_Rico",
+    "America/Sitka",
+    "America/St_Thomas",
+    "America/Yakutat",
+    "Pacific/Guam",
+    "Pacific/Honolulu",
+    "Pacific/Midway",
+    "Pacific/Pago_Pago",
+    "Pacific/Saipan",
+    "Pacific/Wake",
+    "Asia/Dhaka",
+    "Asia/Kabul",
+    "Asia/Karachi",
+] as const
+
+const NONE_TIMEZONE_VALUE = "__none__"
+
 
 export function ClientCreateForm({
     trigger,
@@ -471,6 +517,7 @@ export function ClientCreateForm({
             longitude: 0,
             status: "planned",
             useCurrentLocation: false,
+            timezone: null,
             locations: [],
             site_document_types: []
         }
@@ -1254,6 +1301,22 @@ export function ClientCreateForm({
                                                         <option value="running">Running</option>
                                                         <option value="paused">Paused</option>
                                                         <option value="completed">Completed</option>
+                                                    </FloatingLabelSelect>
+                                                </div>
+
+                                                <div className="lg:col-span-1">
+                                                    <FloatingLabelSelect
+                                                        label="Timezone"
+                                                        value={site.timezone || NONE_TIMEZONE_VALUE}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value
+                                                            handleFieldChange(`sites.${siteIndex}.timezone`, value === NONE_TIMEZONE_VALUE ? null : value)
+                                                        }}
+                                                    >
+                                                        <option value={NONE_TIMEZONE_VALUE}>None (Default)</option>
+                                                        {TIMEZONES.map((tz) => (
+                                                            <option key={tz} value={tz}>{tz}</option>
+                                                        ))}
                                                     </FloatingLabelSelect>
                                                 </div>
 

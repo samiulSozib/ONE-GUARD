@@ -1,4 +1,5 @@
 // components/clients/create-site-with-client-form.tsx
+
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -31,6 +32,7 @@ import {
   X,
   Crosshair,
   Users,
+  Globe,
 } from "lucide-react"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
@@ -39,6 +41,51 @@ import { fetchContracts } from "@/store/slices/clientContractSlice"
 import { createSite } from "@/store/slices/siteSlice"
 import { ClientContract } from "@/app/types/clientContract"
 import { Client } from "@/app/types/client"
+
+// Timezone list
+const TIMEZONES = [
+  "America/Adak",
+  "America/Anchorage",
+  "America/Boise",
+  "America/Chicago",
+  "America/Denver",
+  "America/Detroit",
+  "America/Indiana/Indianapolis",
+  "America/Indiana/Knox",
+  "America/Indiana/Marengo",
+  "America/Indiana/Petersburg",
+  "America/Indiana/Tell_City",
+  "America/Indiana/Vevay",
+  "America/Indiana/Vincennes",
+  "America/Indiana/Winamac",
+  "America/Juneau",
+  "America/Kentucky/Louisville",
+  "America/Kentucky/Monticello",
+  "America/Los_Angeles",
+  "America/Menominee",
+  "America/Metlakatla",
+  "America/New_York",
+  "America/Nome",
+  "America/North_Dakota/Beulah",
+  "America/North_Dakota/Center",
+  "America/North_Dakota/New_Salem",
+  "America/Phoenix",
+  "America/Puerto_Rico",
+  "America/Sitka",
+  "America/St_Thomas",
+  "America/Yakutat",
+  "Pacific/Guam",
+  "Pacific/Honolulu",
+  "Pacific/Midway",
+  "Pacific/Pago_Pago",
+  "Pacific/Saipan",
+  "Pacific/Wake",
+  "Asia/Dhaka",
+  "Asia/Kabul",
+  "Asia/Karachi",
+] as const
+
+const NONE_TIMEZONE_VALUE = "__none__"
 
 interface Location {
   title: string
@@ -61,6 +108,7 @@ interface CreateSiteFormData {
   site_instruction?: string
   locations: Location[]
   useCurrentLocation?: boolean
+  timezone?: string | null
 }
 
 interface CreateSiteWithClientFormProps {
@@ -82,6 +130,7 @@ interface SubmitSiteData {
   latitude?: number
   longitude?: number
   is_active?: boolean
+  timezone?: string | null
   locations: {
     title: string
     description: string
@@ -139,6 +188,7 @@ export function CreateSiteWithClientForm({
     site_instruction: "",
     locations: [],
     useCurrentLocation: false,
+    timezone: null,
   })
 
   const [locations, setLocations] = useState<Location[]>([])
@@ -197,6 +247,7 @@ export function CreateSiteWithClientForm({
       site_instruction: "",
       locations: [],
       useCurrentLocation: false,
+      timezone: null,
     })
     setLocations([])
     setValidationErrors({})
@@ -330,6 +381,7 @@ export function CreateSiteWithClientForm({
                    formData.latitude ||
                    formData.longitude ||
                    formData.site_instruction ||
+                   formData.timezone ||
                    locations.length > 0 ||
                    formData.client_contract_id ||
                    formData.client_id
@@ -414,6 +466,7 @@ export function CreateSiteWithClientForm({
         status: formData.status,
         site_instruction: formData.site_instruction || "",
         is_active: true,
+        timezone: formData.timezone || null,
         locations: locations.map(({ title, description, latitude, longitude, is_active }) => ({
           title,
           description: description || "",
@@ -844,6 +897,42 @@ export function CreateSiteWithClientForm({
                           rows={3}
                         />
                       </div>
+
+                      {/* Timezone Dropdown */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          Timezone
+                        </Label>
+                        <Select
+                          value={formData.timezone || NONE_TIMEZONE_VALUE}
+                          onValueChange={(value) => {
+                            if (value === NONE_TIMEZONE_VALUE) {
+                              handleFieldChange('timezone', null)
+                            } else {
+                              handleFieldChange('timezone', value)
+                            }
+                          }}
+                          disabled={isLoading}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select timezone (Optional)">
+                              {formData.timezone || 'None (Default)'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            <SelectItem value={NONE_TIMEZONE_VALUE}>None (Default)</SelectItem>
+                            {TIMEZONES.map((tz) => (
+                              <SelectItem key={tz} value={tz}>
+                                {tz}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500">
+                          Select the timezone for this site. If not set, the default timezone will be used.
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -1046,6 +1135,7 @@ export function CreateSiteWithClientForm({
                           <ul className="text-xs text-gray-600 mt-2 space-y-1 list-disc list-inside">
                             <li>Guards required: {formData.guards_required}</li>
                             <li>Status: {formData.status}</li>
+                            <li>Timezone: {formData.timezone || 'Default'}</li>
                             <li>Locations: {locations.length}</li>
                           </ul>
                         </div>

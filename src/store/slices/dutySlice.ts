@@ -54,7 +54,7 @@ export const fetchDuty = createAsyncThunk(
 export const createDuty = createAsyncThunk(
   "duty/createDuty",
   async (
-    data: Omit<Duty, "id" | "created_at" | "updated_at">,
+    data: Partial<Duty>,
     { rejectWithValue }
   ) => {
     try {

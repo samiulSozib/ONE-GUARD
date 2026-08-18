@@ -294,7 +294,7 @@ export function DutyCreateForm({
         setIsLoading(true)
         try {
             // Prepare data exactly as your example
-            const submitData: Omit<Duty, 'id' | 'created_at' | 'updated_at' | 'is_active' | 'site' | 'site_location'> = {
+            const submitData: Partial<Duty> = {
                 title: data.title.trim(),
                 site_id: data.site_id,
                 site_location_id: data.site_location_id,

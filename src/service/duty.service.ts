@@ -25,7 +25,7 @@ export const dutyService = {
 
   // Create duty
   createDuty: (
-    data: FormData | Omit<Duty, "id" | "created_at" | "updated_at">
+    data: FormData | Partial<Duty>
   ) =>
     handleApiResponse(
       api.post<ApiResponse<{item:Duty}>>("/admin/duties", data, {
@@ -58,7 +58,7 @@ export const dutyService = {
     handleApiResponse(
       api.get<ApiResponse<{message:string}>>(
         `/admin/duties/${id}/change-status?status=${status}`
-        
+
       )
     ),
 };

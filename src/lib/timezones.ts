@@ -36,5 +36,8 @@ export const TIMEZONES = [
   "Pacific/Midway",
   "Pacific/Pago_Pago",
   "Pacific/Saipan",
-  "Pacific/Wake"
+  "Pacific/Wake",
+  "Asia/Dhaka",
+  "Asia/Kabul",
+  "Asia/Karachi",
 ] as const;
