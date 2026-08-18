@@ -149,8 +149,17 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
-  // Get current user timezone
+  // Get current user timezone and time
   const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const [currentTime, setCurrentTime] = useState(format(new Date(), 'HH:mm:ss'));
+
+  // Update current time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(format(new Date(), 'HH:mm:ss'));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Date shortcut handlers
   const setDateToday = () => {
@@ -941,13 +950,21 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           </div>
                         </TableCell>
 
-                        {/* Your Timezone Column (Current User) */}
+                        {/* Your Timezone Column with Current Time */}
                         <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <User className="h-3 w-3 text-blue-400" />
-                            <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
-                              {currentUserTimezone}
-                            </span>
+                          <div className="flex flex-col items-start gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3 w-3 text-blue-400" />
+                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
+                                {currentUserTimezone}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 ml-5">
+                              <Clock className="h-3 w-3 text-emerald-400" />
+                              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+                                {currentTime}
+                              </span>
+                            </div>
                           </div>
                         </TableCell>
 
