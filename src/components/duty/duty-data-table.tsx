@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, isToday, isTomorrow, isYesterday, addDays, subDays } from "date-fns";
 import {
   CalendarIcon,
   DownloadIcon,
@@ -27,6 +27,11 @@ import {
   Calendar,
   Globe,
   User,
+  Sun,
+  Sparkles,
+  Cloud,
+  Zap,
+  Minus,
 } from "lucide-react";
 import {
   Card,
@@ -84,18 +89,32 @@ import SweetAlertService from "@/lib/sweetAlert";
 import { DutyEditForm } from "./duty-edit-form";
 import Swal from 'sweetalert2';
 
-// Status colors mapping
+// Status colors mapping - More vibrant
 const dutyStatusColors: Record<string, string> = {
-  "pending": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  "approved": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "completed": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  "pending": "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-700",
+  "approved": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700",
+  "completed": "bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 border-sky-200 dark:border-sky-700",
 };
 
 const coverageStatusColors: Record<string, string> = {
-  "unassigned": "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200",
-  "partial": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
-  "covered": "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
-  "not_required": "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300",
+  "unassigned": "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200 border-rose-200 dark:border-rose-700",
+  "partial": "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border-amber-200 dark:border-amber-700",
+  "covered": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700",
+  "not_required": "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+};
+
+const sourceTypeColors: Record<string, string> = {
+  scheduled: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700",
+  one_time: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700",
+  manual: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+  exception: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-700",
+};
+
+const coverageIcons: Record<string, React.ReactNode> = {
+  covered: <CheckCircle className="h-3 w-3 text-emerald-500" />,
+  partial: <AlertCircle className="h-3 w-3 text-amber-500" />,
+  unassigned: <XCircle className="h-3 w-3 text-rose-500" />,
+  not_required: <Minus className="h-3 w-3 text-gray-400" />,
 };
 
 interface DutyDataTableProps {
@@ -129,6 +148,55 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [coverageFilter, setCoverageFilter] = useState("all");
   const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+
+  // Get current user timezone
+  const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Date shortcut handlers
+  const setDateToday = () => {
+    setDateFilter(new Date());
+  };
+
+  const setDateTomorrow = () => {
+    setDateFilter(addDays(new Date(), 1));
+  };
+
+  const setDateYesterday = () => {
+    setDateFilter(subDays(new Date(), 1));
+  };
+
+  const setDate7Days = () => {
+    setDateFilter(addDays(new Date(), 7));
+  };
+
+  const getDateDisplay = (date: Date | undefined) => {
+    if (!date) return "";
+    if (isToday(date)) return "Today";
+    if (isTomorrow(date)) return "Tomorrow";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "EEE, MMM dd");
+  };
+
+  const getDayName = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, "EEE");
+    } catch {
+      return "";
+    }
+  };
+
+  const getDateLabel = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isToday(date)) return "Today";
+      if (isTomorrow(date)) return "Tomorrow";
+      if (isYesterday(date)) return "Yesterday";
+      return format(date, "MMM dd");
+    } catch {
+      return dateString;
+    }
+  };
 
   // Fetch duties on mount and filter changes
   useEffect(() => {
@@ -228,7 +296,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       text: `Are you sure you want to mark "${duty.title}" as ${statusDisplay}?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: newStatus === 'approved' ? '#10b981' : newStatus === 'completed' ? '#3b82f6' : '#f59e0b',
+      confirmButtonColor: newStatus === 'approved' ? '#10b981' : newStatus === 'completed' ? '#0ea5e9' : '#f59e0b',
       cancelButtonColor: '#6b7280',
       confirmButtonText: `Yes, mark as ${statusDisplay}`,
       cancelButtonText: 'Cancel',
@@ -285,12 +353,10 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }
   };
 
-  // Navigate to duty view page
   const handleViewDetails = (duty: Duty) => {
     router.push(`/duty/${duty.id}`);
   };
 
-  // Also support the onViewClick prop for custom handling
   const handleViewClick = (duty: Duty) => {
     if (onViewClick) {
       onViewClick(duty);
@@ -332,6 +398,15 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }
   };
 
+  const formatDateWithDay = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'EEE, MMM dd');
+    } catch {
+      return dateString;
+    }
+  };
+
   const calculateDuration = (start: string, end: string) => {
     try {
       const startTime = new Date(start);
@@ -363,12 +438,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   };
 
   const getCoverageIcon = (status: string) => {
-    switch(status) {
-      case 'covered': return <CheckCircle className="h-3 w-3" />;
-      case 'partial': return <AlertCircle className="h-3 w-3" />;
-      case 'unassigned': return <XCircle className="h-3 w-3" />;
-      default: return null;
-    }
+    return coverageIcons[status] || null;
   };
 
   const canChangeTo = (currentStatus: string, targetStatus: string) => {
@@ -387,6 +457,30 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
   const handleExport = async () => {
     await SweetAlertService.success('Export Started', 'Your duty data export has been initiated.', { timer: 2000 });
+  };
+
+  const isTodayDuty = (dateString: string) => {
+    try {
+      return isToday(new Date(dateString));
+    } catch {
+      return false;
+    }
+  };
+
+  const isTomorrowDuty = (dateString: string) => {
+    try {
+      return isTomorrow(new Date(dateString));
+    } catch {
+      return false;
+    }
+  };
+
+  const isYesterdayDuty = (dateString: string) => {
+    try {
+      return isYesterday(new Date(dateString));
+    } catch {
+      return false;
+    }
   };
 
   // Get unique sites for filter
@@ -418,7 +512,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
   return (
     <>
-      <Card className="shadow-sm rounded-2xl">
+      <Card className="shadow-sm rounded-2xl border-0 overflow-hidden">
         {/* Top Header Section */}
         <div className="bg-[#F4F6F8] p-5 -mt-6 rounded-t-md flex flex-row items-center gap-4 w-full justify-between md:justify-start">
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
@@ -457,8 +551,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
         </div>
 
         <CardContent className="p-0">
-          {/* Filters Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
+          {/* Filters Section - Plain */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 py-3">
             <div className="sm:col-span-3">
               <InputGroup>
                 <InputGroupInput
@@ -492,10 +586,10 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               </Select>
             </div>
 
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-1">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
@@ -509,7 +603,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               </Select>
             </div>
 
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-1">
               <Select value={coverageFilter} onValueChange={setCoverageFilter}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Coverage" />
@@ -517,7 +611,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Coverage</SelectLabel>
-                    <SelectItem value="all">All Coverage</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     <SelectItem value="partial">Partial</SelectItem>
                     <SelectItem value="covered">Covered</SelectItem>
@@ -532,26 +626,82 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   <FloatingLabelInput
                     className="text-start h-9"
                     label="Date"
-                    value={dateFilter ? format(dateFilter, "MM/dd/yyyy") : ""}
+                    value={dateFilter ? getDateDisplay(dateFilter) : ""}
                     readOnly
-                    postfixIcon={<CalendarIcon />}
+                    postfixIcon={<CalendarIcon className="text-gray-400" />}
                   />
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateFilter}
-                    onSelect={setDateFilter}
-                    initialFocus
-                  />
+                <PopoverContent className="w-auto p-4 bg-white dark:bg-gray-900 shadow-xl rounded-xl border-0">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDateToday}
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                      >
+                        <Sun className="h-3 w-3 mr-1" />
+                        Today
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDateTomorrow}
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
+                      >
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Tomorrow
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDateYesterday}
+                        className="border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300"
+                      >
+                        <Cloud className="h-3 w-3 mr-1" />
+                        Yesterday
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDate7Days}
+                        className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                      >
+                        <Zap className="h-3 w-3 mr-1" />
+                        7 Days
+                      </Button>
+                    </div>
+                    <div className="border-t pt-3">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dateFilter}
+                        onSelect={setDateFilter}
+                        initialFocus
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
 
-            <div className="sm:col-span-12 flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+            <div className="sm:col-span-2 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+              >
                 Clear Filters
               </Button>
+              {onAddClick && (
+                <Button
+                  size="sm"
+                  onClick={onAddClick}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Add Duty
+                </Button>
+              )}
             </div>
           </div>
 
@@ -561,28 +711,30 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
           )}
 
-          {/* Table Section */}
+          {/* Table Section - Colorful */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-gradient-to-r from-blue-50 via-purple-50 to-indigo-50 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-indigo-900/20">
                   <TableHead className="w-12">
                     <span className="sr-only">Select</span>
                   </TableHead>
-                  <TableHead>Duty Title & Site</TableHead>
-                  <TableHead>Scheduled Time (Site Time)</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Guards</TableHead>
-                  <TableHead>Coverage</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Duty Title & Site</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Scheduled Time (Site Time)</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Type</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Guards</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Coverage</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Status</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Site Timezone</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Your Timezone</TableHead>
+                  <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {duties.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={10} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -600,182 +752,257 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  duties.map((duty: Duty) => (
-                    <TableRow
-                      key={duty.id}
-                      className="hover:bg-gray-50 dark:hover:bg-black cursor-pointer"
-                      onClick={() => handleViewClick(duty)}
-                    >
-                      {/* Select Checkbox */}
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedDuties.includes(duty.id)}
-                          onCheckedChange={(checked) =>
-                            handleSelectDuty(duty.id, checked as boolean)
-                          }
-                        />
-                      </TableCell>
+                  duties.map((duty: Duty, index: number) => {
+                    const isToday = isTodayDuty(duty.start_datetime);
+                    const isTomorrow = isTomorrowDuty(duty.start_datetime);
+                    const isYesterday = isYesterdayDuty(duty.start_datetime);
 
-                      {/* Duty Title & Site */}
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              {duty.title}
-                            </span>
-                          </div>
-                          {duty.site && (
-                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                              <Building className="h-3 w-3" />
-                              <span>{duty.site.site_name}</span>
-                              {duty.site.address && (
-                                <>
-                                  <span className="text-gray-300">•</span>
-                                  <span className="text-xs">{duty.site.address}</span>
-                                </>
+                    let rowBgColor = '';
+                    let borderColor = '';
+
+                    if (isToday) {
+                      rowBgColor = 'bg-blue-50/80 dark:bg-blue-900/30';
+                      borderColor = 'border-l-4 border-l-blue-500';
+                    } else if (isTomorrow) {
+                      rowBgColor = 'bg-purple-50/60 dark:bg-purple-900/20';
+                      borderColor = 'border-l-4 border-l-purple-400';
+                    } else if (isYesterday) {
+                      rowBgColor = 'bg-amber-50/60 dark:bg-amber-900/20';
+                      borderColor = 'border-l-4 border-l-amber-400';
+                    } else if (index % 2 === 0) {
+                      rowBgColor = 'bg-white dark:bg-gray-900/50';
+                    } else {
+                      rowBgColor = 'bg-gray-50/50 dark:bg-gray-800/30';
+                    }
+
+                    const dayName = getDayName(duty.start_datetime);
+                    const dateLabel = getDateLabel(duty.start_datetime);
+
+                    return (
+                      <TableRow
+                        key={duty.id}
+                        className={`${rowBgColor} ${borderColor} hover:bg-blue-50/80 dark:hover:bg-blue-900/30 cursor-pointer transition-colors`}
+                        onClick={() => handleViewClick(duty)}
+                      >
+                        {/* Select Checkbox */}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedDuties.includes(duty.id)}
+                            onCheckedChange={(checked) =>
+                              handleSelectDuty(duty.id, checked as boolean)
+                            }
+                          />
+                        </TableCell>
+
+                        {/* Duty Title & Site */}
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <Shield className={`h-4 w-4 ${
+                                isToday ? 'text-blue-500' :
+                                isTomorrow ? 'text-purple-500' :
+                                isYesterday ? 'text-amber-500' : 'text-gray-400'
+                              }`} />
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {duty.title}
+                              </span>
+                              {isToday && (
+                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border-0 text-[10px] px-2 py-0">
+                                  Today
+                                </Badge>
+                              )}
+                              {isTomorrow && (
+                                <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0 text-[10px] px-2 py-0">
+                                  Tomorrow
+                                </Badge>
+                              )}
+                              {isYesterday && (
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[10px] px-2 py-0">
+                                  Yesterday
+                                </Badge>
                               )}
                             </div>
-                          )}
-                          {duty.duty_schedule && (
-                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                              Schedule: {duty.duty_schedule.title}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
+                            {duty.site && (
+                              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                <Building className="h-3 w-3" />
+                                <span>{duty.site.site_name}</span>
+                                {duty.site.address && (
+                                  <>
+                                    <span className="text-gray-300">•</span>
+                                    <span className="text-xs truncate max-w-[150px]">{duty.site.address}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {duty.duty_schedule && (
+                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Schedule: {duty.duty_schedule.title}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
 
-                      {/* Scheduled Time (Site Time) */}
-                      <TableCell>
-                        <div className="flex flex-col">
+                        {/* Scheduled Time with Day Name */}
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3 text-gray-400" />
+                              <span className={`text-sm font-medium ${
+                                isToday ? 'text-blue-600 dark:text-blue-400' :
+                                isTomorrow ? 'text-purple-600 dark:text-purple-400' :
+                                isYesterday ? 'text-amber-600 dark:text-amber-400' : ''
+                              }`}>
+                                {formatDate(duty.start_datetime)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Clock className="h-3 w-3 text-gray-400" />
+                              <span className="text-sm">
+                                {formatTime(duty.start_datetime)} - {formatTime(duty.end_datetime)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className={`text-xs px-2 py-0 ${
+                                isToday ? 'border-blue-300 text-blue-600 bg-blue-50' :
+                                isTomorrow ? 'border-purple-300 text-purple-600 bg-purple-50' :
+                                isYesterday ? 'border-amber-300 text-amber-600 bg-amber-50' :
+                                'border-gray-300 text-gray-500'
+                              }`}>
+                                {dayName}, {dateLabel}
+                              </Badge>
+                              <span className="text-xs text-gray-400">
+                                {calculateDuration(duty.start_datetime, duty.end_datetime)}h
+                              </span>
+                            </div>
+                            {/* Site Timezone */}
+                            {duty.site?.timezone && (
+                              <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+                                <Globe className="h-3 w-3" />
+                                <span className="font-mono">{duty.site.timezone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Type */}
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`${sourceTypeColors[duty.source_type || 'manual']} border-0 px-3 py-1 font-medium`}
+                          >
+                            {duty.source_type === 'scheduled' ? 'Scheduled' :
+                             duty.source_type === 'one_time' ? 'One Time' :
+                             duty.source_type === 'exception' ? 'Exception' : 'Manual'}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Guards */}
+                        <TableCell>
                           <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            <span className="text-sm font-medium">
-                              {formatDate(duty.start_datetime)}
+                            <Users className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {duty.assigned_guards_count || 0}
+                            </span>
+                            <span className="text-gray-400">/</span>
+                            <span className="text-gray-700 dark:text-gray-300">{duty.guards_required}</span>
+                            {duty.assigned_guards_count === duty.guards_required && duty.guards_required > 0 && (
+                              <CheckCircle className="h-3 w-3 text-emerald-500" />
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Coverage */}
+                        <TableCell>
+                          <Badge
+                            className={`${coverageStatusColors[duty.coverage_status || 'unassigned']} border px-3 py-1 flex items-center gap-1.5 w-fit font-medium`}
+                          >
+                            {getCoverageIcon(duty.coverage_status || 'unassigned')}
+                            {getCoverageStatusDisplay(duty.coverage_status || 'unassigned')}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell>
+                          <Badge
+                            className={`${dutyStatusColors[duty.status] || 'bg-gray-100 text-gray-800'} border px-3 py-1 font-medium`}
+                          >
+                            {getStatusDisplay(duty.status)}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Site Timezone Column */}
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Globe className="h-3 w-3 text-gray-400" />
+                            <span className="text-xs font-mono text-gray-600 dark:text-gray-300">
+                              {duty.site?.timezone || 'N/A'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Clock className="h-3 w-3 text-gray-400" />
-                            <span className="text-sm">
-                              {formatTime(duty.start_datetime)} - {formatTime(duty.end_datetime)}
+                        </TableCell>
+
+                        {/* Your Timezone Column (Current User) */}
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3 w-3 text-blue-400" />
+                            <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
+                              {currentUserTimezone}
                             </span>
                           </div>
-                          {duty.site?.timezone && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                              <Globe className="h-3 w-3" />
-                              <span>{duty.site.timezone}</span>
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-400 mt-1">
-                            {calculateDuration(duty.start_datetime, duty.end_datetime)} hours
-                          </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Type */}
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`${
-                            duty.source_type === 'scheduled'
-                              ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
-                              : duty.source_type === 'one_time'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300'
-                              : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300'
-                          } border-0`}
-                        >
-                          {duty.source_type === 'scheduled' ? 'Scheduled' :
-                           duty.source_type === 'one_time' ? 'One Time' :
-                           duty.source_type === 'exception' ? 'Exception' : 'Manual'}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Guards */}
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium">
-                            {duty.assigned_guards_count || 0}
-                          </span>
-                          <span className="text-gray-400">/</span>
-                          <span>{duty.guards_required}</span>
-                        </div>
-                      </TableCell>
-
-                      {/* Coverage */}
-                      <TableCell>
-                        <Badge
-                          className={`${
-                            coverageStatusColors[duty.coverage_status || 'unassigned']
-                          } border-0 px-2 py-1 flex items-center gap-1 w-fit`}
-                        >
-                          {getCoverageIcon(duty.coverage_status || 'unassigned')}
-                          {getCoverageStatusDisplay(duty.coverage_status || 'unassigned')}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell>
-                        <Badge
-                          className={`${
-                            dutyStatusColors[duty.status] || 'bg-gray-100 text-gray-800'
-                          } border-0 px-3 py-1`}
-                        >
-                          {getStatusDisplay(duty.status)}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewClick(duty)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(duty)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit duty
-                            </DropdownMenuItem>
-
-                            {canChangeTo(duty.status, 'approved') && (
-                              <DropdownMenuItem
-                                onClick={(e) => handleDutyStatusUpdate(e, duty, 'approved')}
-                                className="text-green-600 focus:text-green-600"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve Duty
+                        {/* Actions */}
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+                                <EllipsisVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 shadow-lg rounded-xl">
+                              <DropdownMenuItem onClick={() => handleViewClick(duty)} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4 text-blue-500" />
+                                View details
                               </DropdownMenuItem>
-                            )}
-
-                            {canChangeTo(duty.status, 'completed') && (
-                              <DropdownMenuItem
-                                onClick={(e) => handleDutyStatusUpdate(e, duty, 'completed')}
-                                className="text-blue-600 focus:text-blue-600"
-                              >
-                                <CheckCheck className="mr-2 h-4 w-4" />
-                                Mark Completed
+                              <DropdownMenuItem onClick={() => handleEdit(duty)} className="hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4 text-amber-500" />
+                                Edit duty
                               </DropdownMenuItem>
-                            )}
 
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => handleDeleteClick(e, duty)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete duty
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                              {canChangeTo(duty.status, 'approved') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => handleDutyStatusUpdate(e, duty, 'approved')}
+                                  className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer"
+                                >
+                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-500" />
+                                  Approve Duty
+                                </DropdownMenuItem>
+                              )}
+
+                              {canChangeTo(duty.status, 'completed') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => handleDutyStatusUpdate(e, duty, 'completed')}
+                                  className="hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg cursor-pointer"
+                                >
+                                  <CheckCheck className="mr-2 h-4 w-4 text-sky-500" />
+                                  Mark Completed
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => handleDeleteClick(e, duty)}
+                                className="hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg cursor-pointer text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete duty
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
