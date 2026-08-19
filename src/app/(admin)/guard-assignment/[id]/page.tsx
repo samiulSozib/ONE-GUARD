@@ -554,7 +554,7 @@ export default function GuardAssignmentViewPage() {
                             <CardContent className="space-y-4">
                                 <div className="flex items-start gap-4">
                                     <Avatar className="h-16 w-16 border-2 border-gray-200 dark:border-gray-700">
-                                        <AvatarImage src={currentAssignment.guard?.profile_image} />
+<AvatarImage src={currentAssignment.guard?.profile_image ?? undefined} />
                                         <AvatarFallback className="bg-primary/10 text-primary text-lg">
                                             {currentAssignment.guard?.full_name?.charAt(0) || 'G'}
                                         </AvatarFallback>
