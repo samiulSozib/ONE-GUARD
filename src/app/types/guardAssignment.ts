@@ -1,73 +1,3 @@
-// import { Duty } from "./duty";
-// import { Guard } from "./guard";
-
-// export interface GuardAssignment {
-//   id: number;
-//   guard_id: number;
-//   duty_id: number;
-//   start_date: string;
-//   end_date: string;
-//   status?: 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
-
-//   guard?: Partial<Guard>;
-//   duty?: Partial<Duty>;
-//   created_at?: string;
-// }
-
-
-// export interface GuardAssignmentParams {
-//   page?: number;
-//   per_page?: number;
-//   search?: string;
-
-//   guard_id?: number;
-//   duty_id?: number;
-
-//   status?: string;
-//   include_guard?: boolean;
-//   include_duty?: boolean;
-
-
-//   sort_by?: string;
-//   sort_order?: "asc" | "desc";
-//   start_date?:string;
-//   end_date?:string
-// }
-
-
-// export interface GuardAssignmentState {
-//   assignments: GuardAssignment[];
-//   currentAssignment: GuardAssignment | null;
-
-//   pagination: {
-//     current_page: number;
-//     last_page: number;
-//     total: number;
-//     per_page?: number; // 🔥 optional
-//   };
-
-//   isLoading: boolean;
-//   error: string | null;
-// }
-
-
-
-// export interface ToggleGuardAssignmentStatusRequest {
-//   status: string;
-// }
-
-
-
-// export interface CreateGuardAssignmentDto {
-//   guard_id: number;
-//   duty_id: number;
-//   start_date: string;
-//   end_date: string;
-//   status: string;
-// }
-
-// app/types/guardAssignment.ts
-
 // app/types/guardAssignment.ts
 
 import { Duty } from "./duty";
@@ -92,7 +22,18 @@ export interface GuardAssignment {
   start_date: string;
   end_date: string;
   status: GuardAssignmentStatus;
-  guard?: Partial<Guard>;
+  guard?: {
+    id: number;
+    user_id: number;
+    guard_code: string;
+    full_name: string;
+    phone: string;
+    email: string;
+    profile_image: string | null;
+    profile_image_url: string | null;
+    status: string | null;
+    user_is_active: boolean | null;
+  };
   duty?: Duty;
   created_at?: string;
   updated_at?: string;

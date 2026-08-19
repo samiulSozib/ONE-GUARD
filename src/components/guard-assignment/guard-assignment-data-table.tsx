@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, isToday, isTomorrow, isYesterday, addDays, subDays } from "date-fns";
 import {
   CalendarIcon,
   DownloadIcon,
@@ -25,7 +25,19 @@ import {
   Ban,
   PlayCircle,
   Flag,
-  RefreshCw
+  RefreshCw,
+  Globe,
+  Timer,
+  Sun,
+  Sparkles,
+  Cloud,
+  Zap,
+  Building,
+  Users,
+  Phone,
+  Mail,
+  Hash,
+  Minus,
 } from "lucide-react";
 import {
   Card,
@@ -106,7 +118,11 @@ const ALL_STATUSES: GuardAssignmentStatus[] = [
   'accepted',
   'checked_in',
   'on_duty',
-  'completed'
+  'completed',
+  'late',
+  'no_show',
+  'cancelled',
+  'replaced'
 ];
 
 const statusActionConfig: Record<GuardAssignmentStatus, { label: string; icon: React.ElementType; color: string }> = {
@@ -119,6 +135,31 @@ const statusActionConfig: Record<GuardAssignmentStatus, { label: string; icon: R
   no_show: { label: 'No Show', icon: XCircle, color: 'text-red-600' },
   cancelled: { label: 'Cancel Assignment', icon: Ban, color: 'text-orange-600' },
   replaced: { label: 'Replace Guard', icon: RefreshCw, color: 'text-indigo-600' },
+};
+
+// Status colors mapping - More vibrant
+const assignmentStatusColors: Record<string, string> = {
+  "assigned": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-700",
+  "accepted": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700",
+  "checked_in": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-700",
+  "on_duty": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700",
+  "completed": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700",
+  "late": "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-700",
+  "no_show": "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200 border-rose-200 dark:border-rose-700",
+  "cancelled": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200 dark:border-orange-700",
+  "replaced": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border-indigo-200 dark:border-indigo-700",
+};
+
+const coverageIcons: Record<string, React.ReactNode> = {
+  completed: <CheckCircle className="h-3 w-3 text-emerald-500" />,
+  on_duty: <PlayCircle className="h-3 w-3 text-emerald-500" />,
+  accepted: <CheckCircle className="h-3 w-3 text-emerald-500" />,
+  assigned: <Clock className="h-3 w-3 text-blue-500" />,
+  checked_in: <MapPin className="h-3 w-3 text-purple-500" />,
+  late: <Clock className="h-3 w-3 text-amber-500" />,
+  no_show: <XCircle className="h-3 w-3 text-rose-500" />,
+  cancelled: <Ban className="h-3 w-3 text-orange-500" />,
+  replaced: <RefreshCw className="h-3 w-3 text-indigo-500" />,
 };
 
 export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssignmentDataTableProps) {
@@ -143,6 +184,110 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+
+  // Get current user timezone and time
+  const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const [currentTime, setCurrentTime] = useState(format(new Date(), 'HH:mm:ss'));
+
+  // Update current time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(format(new Date(), 'HH:mm:ss'));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate time difference between user and site timezone
+  const getTimeDifference = (siteTimezone: string | null | undefined): string => {
+    if (!siteTimezone) return 'N/A';
+
+    try {
+      const now = new Date();
+
+      // Get site time in hours/minutes
+      const siteTimeStr = now.toLocaleString('en-US', {
+        timeZone: siteTimezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const [siteHours, siteMinutes] = siteTimeStr.split(':').map(Number);
+      const siteTotalMinutes = siteHours * 60 + siteMinutes;
+
+      // Get user's local time in hours/minutes
+      const userHours = now.getHours();
+      const userMinutes = now.getMinutes();
+      const userTotalMinutes = userHours * 60 + userMinutes;
+
+      // Calculate difference
+      let diffMinutes = siteTotalMinutes - userTotalMinutes;
+
+      // Adjust for day wrap
+      if (diffMinutes > 720) diffMinutes -= 1440;
+      if (diffMinutes < -720) diffMinutes += 1440;
+
+      if (diffMinutes === 0) return 'Same';
+
+      const sign = diffMinutes > 0 ? '+' : '';
+      const absMinutes = Math.abs(diffMinutes);
+      const hours = Math.floor(absMinutes / 60);
+      const minutes = absMinutes % 60;
+
+      if (minutes === 0) {
+        return `${sign}${hours}h`;
+      }
+      return `${sign}${hours}h ${minutes}m`;
+    } catch (error) {
+      console.error('Error calculating time difference:', error);
+      return 'N/A';
+    }
+  };
+
+  // Date shortcut handlers
+  const setDateToday = () => {
+    setDateFilter(new Date());
+  };
+
+  const setDateTomorrow = () => {
+    setDateFilter(addDays(new Date(), 1));
+  };
+
+  const setDateYesterday = () => {
+    setDateFilter(subDays(new Date(), 1));
+  };
+
+  const setDate7Days = () => {
+    setDateFilter(addDays(new Date(), 7));
+  };
+
+  const getDateDisplay = (date: Date | undefined) => {
+    if (!date) return "";
+    if (isToday(date)) return "Today";
+    if (isTomorrow(date)) return "Tomorrow";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "EEE, MMM dd");
+  };
+
+  const getDayName = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, "EEE");
+    } catch {
+      return "";
+    }
+  };
+
+  const getDateLabel = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isToday(date)) return "Today";
+      if (isTomorrow(date)) return "Tomorrow";
+      if (isYesterday(date)) return "Yesterday";
+      return format(date, "MMM dd");
+    } catch {
+      return dateString;
+    }
+  };
 
   // Fetch assignments on mount and filter changes
   useEffect(() => {
@@ -514,6 +659,30 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
     { value: "replaced", label: "Replaced" },
   ];
 
+  const isTodayAssignment = (dateString: string) => {
+    try {
+      return isToday(new Date(dateString));
+    } catch {
+      return false;
+    }
+  };
+
+  const isTomorrowAssignment = (dateString: string) => {
+    try {
+      return isTomorrow(new Date(dateString));
+    } catch {
+      return false;
+    }
+  };
+
+  const isYesterdayAssignment = (dateString: string) => {
+    try {
+      return isYesterday(new Date(dateString));
+    } catch {
+      return false;
+    }
+  };
+
   if (isLoading && assignments.length === 0) {
     return (
       <Card className="shadow-sm rounded-2xl">
@@ -537,7 +706,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
   return (
     <>
-      <Card className="shadow-sm rounded-2xl">
+      <Card className="shadow-sm rounded-2xl border-0 overflow-hidden">
         {/* Top Header Section */}
         <div className="bg-[#F4F6F8] p-5 -mt-6 rounded-t-md flex flex-row items-center gap-4 w-full justify-between md:justify-start">
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
@@ -577,8 +746,8 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
 
         <CardContent className="p-0">
           {/* Filters Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
-            <div className="sm:col-span-4">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 py-3">
+            <div className="sm:col-span-3">
               <InputGroup>
                 <InputGroupInput
                   placeholder="Search by guard name..."
@@ -592,7 +761,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               </InputGroup>
             </div>
 
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-2">
               <Select value={statusFilter} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Status" />
@@ -610,29 +779,72 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               </Select>
             </div>
 
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <FloatingLabelInput
                     className="text-start h-9"
-                    label="Assignment Date"
-                    value={dateFilter ? format(dateFilter, "MM/dd/yyyy") : ""}
+                    label="Date"
+                    value={dateFilter ? getDateDisplay(dateFilter) : ""}
                     readOnly
-                    postfixIcon={<CalendarIcon />}
+                    postfixIcon={<CalendarIcon className="text-gray-400" />}
                   />
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateFilter}
-                    onSelect={handleDateChange}
-                    initialFocus
-                  />
+                <PopoverContent className="w-auto p-4 bg-white dark:bg-gray-900 shadow-xl rounded-xl border-0">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDateToday}
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                      >
+                        <Sun className="h-3 w-3 mr-1" />
+                        Today
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDateTomorrow}
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
+                      >
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Tomorrow
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDateYesterday}
+                        className="border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300"
+                      >
+                        <Cloud className="h-3 w-3 mr-1" />
+                        Yesterday
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={setDate7Days}
+                        className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                      >
+                        <Zap className="h-3 w-3 mr-1" />
+                        7 Days
+                      </Button>
+                    </div>
+                    <div className="border-t pt-3">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dateFilter}
+                        onSelect={setDateFilter}
+                        initialFocus
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
 
-            <div className="sm:col-span-12 flex justify-end">
+            <div className="sm:col-span-2 flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -640,6 +852,24 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
               >
                 Clear Filters
               </Button>
+              {onAddClick && (
+                <Button
+                  size="sm"
+                  onClick={onAddClick}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Add Assignment
+                </Button>
+              )}
+            </div>
+
+            {/* Timezone Display */}
+            <div className="sm:col-span-3 flex items-center justify-end gap-2 text-xs bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800">
+              <Globe className="h-3 w-3 text-blue-500" />
+              <span className="text-gray-500 dark:text-gray-400">Your Timezone:</span>
+              <span className="font-mono font-medium text-blue-600 dark:text-blue-400">{currentUserTimezone}</span>
+              <Clock className="h-3 w-3 text-emerald-500 ml-1" />
+              <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{currentTime}</span>
             </div>
           </div>
 
@@ -649,23 +879,23 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
             </div>
           )}
 
-          {/* Table Section */}
+          {/* Table Section - Colorful */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-gradient-to-r from-blue-50 via-purple-50 to-indigo-50 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-indigo-900/20">
                   <TableHead className="w-12">
                     <span className="sr-only">Select</span>
                   </TableHead>
-                  <TableHead>Guard</TableHead>
-                  <TableHead>Duty</TableHead>
-                  <TableHead>Assignment Period</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Guard Code</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Guard</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Duty</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Assignment Period</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Day</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Duration</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Status</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Site Timezone</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Your Timezone</TableHead>
+                  <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -692,14 +922,41 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                     </TableCell>
                   </TableRow>
                 ) : (
-                  assignments.map((assignment: GuardAssignment) => {
+                  assignments.map((assignment: GuardAssignment, index: number) => {
                     const currentStatus = (assignment.status || 'assigned') as GuardAssignmentStatus;
                     const availableActions = getAvailableActions(currentStatus);
+
+                    const isToday = isTodayAssignment(assignment.start_date);
+                    const isTomorrow = isTomorrowAssignment(assignment.start_date);
+                    const isYesterday = isYesterdayAssignment(assignment.start_date);
+
+                    let rowBgColor = '';
+                    let borderColor = '';
+
+                    if (isToday) {
+                      rowBgColor = 'bg-blue-50/80 dark:bg-blue-900/30';
+                      borderColor = 'border-l-4 border-l-blue-500';
+                    } else if (isTomorrow) {
+                      rowBgColor = 'bg-purple-50/60 dark:bg-purple-900/20';
+                      borderColor = 'border-l-4 border-l-purple-400';
+                    } else if (isYesterday) {
+                      rowBgColor = 'bg-amber-50/60 dark:bg-amber-900/20';
+                      borderColor = 'border-l-4 border-l-amber-400';
+                    } else if (index % 2 === 0) {
+                      rowBgColor = 'bg-white dark:bg-gray-900/50';
+                    } else {
+                      rowBgColor = 'bg-gray-50/50 dark:bg-gray-800/30';
+                    }
+
+                    const dayName = getDayName(assignment.start_date);
+                    const dateLabel = getDateLabel(assignment.start_date);
+                    const siteTimezone = assignment.duty?.site?.timezone;
+                    const timeDiff = getTimeDifference(siteTimezone);
 
                     return (
                       <TableRow
                         key={assignment.id}
-                        className="hover:bg-gray-50 dark:hover:bg-black cursor-pointer"
+                        className={`${rowBgColor} ${borderColor} hover:bg-blue-50/80 dark:hover:bg-blue-900/30 cursor-pointer transition-colors`}
                         onClick={() => handleViewDetails(assignment)}
                       >
                         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -711,108 +968,170 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                           />
                         </TableCell>
 
-                        <TableCell className="font-medium text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-gray-500" />
-                            <span>{assignment.guard?.full_name || `Guard #${assignment.guard_id}`}</span>
+                        {/* Guard */}
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <User className={`h-4 w-4 ${
+                                isToday ? 'text-blue-500' :
+                                isTomorrow ? 'text-purple-500' :
+                                isYesterday ? 'text-amber-500' : 'text-gray-400'
+                              }`} />
+                              <span className="text-gray-900 dark:text-white">
+                                {assignment.guard?.full_name || `Guard #${assignment.guard_id}`}
+                              </span>
+                              {isToday && (
+                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border-0 text-[10px] px-2 py-0">
+                                  Today
+                                </Badge>
+                              )}
+                              {isTomorrow && (
+                                <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0 text-[10px] px-2 py-0">
+                                  Tomorrow
+                                </Badge>
+                              )}
+                              {isYesterday && (
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[10px] px-2 py-0">
+                                  Yesterday
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                              <Hash className="h-3 w-3" />
+                              <span>{assignment.guard?.guard_code}</span>
+                            </div>
                           </div>
                         </TableCell>
 
+                        {/* Duty */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
-                          {assignment.duty ? (
+                          <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-gray-500" />
-                              <span className="truncate max-w-[150px]" title={assignment.duty.title}>
-                                {assignment.duty.title || `Duty #${assignment.duty_id}`}
+                              <Shield className="h-4 w-4 text-gray-400" />
+                              <span className="truncate max-w-[150px]" title={assignment.duty?.title}>
+                                {assignment.duty?.title || `Duty #${assignment.duty_id}`}
                               </span>
                             </div>
-                          ) : (
-                            <span>Duty #{assignment.duty_id}</span>
-                          )}
+                            {assignment.duty?.site && (
+                              <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                                <Building className="h-3 w-3" />
+                                <span>{assignment.duty.site.site_name}</span>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
 
+                        {/* Assignment Period */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-gray-500" />
+                              <Calendar className="h-3 w-3 text-gray-400" />
                               <span className="text-xs">Start: {formatDate(assignment.start_date)}</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-gray-500" />
+                              <Calendar className="h-3 w-3 text-gray-400" />
                               <span className="text-xs">End: {formatDate(assignment.end_date)}</span>
                             </div>
                           </div>
                         </TableCell>
 
+                        {/* Day */}
+                        <TableCell>
+                          <div className="flex flex-col items-center">
+                            <Badge className={`text-xs px-2 py-1 border ${
+                              isToday ? 'border-blue-300 text-blue-600 bg-blue-50' :
+                              isTomorrow ? 'border-purple-300 text-purple-600 bg-purple-50' :
+                              isYesterday ? 'border-amber-300 text-amber-600 bg-amber-50' :
+                              'border-gray-300 text-gray-500'
+                            }`}>
+                              {dayName}
+                            </Badge>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {dateLabel}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* Duration */}
                         <TableCell className="text-gray-700 dark:text-gray-300">
                           <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-gray-500" />
+                            <Clock className="h-4 w-4 text-gray-400" />
                             <span>{calculateDurationDays(assignment.start_date, assignment.end_date)} days</span>
                           </div>
                         </TableCell>
 
-                        <TableCell className="text-gray-700 dark:text-gray-300">
-                          {assignment.guard?.guard_code ? (
-                            <Badge variant="outline" className="border-gray-300">
-                              {assignment.guard.guard_code}
-                            </Badge>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-
-                        <TableCell className="text-gray-700 dark:text-gray-300">
-                          {assignment.guard ? (
-                            <div className="flex flex-col text-xs">
-                              <span>{assignment.guard.phone || "N/A"}</span>
-                              <span className="text-gray-500">{assignment.guard.email || ""}</span>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-
+                        {/* Status */}
                         <TableCell>
-                          <span
-                            className={`
-                              inline-block
-                              min-w-24
-                              text-center
-                              px-2 py-1
-                              rounded-full
-                              text-xs
-                              font-medium
-                              ${getStatusColor(currentStatus)}
-                            `}
+                          <Badge
+                            className={`${assignmentStatusColors[currentStatus] || 'bg-gray-100 text-gray-800'} border px-3 py-1 flex items-center gap-1.5 w-fit font-medium`}
                           >
+                            {coverageIcons[currentStatus] || null}
                             {getStatusDisplay(currentStatus)}
-                          </span>
+                          </Badge>
                         </TableCell>
 
-                        <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
-                          {assignment.created_at ? formatDate(assignment.created_at) : "-"}
+                        {/* Site Timezone */}
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Globe className="h-3 w-3 text-gray-400" />
+                            <span className="text-xs font-mono text-gray-600 dark:text-gray-300">
+                              {siteTimezone || 'N/A'}
+                            </span>
+                          </div>
                         </TableCell>
 
+                        {/* Your Timezone */}
+                        <TableCell>
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3 w-3 text-blue-400" />
+                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
+                                {currentUserTimezone}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 ml-5">
+                              <Clock className="h-3 w-3 text-emerald-400" />
+                              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+                                {currentTime}
+                              </span>
+                            </div>
+                            {siteTimezone && (
+                              <div className="flex items-center gap-1.5 ml-5 mt-0.5">
+                                <Timer className="h-3 w-3 text-amber-400" />
+                                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                                  timeDiff === 'Same' ? 'border-emerald-300 text-emerald-600 bg-emerald-50' :
+                                  timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
+                                  timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
+                                  'border-gray-300 text-gray-500'
+                                }`}>
+                                  {timeDiff === 'Same' ? 'Same time' : `${timeDiff}`}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Actions */}
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
                                 <EllipsisVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 max-h-[400px] overflow-y-auto">
-                              <DropdownMenuItem onClick={() => handleViewDetails(assignment)}>
-                                <Eye className="mr-2 h-4 w-4" />
+                            <DropdownMenuContent align="end" className="w-56 max-h-[400px] overflow-y-auto shadow-lg rounded-xl">
+                              <DropdownMenuItem onClick={() => handleViewDetails(assignment)} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4 text-blue-500" />
                                 View details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => handleEdit(e, assignment)}>
-                                <Pencil className="mr-2 h-4 w-4" />
+                              <DropdownMenuItem onClick={(e) => handleEdit(e, assignment)} className="hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4 text-amber-500" />
                                 Edit assignment
                               </DropdownMenuItem>
 
                               <DropdownMenuItem
                                 onClick={(e) => handleReplace(e, assignment)}
-                                className="text-blue-600 focus:text-blue-600"
+                                className="hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer text-blue-600 hover:text-blue-700"
                               >
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 Replace Guard
@@ -824,7 +1143,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                                 <DropdownMenuItem
                                   key={index}
                                   onClick={(e) => handleStatusUpdate(e, assignment, action.status)}
-                                  className={action.color}
+                                  className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg cursor-pointer ${action.color}`}
                                 >
                                   <action.icon className="mr-2 h-4 w-4" />
                                   {action.label}
@@ -834,7 +1153,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={(e) => handleDeleteClick(e, assignment)}
-                                className="text-red-600 focus:text-red-600"
+                                className="hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg cursor-pointer text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete assignment
@@ -851,11 +1170,12 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
           </div>
 
           {assignments.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t">
-              <div className="text-sm text-gray-700">
-                Showing {assignments.length} of {pagination.total} assignments
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t bg-gray-50/50 dark:bg-gray-900/20">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span className="font-medium text-gray-900 dark:text-white">{assignments.length}</span> of{' '}
+                <span className="font-medium text-gray-900 dark:text-white">{pagination.total}</span> assignments
                 {selectedAssignments.length > 0 && (
-                  <span className="ml-2 text-blue-600">
+                  <span className="ml-2 text-blue-600 font-medium">
                     ({selectedAssignments.length} selected)
                   </span>
                 )}
@@ -869,7 +1189,7 @@ export function GuardAssignmentDataTable({ onAddClick, onViewClick }: GuardAssig
                 >
                   Previous
                 </Button>
-                <span className="text-sm px-3">
+                <span className="text-sm px-3 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-lg font-medium text-blue-600 dark:text-blue-400">
                   Page {pagination.current_page} of {pagination.last_page}
                 </span>
                 <Button
