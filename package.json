@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -50,6 +49,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "laravel-echo": "^2.3.4",
     "lucide-react": "^0.553.0",
     "next": "^16.1.1",

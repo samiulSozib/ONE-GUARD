@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, isToday, isTomorrow, isYesterday, addDays, subDays } from "date-fns";
+import { formatInTimeZone } from 'date-fns-tz';
 import {
   CalendarIcon,
   DownloadIcon,
@@ -90,6 +91,51 @@ import SweetAlertService from "@/lib/sweetAlert";
 import { DutyEditForm } from "./duty-edit-form";
 import Swal from 'sweetalert2';
 
+// Timezone list from your app
+const TIMEZONES = [
+  "America/Adak",
+  "America/Anchorage",
+  "America/Boise",
+  "America/Chicago",
+  "America/Denver",
+  "America/Detroit",
+  "America/Indiana/Indianapolis",
+  "America/Indiana/Knox",
+  "America/Indiana/Marengo",
+  "America/Indiana/Petersburg",
+  "America/Indiana/Tell_City",
+  "America/Indiana/Vevay",
+  "America/Indiana/Vincennes",
+  "America/Indiana/Winamac",
+  "America/Juneau",
+  "America/Kentucky/Louisville",
+  "America/Kentucky/Monticello",
+  "America/Los_Angeles",
+  "America/Menominee",
+  "America/Metlakatla",
+  "America/New_York",
+  "America/Nome",
+  "America/North_Dakota/Beulah",
+  "America/North_Dakota/Center",
+  "America/North_Dakota/New_Salem",
+  "America/Phoenix",
+  "America/Puerto_Rico",
+  "America/Sitka",
+  "America/St_Thomas",
+  "America/Yakutat",
+  "Pacific/Guam",
+  "Pacific/Honolulu",
+  "Pacific/Midway",
+  "Pacific/Pago_Pago",
+  "Pacific/Saipan",
+  "Pacific/Wake",
+  "Asia/Dhaka",
+  "Asia/Kabul",
+  "Asia/Karachi",
+] as const;
+
+type Timezone = typeof TIMEZONES[number];
+
 // Status colors mapping - More vibrant
 const dutyStatusColors: Record<string, string> = {
   "pending": "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-700",
@@ -150,7 +196,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
-  // Get current user timezone and time
+  // Get current user timezone
   const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [currentTime, setCurrentTime] = useState(format(new Date(), 'HH:mm:ss'));
 
@@ -162,7 +208,35 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate time difference between user and site timezone - FIXED to accept null
+  // Check if timezones are the same
+  const isSameTimezone = (siteTimezone: string | null | undefined): boolean => {
+    if (!siteTimezone) return true;
+    return siteTimezone === currentUserTimezone;
+  };
+
+  // Convert date to user timezone with proper offset
+  const convertToUserTimezone = (dateString: string, formatStr: string): string => {
+    try {
+      const date = new Date(dateString);
+      return formatInTimeZone(date, currentUserTimezone, formatStr);
+    } catch (error) {
+      console.error('Error converting to user timezone:', error);
+      return dateString;
+    }
+  };
+
+  // Convert date to site timezone
+  const convertToSiteTimezone = (dateString: string, formatStr: string, timezone: string): string => {
+    try {
+      const date = new Date(dateString);
+      return formatInTimeZone(date, timezone, formatStr);
+    } catch (error) {
+      console.error('Error converting to site timezone:', error);
+      return dateString;
+    }
+  };
+
+  // Get time difference between site and user timezone
   const getTimeDifference = (siteTimezone: string | null | undefined): string => {
     if (!siteTimezone) return 'N/A';
 
@@ -251,6 +325,18 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       return format(date, "MMM dd");
     } catch {
       return dateString;
+    }
+  };
+
+  // Check if date changes when converted to user timezone
+  const doesDateChange = (dateString: string, timezone: string): boolean => {
+    try {
+      const siteDate = new Date(dateString);
+      const siteDateStr = formatInTimeZone(siteDate, timezone, 'yyyy-MM-dd');
+      const userDateStr = formatInTimeZone(siteDate, currentUserTimezone, 'yyyy-MM-dd');
+      return siteDateStr !== userDateStr;
+    } catch {
+      return false;
     }
   };
 
@@ -750,6 +836,15 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                 </Button>
               )}
             </div>
+
+            {/* Timezone Display */}
+            <div className="sm:col-span-3 flex items-center justify-end gap-2 text-xs bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800">
+              <Globe className="h-3 w-3 text-blue-500" />
+              <span className="text-gray-500 dark:text-gray-400">Your Timezone:</span>
+              <span className="font-mono font-medium text-blue-600 dark:text-blue-400">{currentUserTimezone}</span>
+              <Clock className="h-3 w-3 text-emerald-500 ml-1" />
+              <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{currentTime}</span>
+            </div>
           </div>
 
           {error && !isLoading && (
@@ -767,13 +862,13 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     <span className="sr-only">Select</span>
                   </TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Duty Title & Site</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Scheduled Time (Site Time)</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Scheduled Time (Site Timezone)</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Your Time ({currentUserTimezone})</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Time Difference</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Type</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Guards</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Coverage</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Status</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Site Timezone</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Your Timezone</TableHead>
                   <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -800,9 +895,24 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   </TableRow>
                 ) : (
                   duties.map((duty: Duty, index: number) => {
+                    const siteTimezone = duty.site?.timezone || 'UTC';
                     const isToday = isTodayDuty(duty.start_datetime);
                     const isTomorrow = isTomorrowDuty(duty.start_datetime);
                     const isYesterday = isYesterdayDuty(duty.start_datetime);
+                    const showUserTime = !isSameTimezone(siteTimezone);
+                    const timeDiff = getTimeDifference(siteTimezone);
+                    const dateChanged = doesDateChange(duty.start_datetime, siteTimezone);
+
+                    // Site timezone display (properly formatted)
+                    const siteDate = convertToSiteTimezone(duty.start_datetime, 'MMM dd, yyyy', siteTimezone);
+                    const siteStartTime = convertToSiteTimezone(duty.start_datetime, 'HH:mm', siteTimezone);
+                    const siteEndTime = convertToSiteTimezone(duty.end_datetime, 'HH:mm', siteTimezone);
+                    const siteDuration = calculateDuration(duty.start_datetime, duty.end_datetime);
+
+                    // User timezone display (properly converted)
+                    const userDate = convertToUserTimezone(duty.start_datetime, 'MMM dd, yyyy');
+                    const userStartTime = convertToUserTimezone(duty.start_datetime, 'HH:mm');
+                    const userEndTime = convertToUserTimezone(duty.end_datetime, 'HH:mm');
 
                     let rowBgColor = '';
                     let borderColor = '';
@@ -824,8 +934,6 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
                     const dayName = getDayName(duty.start_datetime);
                     const dateLabel = getDateLabel(duty.start_datetime);
-                    const siteTimezone = duty.site?.timezone;
-                    const timeDiff = getTimeDifference(siteTimezone);
 
                     return (
                       <TableRow
@@ -889,10 +997,16 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 Schedule: {duty.duty_schedule.title}
                               </div>
                             )}
+                            {siteTimezone && (
+                              <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-400">
+                                <Globe className="h-3 w-3" />
+                                <span className="font-mono">{siteTimezone}</span>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
 
-                        {/* Scheduled Time with Day Name */}
+                        {/* Scheduled Time (Site Timezone) */}
                         <TableCell>
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
@@ -902,13 +1016,13 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 isTomorrow ? 'text-purple-600 dark:text-purple-400' :
                                 isYesterday ? 'text-amber-600 dark:text-amber-400' : ''
                               }`}>
-                                {formatDate(duty.start_datetime)}
+                                {siteDate}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <Clock className="h-3 w-3 text-gray-400" />
                               <span className="text-sm">
-                                {formatTime(duty.start_datetime)} - {formatTime(duty.end_datetime)}
+                                {siteStartTime} - {siteEndTime}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
@@ -921,17 +1035,75 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 {dayName}, {dateLabel}
                               </Badge>
                               <span className="text-xs text-gray-400">
-                                {calculateDuration(duty.start_datetime, duty.end_datetime)}h
+                                {siteDuration}h
                               </span>
                             </div>
-                            {/* Site Timezone */}
-                            {duty.site?.timezone && (
+                            {siteTimezone && (
                               <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
                                 <Globe className="h-3 w-3" />
-                                <span className="font-mono">{duty.site.timezone}</span>
+                                <span className="font-mono">{siteTimezone}</span>
                               </div>
                             )}
                           </div>
+                        </TableCell>
+
+                        {/* Your Time (User Timezone) */}
+                        <TableCell>
+                          {showUserTime ? (
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <User className="h-3 w-3 text-blue-400" />
+                                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                  {userDate}
+                                  {dateChanged && (
+                                    <span className="text-amber-500 text-xs ml-1">*</span>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 ml-5">
+                                <Clock className="h-3 w-3 text-emerald-400" />
+                                <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                                  {userStartTime} - {userEndTime}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-1 ml-5 text-xs text-gray-400">
+                                <Globe className="h-3 w-3" />
+                                <span className="font-mono">{currentUserTimezone}</span>
+                              </div>
+                              {dateChanged && (
+                                <div className="flex items-center gap-1 mt-1 ml-5 text-xs text-amber-500">
+                                  <AlertCircle className="h-3 w-3" />
+                                  <span>Date differs from site timezone</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                              <User className="h-3 w-3" />
+                              <span>Same timezone</span>
+                            </div>
+                          )}
+                        </TableCell>
+
+                        {/* Time Difference */}
+                        <TableCell>
+                          {siteTimezone && timeDiff !== 'Same' && timeDiff !== 'N/A' ? (
+                            <Badge variant="outline" className={`text-xs px-2 py-1 ${
+                              timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
+                              timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
+                              'border-gray-300 text-gray-500'
+                            }`}>
+                              <Timer className="h-3 w-3 mr-1" />
+                              {timeDiff}
+                            </Badge>
+                          ) : timeDiff === 'Same' ? (
+                            <Badge variant="outline" className="text-xs px-2 py-1 border-emerald-300 text-emerald-600 bg-emerald-50">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Same time
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-gray-400">N/A</span>
+                          )}
                         </TableCell>
 
                         {/* Type */}
@@ -978,47 +1150,6 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           >
                             {getStatusDisplay(duty.status)}
                           </Badge>
-                        </TableCell>
-
-                        {/* Site Timezone Column */}
-                        <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <Globe className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs font-mono text-gray-600 dark:text-gray-300">
-                              {duty.site?.timezone || 'N/A'}
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        {/* Your Timezone Column with Current Time and Difference */}
-                        <TableCell>
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <User className="h-3 w-3 text-blue-400" />
-                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
-                                {currentUserTimezone}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 ml-5">
-                              <Clock className="h-3 w-3 text-emerald-400" />
-                              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
-                                {currentTime}
-                              </span>
-                            </div>
-                            {duty.site?.timezone && (
-                              <div className="flex items-center gap-1.5 ml-5 mt-0.5">
-                                <Timer className="h-3 w-3 text-amber-400" />
-                                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
-                                  timeDiff === 'Same' ? 'border-emerald-300 text-emerald-600 bg-emerald-50' :
-                                  timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
-                                  timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
-                                  'border-gray-300 text-gray-500'
-                                }`}>
-                                  {timeDiff === 'Same' ? 'Same time' : `${timeDiff}`}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
                         </TableCell>
 
                         {/* Actions */}
@@ -1080,11 +1211,12 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
           {/* Pagination */}
           {duties.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t">
-              <div className="text-sm text-gray-700">
-                Showing {duties.length} of {pagination.total} duties
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t bg-gray-50/50 dark:bg-gray-900/20">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span className="font-medium text-gray-900 dark:text-white">{duties.length}</span> of{' '}
+                <span className="font-medium text-gray-900 dark:text-white">{pagination.total}</span> duties
                 {selectedDuties.length > 0 && (
-                  <span className="ml-2 text-blue-600">
+                  <span className="ml-2 text-blue-600 font-medium">
                     ({selectedDuties.length} selected)
                   </span>
                 )}
@@ -1098,7 +1230,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                 >
                   Previous
                 </Button>
-                <span className="text-sm px-3">
+                <span className="text-sm px-3 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-lg font-medium text-blue-600 dark:text-blue-400">
                   Page {pagination.current_page} of {pagination.last_page}
                 </span>
                 <Button
