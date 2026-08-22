@@ -72,6 +72,66 @@ const weekdays = [
   { value: "sunday", label: "Sunday" },
 ];
 
+// Timezone Display Component - Full Width Responsive
+const TimezoneInfo = ({ siteTimezone }: { siteTimezone?: string }) => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!siteTimezone) return null;
+
+  const formatTime = (date: Date, timezone?: string) => {
+    return date.toLocaleTimeString('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getTimezoneName = (tz: string) => {
+    return tz.split('/').pop()?.replace('_', ' ') || tz;
+  };
+
+  return (
+    <div className="w-full p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+      <div className="flex items-center gap-2 mb-2 sm:mb-3">
+        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+        <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Timezone Information</span>
+      </div>
+      <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3 text-sm">
+        <div className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-md border border-blue-100 dark:border-blue-900">
+          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-1">
+            <span>Site Time</span>
+            <span className="font-medium text-blue-600 dark:text-blue-400 truncate max-w-[100px] sm:max-w-none">
+              {getTimezoneName(siteTimezone)}
+            </span>
+          </div>
+          <div className="font-mono font-semibold text-blue-600 dark:text-blue-400 mt-1 text-sm sm:text-base">
+            {formatTime(currentTime, siteTimezone)}
+          </div>
+        </div>
+        <div className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-md border border-green-100 dark:border-green-900">
+          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-1">
+            <span>Device Time</span>
+            <span className="font-medium text-green-600 dark:text-green-400 truncate max-w-[100px] sm:max-w-none">
+              {getTimezoneName(deviceTimezone)}
+            </span>
+          </div>
+          <div className="font-mono font-semibold text-green-600 dark:text-green-400 mt-1 text-sm sm:text-base">
+            {formatTime(currentTime)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Zod schema
 const dutyScheduleSchema = z.object({
   site_id: z.number()
@@ -173,6 +233,7 @@ export function DutyScheduleEditForm({
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
+  const [selectedSiteTimezone, setSelectedSiteTimezone] = useState<string | undefined>(undefined);
 
   // Redux states
   const { sites } = useAppSelector((state) => state.site);
@@ -305,6 +366,11 @@ export function DutyScheduleEditForm({
         const data = result.payload.item;
         const days = data.recurrence_days || [];
         setSelectedWeekdays(days);
+
+        // Set the timezone from the site data
+        if (data.site?.timezone) {
+          setSelectedSiteTimezone(data.site.timezone);
+        }
 
         reset({
           site_id: data.site_id,
@@ -469,6 +535,7 @@ export function DutyScheduleEditForm({
       const hasChanges = JSON.stringify(originalData) !== JSON.stringify(currentData);
 
       if (!hasChanges) {
+        setSelectedSiteTimezone(undefined);
         onOpenChange?.(false);
       } else {
         SweetAlertService.confirm(
@@ -480,6 +547,7 @@ export function DutyScheduleEditForm({
           if (result.isConfirmed) {
             reset();
             setSelectedWeekdays([]);
+            setSelectedSiteTimezone(undefined);
             onOpenChange?.(false);
           } else {
             onOpenChange?.(true);
@@ -495,29 +563,32 @@ export function DutyScheduleEditForm({
         {trigger}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-6">
-        <div className="flex items-center gap-2 text-lg font-semibold mb-6 pb-2 border-b">
-          <Image src="/images/logo.png" alt="" width={24} height={24} />
+      <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-3 sm:p-6">
+        <div className="flex items-center gap-2 text-base sm:text-lg font-semibold mb-3 sm:mb-6 pb-2 border-b">
+          <Image src="/images/logo.png" alt="" width={20} height={20} className="sm:w-6 sm:h-6" />
           <span className="whitespace-nowrap">Edit Duty Schedule</span>
         </div>
 
+        {/* Timezone Display - Full Width at Top */}
+        <TimezoneInfo siteTimezone={selectedSiteTimezone} />
+
         {isFetching ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-8 sm:py-12">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading schedule details...</p>
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
+              <p className="text-xs sm:text-sm text-gray-600">Loading schedule details...</p>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <FileText className="h-4 w-4" />
                 Basic Information
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <FloatingLabelInput
                     label="Title *"
@@ -569,20 +640,20 @@ export function DutyScheduleEditForm({
                   rows={2}
                   {...register("description")}
                   disabled={isLoading || isFetching}
-                  className="resize-none"
+                  className="resize-none text-xs sm:text-sm"
                   placeholder="Enter schedule description..."
                 />
               </div>
             </div>
 
             {/* Location & Contract */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Building className="h-4 w-4" />
                 Location & Contract
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Site *
@@ -590,8 +661,17 @@ export function DutyScheduleEditForm({
                   <SearchableDropdownWithIcon
                     value={formValues.site_id || ""}
                     onValueChange={(value) => {
-                      setValue("site_id", Number(value), { shouldValidate: true });
+                      const siteId = Number(value);
+                      setValue("site_id", siteId, { shouldValidate: true });
                       setValue("site_location_id", null);
+
+                      // Find the selected site and get its timezone
+                      const selectedSite = sites.find((site: Site) => site.id === siteId);
+                      if (selectedSite) {
+                        setSelectedSiteTimezone(selectedSite.timezone||undefined);
+                      } else {
+                        setSelectedSiteTimezone(undefined);
+                      }
                     }}
                     options={sites.map((site: Site) => ({
                       value: site.id,
@@ -701,13 +781,13 @@ export function DutyScheduleEditForm({
             </div>
 
             {/* Schedule Details */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Calendar className="h-4 w-4" />
                 Schedule Details
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <FloatingLabelInput
                     label="Start Date *"
@@ -752,13 +832,13 @@ export function DutyScheduleEditForm({
 
             {/* Recurrence Settings */}
             {formValues.schedule_type === 'recurring' && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                   <Repeat className="h-4 w-4" />
                   Recurrence Settings
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Recurrence Frequency *
@@ -816,7 +896,7 @@ export function DutyScheduleEditForm({
                           size="sm"
                           onClick={() => toggleWeekday(day.value)}
                           disabled={isLoading || isFetching}
-                          className="capitalize"
+                          className="capitalize text-xs sm:text-sm"
                         >
                           {day.label.substring(0, 3)}
                         </Button>
@@ -832,13 +912,13 @@ export function DutyScheduleEditForm({
             )}
 
             {/* Time & Guards */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Clock className="h-4 w-4" />
                 Time & Guards
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <FloatingLabelInput
                     label="Start Time *"
@@ -860,7 +940,7 @@ export function DutyScheduleEditForm({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <FloatingLabelInput
                     label="Guards Required *"
@@ -887,7 +967,7 @@ export function DutyScheduleEditForm({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <FloatingLabelInput
                     label="Mandatory Check-in Time"
@@ -939,13 +1019,13 @@ export function DutyScheduleEditForm({
                 rows={2}
                 {...register("notes")}
                 disabled={isLoading || isFetching}
-                className="resize-none"
+                className="resize-none text-xs sm:text-sm"
                 placeholder="Enter additional notes..."
               />
             </div>
 
             {/* Status Flags */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <Switch
                   id="is_active"

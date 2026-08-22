@@ -4,6 +4,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { format, formatInTimeZone } from 'date-fns-tz';
+import Image from "next/image";
 import {
     ArrowLeft,
     Calendar,
@@ -25,7 +27,9 @@ import {
     XCircle,
     RefreshCw,
     Briefcase,
-    CalendarDays
+    CalendarDays,
+    Globe,
+    Timer,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -33,7 +37,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     AlertDialog,
@@ -77,7 +80,6 @@ import {
     clearAssignmentData
 } from '@/store/slices/shiftLogsSlice';
 import SweetAlertService from '@/lib/sweetAlert';
-import { format } from 'date-fns';
 import { GuardAssignmentEditForm } from '@/components/guard-assignment/guard-assignment-edit-form';
 import { ReplaceGuardDialog } from '@/components/guard-assignment/replace-guard-dialog';
 import Swal from 'sweetalert2';
@@ -111,6 +113,68 @@ const statusBadgeVariant: Record<AssignmentStatus, 'default' | 'destructive' | '
     replaced: 'secondary'
 };
 
+// Profile Image Component with fallback
+const GuardProfileImage = ({ guard }: { guard: any }) => {
+    const [imageError, setImageError] = useState(false);
+
+    const getProfileImageUrl = (guard: any) => {
+        if (!guard) return null;
+        if (guard.profile_image_url) {
+            return guard.profile_image_url;
+        }
+        if (guard.profile_image) {
+            const imagePath = guard.profile_image.replace(/\/\//g, '/');
+            return `${process.env.NEXT_PUBLIC_API_URL || ''}/${imagePath}`;
+        }
+        return null;
+    };
+
+    const imageUrl = getProfileImageUrl(guard);
+    const name = guard?.full_name || 'Guard';
+    const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+
+    // Generate consistent color based on name
+    const getColorFromName = (name: string) => {
+        const colors = [
+            'from-blue-400 to-blue-600',
+            'from-purple-400 to-purple-600',
+            'from-green-400 to-green-600',
+            'from-red-400 to-red-600',
+            'from-pink-400 to-pink-600',
+            'from-indigo-400 to-indigo-600',
+            'from-teal-400 to-teal-600',
+            'from-orange-400 to-orange-600',
+        ];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    };
+
+    const colorClass = getColorFromName(name);
+
+    if (imageUrl && !imageError) {
+        return (
+            <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                <Image
+                    src={imageUrl}
+                    alt={name}
+                    fill
+                    className="object-cover"
+                    onError={() => setImageError(true)}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className={`h-16 w-16 rounded-full bg-gradient-to-r ${colorClass} flex items-center justify-center text-white text-xl font-semibold border-2 border-gray-200 dark:border-gray-700`}>
+            {initials || 'G'}
+        </div>
+    );
+};
+
 export default function GuardAssignmentViewPage() {
     const params = useParams();
     const router = useRouter();
@@ -124,6 +188,18 @@ export default function GuardAssignmentViewPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+
+    // Get current user timezone
+    const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const [currentTime, setCurrentTime] = useState(format(new Date(), 'HH:mm:ss'));
+
+    // Update current time every second
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(format(new Date(), 'HH:mm:ss'));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     const { currentAssignment, isLoading: storeLoading, error } = useAppSelector(
         (state) => state.guardAssignment
@@ -288,6 +364,67 @@ export default function GuardAssignmentViewPage() {
         }
     };
 
+    // Convert to site timezone
+    const convertToSiteTimezone = (dateString: string, formatStr: string, timezone: string): string => {
+        try {
+            const date = new Date(dateString);
+            return formatInTimeZone(date, timezone, formatStr);
+        } catch (error) {
+            return dateString;
+        }
+    };
+
+    // Convert to user timezone
+    const convertToUserTimezone = (dateString: string, formatStr: string): string => {
+        try {
+            const date = new Date(dateString);
+            return formatInTimeZone(date, currentUserTimezone, formatStr);
+        } catch (error) {
+            return dateString;
+        }
+    };
+
+    // Get time difference
+    const getTimeDifference = (siteTimezone: string | null | undefined): string => {
+        if (!siteTimezone) return 'N/A';
+
+        try {
+            const now = new Date();
+
+            const siteTimeStr = now.toLocaleString('en-US', {
+                timeZone: siteTimezone,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            const [siteHours, siteMinutes] = siteTimeStr.split(':').map(Number);
+            const siteTotalMinutes = siteHours * 60 + siteMinutes;
+
+            const userHours = now.getHours();
+            const userMinutes = now.getMinutes();
+            const userTotalMinutes = userHours * 60 + userMinutes;
+
+            let diffMinutes = siteTotalMinutes - userTotalMinutes;
+
+            if (diffMinutes > 720) diffMinutes -= 1440;
+            if (diffMinutes < -720) diffMinutes += 1440;
+
+            if (diffMinutes === 0) return 'Same';
+
+            const sign = diffMinutes > 0 ? '+' : '';
+            const absMinutes = Math.abs(diffMinutes);
+            const hours = Math.floor(absMinutes / 60);
+            const minutes = absMinutes % 60;
+
+            if (minutes === 0) {
+                return `${sign}${hours}h`;
+            }
+            return `${sign}${hours}h ${minutes}m`;
+        } catch (error) {
+            return 'N/A';
+        }
+    };
+
     const formatDuration = (minutes?: number) => {
         if (!minutes) return 'N/A';
         const hours = Math.floor(minutes / 60);
@@ -412,6 +549,22 @@ export default function GuardAssignmentViewPage() {
 
     const currentStatus = currentAssignment.status as AssignmentStatus;
     const availableStatuses = getAvailableStatuses();
+    const siteTimezone = currentAssignment.duty?.site?.timezone || 'UTC';
+    const timeDiff = getTimeDifference(siteTimezone);
+
+    // Format times in site and user timezones
+    const siteStartTime = currentAssignment.duty?.start_datetime
+        ? convertToSiteTimezone(currentAssignment.duty.start_datetime, 'hh:mm a', siteTimezone)
+        : 'N/A';
+    const siteEndTime = currentAssignment.duty?.end_datetime
+        ? convertToSiteTimezone(currentAssignment.duty.end_datetime, 'hh:mm a', siteTimezone)
+        : 'N/A';
+    const userStartTime = currentAssignment.duty?.start_datetime
+        ? convertToUserTimezone(currentAssignment.duty.start_datetime, 'hh:mm a')
+        : 'N/A';
+    const userEndTime = currentAssignment.duty?.end_datetime
+        ? convertToUserTimezone(currentAssignment.duty.end_datetime, 'hh:mm a')
+        : 'N/A';
 
     return (
         <div className="container mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -541,6 +694,65 @@ export default function GuardAssignmentViewPage() {
                         </CardHeader>
                     </Card>
 
+                    {/* Timezone Info Card */}
+                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
+                        <CardContent className="pt-4">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Globe className="h-4 w-4 text-blue-500" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Site Timezone:</span>
+                                    <Badge variant="outline" className="font-mono">
+                                        {siteTimezone}
+                                    </Badge>
+                                </div>
+                                <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                                <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Site Time:</span>
+                                    <Badge variant="outline" className="font-mono border-emerald-300 text-emerald-600 bg-emerald-50">
+                                        {siteStartTime} - {siteEndTime}
+                                    </Badge>
+                                </div>
+                                <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                                <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-blue-400" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Timezone:</span>
+                                    <Badge variant="outline" className="font-mono">
+                                        {currentUserTimezone.split('/').pop()}
+                                    </Badge>
+                                </div>
+                                <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                                <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-emerald-400" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Time:</span>
+                                    <Badge variant="outline" className="font-mono border-emerald-300 text-emerald-600 bg-emerald-50">
+                                        {userStartTime} - {userEndTime}
+                                    </Badge>
+                                </div>
+                                {timeDiff !== 'Same' && timeDiff !== 'N/A' && (
+                                    <>
+                                        <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                                        <div className="flex items-center gap-2">
+                                            <Timer className="h-4 w-4 text-amber-400" />
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Diff:</span>
+                                            <Badge variant="outline" className={`font-mono ${
+                                                timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
+                                                timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
+                                                'border-gray-300 text-gray-500'
+                                            }`}>
+                                                {timeDiff}
+                                            </Badge>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <div className="mt-2 text-xs text-gray-400">
+                                <Clock className="h-3 w-3 inline mr-1" />
+                                Current time: {currentTime} {currentUserTimezone}
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Two Column Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Guard Information */}
@@ -553,12 +765,7 @@ export default function GuardAssignmentViewPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-start gap-4">
-                                    <Avatar className="h-16 w-16 border-2 border-gray-200 dark:border-gray-700">
-<AvatarImage src={currentAssignment.guard?.profile_image ?? undefined} />
-                                        <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                                            {currentAssignment.guard?.full_name?.charAt(0) || 'G'}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    <GuardProfileImage guard={currentAssignment.guard} />
                                     <div className="flex-1 min-w-0">
                                         <h3 className="text-lg font-semibold truncate">
                                             {currentAssignment.guard?.full_name || `Guard #${currentAssignment.guard_id}`}
@@ -637,6 +844,15 @@ export default function GuardAssignmentViewPage() {
                                             <span className="text-gray-600">Location:</span>
                                             <span className="font-medium">
                                                 {currentAssignment.duty.site_location.title}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {currentAssignment.duty?.site?.timezone && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Globe className="h-4 w-4 text-gray-500 shrink-0" />
+                                            <span className="text-gray-600">Timezone:</span>
+                                            <span className="font-medium">
+                                                {currentAssignment.duty.site.timezone}
                                             </span>
                                         </div>
                                     )}

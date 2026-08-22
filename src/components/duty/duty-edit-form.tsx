@@ -91,6 +91,66 @@ const dutySchema = z.object({
 
 type DutyFormData = z.infer<typeof dutySchema>
 
+// Timezone Display Component - Full Width Responsive
+const TimezoneInfo = ({ siteTimezone }: { siteTimezone?: string }) => {
+    const [currentTime, setCurrentTime] = useState(new Date())
+    const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(new Date()), 1000)
+        return () => clearInterval(interval)
+    }, [])
+
+    if (!siteTimezone) return null
+
+    const formatTime = (date: Date, timezone?: string) => {
+        return date.toLocaleTimeString('en-US', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        })
+    }
+
+    const getTimezoneName = (tz: string) => {
+        return tz.split('/').pop()?.replace('_', ' ') || tz
+    }
+
+    return (
+        <div className="w-full p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <ClockIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Timezone Information</span>
+            </div>
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3 text-sm">
+                <div className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-md border border-blue-100 dark:border-blue-900">
+                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-1">
+                        <span>Site Time</span>
+                        <span className="font-medium text-blue-600 dark:text-blue-400 truncate max-w-[100px] sm:max-w-none">
+                            {getTimezoneName(siteTimezone)}
+                        </span>
+                    </div>
+                    <div className="font-mono font-semibold text-blue-600 dark:text-blue-400 mt-1 text-sm sm:text-base">
+                        {formatTime(currentTime, siteTimezone)}
+                    </div>
+                </div>
+                <div className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-md border border-green-100 dark:border-green-900">
+                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-1">
+                        <span>Device Time</span>
+                        <span className="font-medium text-green-600 dark:text-green-400 truncate max-w-[100px] sm:max-w-none">
+                            {getTimezoneName(deviceTimezone)}
+                        </span>
+                    </div>
+                    <div className="font-mono font-semibold text-green-600 dark:text-green-400 mt-1 text-sm sm:text-base">
+                        {formatTime(currentTime)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export function DutyEditForm({
     trigger,
     duty,
@@ -119,6 +179,9 @@ export function DutyEditForm({
     const [startTime, setStartTime] = useState("09:00")
     const [endTime, setEndTime] = useState("17:00")
     const [checkInTime, setCheckInTime] = useState("08:45")
+
+    // Selected site timezone state
+    const [selectedSiteTimezone, setSelectedSiteTimezone] = useState<string | undefined>(undefined)
 
     const {
         register,
@@ -202,6 +265,11 @@ export function DutyEditForm({
                 setStartTime(format(startDatetime, 'HH:mm'))
                 setEndTime(format(endDatetime, 'HH:mm'))
                 setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
+
+                // Set the timezone from the site data
+                if (data.site?.timezone) {
+                    setSelectedSiteTimezone(data.site.timezone)
+                }
 
                 // Set site search for dropdown display
                 const selectedSite = sites.find(s => s.id === data.site?.id)
@@ -324,6 +392,7 @@ export function DutyEditForm({
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
             reset()
+            setSelectedSiteTimezone(undefined)
         }
         onOpenChange?.(open)
     }
@@ -334,29 +403,32 @@ export function DutyEditForm({
                 {trigger}
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[800px] w-[80vw] max-w-[80vw] mx-auto max-h-[80vh] overflow-y-auto dark:bg-gray-900 p-4 sm:p-6">
+            <DialogContent className="w-[95vw] sm:max-w-[800px] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-3 sm:p-6">
                 {/* Header */}
-                <div className="flex items-center gap-2 text-lg font-semibold mb-4 sm:mb-6">
-                    <Image src="/images/logo.png" alt="" width={24} height={24} />
+                <div className="flex items-center gap-2 text-base sm:text-lg font-semibold mb-3 sm:mb-6">
+                    <Image src="/images/logo.png" alt="" width={20} height={20} className="sm:w-6 sm:h-6" />
                     <span className="whitespace-nowrap">Edit Duty</span>
                 </div>
 
+                {/* Timezone Display - Full Width at Top */}
+                <TimezoneInfo siteTimezone={selectedSiteTimezone} />
+
                 {isFetching ? (
-                    <div className="flex items-center justify-center py-12">
+                    <div className="flex items-center justify-center py-8 sm:py-12">
                         <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading duty details...</p>
+                            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
+                            <p className="text-xs sm:text-sm text-gray-600">Loading duty details...</p>
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
                                 Duty Information
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                                 {/* Title */}
-                                <div className="md:col-span-2 lg:col-span-3">
+                                <div className="sm:col-span-2 lg:col-span-3">
                                     <FloatingLabelInput
                                         label="Title"
                                         {...register("title")}
@@ -377,6 +449,14 @@ export function DutyEditForm({
                                             setValue("site_id", siteId, { shouldValidate: true })
                                             setValue("site_location_id", 0)
                                             setLocationSearch("")
+
+                                            // Find the selected site and get its timezone
+                                            const selectedSite = sites.find((site: Site) => site.id === siteId)
+                                            if (selectedSite) {
+                                                setSelectedSiteTimezone(selectedSite.timezone || undefined)
+                                            } else {
+                                                setSelectedSiteTimezone(undefined)
+                                            }
                                         }}
                                         options={sites.map((site: Site) => ({
                                             value: site.id,
@@ -533,11 +613,11 @@ export function DutyEditForm({
                         </div>
 
                         {/* Duty Type Section */}
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
                                 Duty Details
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                                 {/* Duty Type */}
                                 <div className="space-y-2">
                                     <Label htmlFor="duty_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -547,7 +627,7 @@ export function DutyEditForm({
                                         <Button
                                             type="button"
                                             variant={formValues.duty_type === "day" ? "default" : "ghost"}
-                                            className="flex-1 transition-all duration-200"
+                                            className="flex-1 transition-all duration-200 text-xs sm:text-sm"
                                             onClick={() => setValue("duty_type", "day", { shouldValidate: true })}
                                             disabled={isLoading || isFetching}
                                         >
@@ -556,7 +636,7 @@ export function DutyEditForm({
                                         <Button
                                             type="button"
                                             variant={formValues.duty_type === "night" ? "default" : "ghost"}
-                                            className="flex-1 transition-all duration-200"
+                                            className="flex-1 transition-all duration-200 text-xs sm:text-sm"
                                             onClick={() => setValue("duty_type", "night", { shouldValidate: true })}
                                             disabled={isLoading || isFetching}
                                         >
@@ -577,7 +657,7 @@ export function DutyEditForm({
                                         <Button
                                             type="button"
                                             variant={formValues.status === "pending" ? "default" : "ghost"}
-                                            className="flex-1 transition-all duration-200"
+                                            className="flex-1 transition-all duration-200 text-xs sm:text-sm"
                                             onClick={() => setValue("status", "pending", { shouldValidate: true })}
                                             disabled={isLoading || isFetching}
                                         >
@@ -586,7 +666,7 @@ export function DutyEditForm({
                                         <Button
                                             type="button"
                                             variant={formValues.status === "approved" ? "default" : "ghost"}
-                                            className="flex-1 transition-all duration-200"
+                                            className="flex-1 transition-all duration-200 text-xs sm:text-sm"
                                             onClick={() => setValue("status", "approved", { shouldValidate: true })}
                                             disabled={isLoading || isFetching}
                                         >
@@ -595,7 +675,7 @@ export function DutyEditForm({
                                         <Button
                                             type="button"
                                             variant={formValues.status === "completed" ? "default" : "ghost"}
-                                            className="flex-1 transition-all duration-200"
+                                            className="flex-1 transition-all duration-200 text-xs sm:text-sm"
                                             onClick={() => setValue("status", "completed", { shouldValidate: true })}
                                             disabled={isLoading || isFetching}
                                         >
@@ -610,19 +690,19 @@ export function DutyEditForm({
                         </div>
 
                         {/* Date & Time Section */}
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
                                 Date & Time
                             </h3>
 
                             {/* Start Date & Time */}
-                            <div className="mb-6">
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            <div className="mb-4 sm:mb-6">
+                                <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     Start Date & Time
                                 </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="start_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <Label htmlFor="start_date" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Date *
                                         </Label>
                                         <Popover>
@@ -631,13 +711,13 @@ export function DutyEditForm({
                                                     type="button"
                                                     variant="outline"
                                                     className={cn(
-                                                        "w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
+                                                        "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !startDate && "text-muted-foreground"
                                                     )}
                                                     disabled={isLoading || isFetching}
                                                 >
-                                                    <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatDateDisplay(startDate)}
+                                                    <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
+                                                    <span className="truncate">{formatDateDisplay(startDate)}</span>
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
@@ -652,7 +732,7 @@ export function DutyEditForm({
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="start_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <Label htmlFor="start_time" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
                                         <CustomTimePicker
@@ -668,13 +748,13 @@ export function DutyEditForm({
                             </div>
 
                             {/* End Date & Time */}
-                            <div className="mb-6">
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            <div className="mb-4 sm:mb-6">
+                                <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     End Date & Time
                                 </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="end_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <Label htmlFor="end_date" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Date *
                                         </Label>
                                         <Popover>
@@ -683,13 +763,13 @@ export function DutyEditForm({
                                                     type="button"
                                                     variant="outline"
                                                     className={cn(
-                                                        "w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
+                                                        "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !endDate && "text-muted-foreground"
                                                     )}
                                                     disabled={isLoading || isFetching}
                                                 >
-                                                    <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatDateDisplay(endDate)}
+                                                    <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
+                                                    <span className="truncate">{formatDateDisplay(endDate)}</span>
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
@@ -704,7 +784,7 @@ export function DutyEditForm({
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="end_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <Label htmlFor="end_time" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
                                         <CustomTimePicker
@@ -720,13 +800,13 @@ export function DutyEditForm({
                             </div>
 
                             {/* Check-in Date & Time */}
-                            <div className="mb-6">
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            <div className="mb-4 sm:mb-6">
+                                <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     Mandatory Check-in
                                 </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="checkin_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <Label htmlFor="checkin_date" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Date *
                                         </Label>
                                         <Popover>
@@ -735,13 +815,13 @@ export function DutyEditForm({
                                                     type="button"
                                                     variant="outline"
                                                     className={cn(
-                                                        "w-full justify-start text-left font-normal h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
+                                                        "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !checkInDate && "text-muted-foreground"
                                                     )}
                                                     disabled={isLoading || isFetching}
                                                 >
-                                                    <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                                    {formatDateDisplay(checkInDate)}
+                                                    <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
+                                                    <span className="truncate">{formatDateDisplay(checkInDate)}</span>
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
@@ -756,7 +836,7 @@ export function DutyEditForm({
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="checkin_time" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <Label htmlFor="checkin_time" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Time *
                                         </Label>
                                         <CustomTimePicker
@@ -773,12 +853,12 @@ export function DutyEditForm({
                         </div>
 
                         {/* Notes Section */}
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
                                 Additional Information
                             </h3>
                             <div className="space-y-2">
-                                <Label htmlFor="notes" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <Label htmlFor="notes" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Notes (Optional)
                                 </Label>
                                 <FloatingLabelTextarea
@@ -786,7 +866,7 @@ export function DutyEditForm({
                                     rows={3}
                                     {...register("notes")}
                                     disabled={isLoading || isFetching}
-                                    className="resize-none"
+                                    className="resize-none text-xs sm:text-sm"
                                 />
                             </div>
                         </div>

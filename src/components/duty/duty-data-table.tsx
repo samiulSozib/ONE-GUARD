@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, isToday, isTomorrow, isYesterday, addDays, subDays } from "date-fns";
 import { formatInTimeZone } from 'date-fns-tz';
+import Image from "next/image";
 import {
   CalendarIcon,
   DownloadIcon,
@@ -168,6 +169,91 @@ interface DutyDataTableProps {
   onAddClick?: () => void;
   onViewClick?: (duty: Duty) => void;
 }
+
+// Function to determine shift type based on time
+const getShiftType = (timeString: string): 'morning' | 'day' | 'night' => {
+  try {
+    const date = new Date(timeString);
+    const hours = date.getHours();
+
+    // Morning: 5 AM to 12 PM (05:00 - 11:59)
+    if (hours >= 5 && hours < 12) {
+      return 'morning';
+    }
+    // Day: 12 PM to 6 PM (12:00 - 17:59)
+    else if (hours >= 12 && hours < 18) {
+      return 'day';
+    }
+    // Night: 6 PM to 5 AM (18:00 - 04:59)
+    else {
+      return 'night';
+    }
+  } catch {
+    return 'morning'; // Default fallback
+  }
+};
+
+// Shift type configuration with static images
+const shiftConfig = {
+  morning: {
+    image: '/images/morning-shift.png',
+    label: 'Morning',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    textColor: 'text-amber-600 dark:text-amber-400',
+    emoji: '🌅',
+  },
+  day: {
+    image: '/images/day-shift.png',
+    label: 'Day',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    emoji: '☀️',
+  },
+  night: {
+    image: '/images/night-shift.png',
+    label: 'Night',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+    borderColor: 'border-indigo-200 dark:border-indigo-800',
+    textColor: 'text-indigo-600 dark:text-indigo-400',
+    emoji: '🌙',
+  },
+};
+
+// Shift type display component with larger image and label
+const ShiftTypeDisplay = ({ shiftType }: { shiftType: 'morning' | 'day' | 'night' }) => {
+  const config = shiftConfig[shiftType];
+
+  return (
+    <div className={`flex flex-col items-center gap-1 px-1 py-1.5 rounded-xl border-2 ${config.bgColor} ${config.borderColor} min-w-[60px] sm:min-w-[70px] md:min-w-[80px] transition-all duration-200 hover:scale-105 hover:shadow-md`}>
+      <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex-shrink-0">
+        <Image
+          src={config.image}
+          alt={config.label}
+          width={64}
+          height={64}
+          className="rounded-full object-cover border-2 border-white shadow-sm"
+          onError={(e) => {
+            // Fallback to emoji if image fails to load
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              const emojiSpan = document.createElement('span');
+              emojiSpan.className = `text-2xl sm:text-3xl md:text-4xl ${config.textColor}`;
+              emojiSpan.textContent = config.emoji;
+              parent.appendChild(emojiSpan);
+            }
+          }}
+        />
+      </div>
+      <span className={`text-[9px] sm:text-[10px] md:text-xs font-semibold ${config.textColor} uppercase tracking-wider`}>
+        {config.label}
+      </span>
+    </div>
+  );
+};
 
 export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const dispatch = useAppDispatch();
@@ -647,7 +733,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     <>
       <Card className="shadow-sm rounded-2xl border-0 overflow-hidden">
         {/* Top Header Section */}
-        <div className="bg-[#F4F6F8] p-5 -mt-6 rounded-t-md flex flex-row items-center gap-4 w-full justify-between md:justify-start">
+        <div className="bg-[#F4F6F8] p-3 sm:p-5 -mt-6 rounded-t-md flex flex-wrap items-center gap-3 w-full justify-between md:justify-start">
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
             <ListFilter size="14px" />
             Filters
@@ -668,7 +754,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               onCheckedChange={handleSelectAll}
               className="dark:bg-white dark:border-black"
             />
-            <Label htmlFor="select-all">Select All</Label>
+            <Label htmlFor="select-all" className="text-xs sm:text-sm">Select All</Label>
           </div>
 
           {selectedDuties.length > 0 && (
@@ -676,7 +762,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               variant="destructive"
               size="sm"
               onClick={handleBulkDelete}
-              className="ml-auto"
+              className="ml-auto text-xs sm:text-sm"
             >
               Delete Selected ({selectedDuties.length})
             </Button>
@@ -684,25 +770,26 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
         </div>
 
         <CardContent className="p-0">
-          {/* Filters Section - Plain */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 py-3">
-            <div className="sm:col-span-3">
+          {/* Filters Section - Responsive */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 border-b px-3 sm:px-4 py-2 sm:py-3">
+            <div className="xs:col-span-2 sm:col-span-3">
               <InputGroup>
                 <InputGroupInput
                   placeholder="Search by duty title..."
                   value={titleSearch}
                   onChange={handleTitleSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSearchSubmit()}
+                  className="h-8 sm:h-9 text-xs sm:text-sm"
                 />
                 <InputGroupAddon onClick={handleTitleSearchSubmit} className="cursor-pointer">
-                  <Search />
+                  <Search className="h-3 w-3 sm:h-4 sm:w-4" />
                 </InputGroupAddon>
               </InputGroup>
             </div>
 
-            <div className="sm:col-span-2">
+            <div className="xs:col-span-1 sm:col-span-2">
               <Select value={siteFilter} onValueChange={setSiteFilter}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="All Sites" />
                 </SelectTrigger>
                 <SelectContent>
@@ -719,9 +806,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               </Select>
             </div>
 
-            <div className="sm:col-span-1">
+            <div className="xs:col-span-1 sm:col-span-1">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -736,9 +823,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               </Select>
             </div>
 
-            <div className="sm:col-span-1">
+            <div className="xs:col-span-1 sm:col-span-1">
               <Select value={coverageFilter} onValueChange={setCoverageFilter}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Coverage" />
                 </SelectTrigger>
                 <SelectContent>
@@ -753,15 +840,15 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               </Select>
             </div>
 
-            <div className="sm:col-span-3">
+            <div className="xs:col-span-2 sm:col-span-3">
               <Popover>
                 <PopoverTrigger asChild>
                   <FloatingLabelInput
-                    className="text-start h-9"
+                    className="text-start h-8 sm:h-9 text-xs sm:text-sm"
                     label="Date"
                     value={dateFilter ? getDateDisplay(dateFilter) : ""}
                     readOnly
-                    postfixIcon={<CalendarIcon className="text-gray-400" />}
+                    postfixIcon={<CalendarIcon className="text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />}
                   />
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-4 bg-white dark:bg-gray-900 shadow-xl rounded-xl border-0">
@@ -771,7 +858,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         variant="outline"
                         size="sm"
                         onClick={setDateToday}
-                        className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-xs"
                       >
                         <Sun className="h-3 w-3 mr-1" />
                         Today
@@ -780,7 +867,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         variant="outline"
                         size="sm"
                         onClick={setDateTomorrow}
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 text-xs"
                       >
                         <Sparkles className="h-3 w-3 mr-1" />
                         Tomorrow
@@ -789,7 +876,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         variant="outline"
                         size="sm"
                         onClick={setDateYesterday}
-                        className="border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300"
+                        className="border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300 text-xs"
                       >
                         <Cloud className="h-3 w-3 mr-1" />
                         Yesterday
@@ -798,7 +885,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         variant="outline"
                         size="sm"
                         onClick={setDate7Days}
-                        className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                        className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 text-xs"
                       >
                         <Zap className="h-3 w-3 mr-1" />
                         7 Days
@@ -818,11 +905,12 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               </Popover>
             </div>
 
-            <div className="sm:col-span-2 flex items-center gap-2">
+            <div className="xs:col-span-2 sm:col-span-2 flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleClearFilters}
+                className="h-8 sm:h-9 text-xs sm:text-sm"
               >
                 Clear Filters
               </Button>
@@ -830,19 +918,19 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                 <Button
                   size="sm"
                   onClick={onAddClick}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-8 sm:h-9 text-xs sm:text-sm"
                 >
                   Add Duty
                 </Button>
               )}
             </div>
 
-            {/* Timezone Display */}
-            <div className="sm:col-span-3 flex items-center justify-end gap-2 text-xs bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800">
+            {/* Timezone Display - Responsive */}
+            <div className="xs:col-span-2 sm:col-span-3 flex flex-wrap items-center justify-start sm:justify-end gap-1 sm:gap-2 text-[10px] sm:text-xs bg-blue-50 dark:bg-blue-900/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-blue-200 dark:border-blue-800">
               <Globe className="h-3 w-3 text-blue-500" />
-              <span className="text-gray-500 dark:text-gray-400">Your Timezone:</span>
-              <span className="font-mono font-medium text-blue-600 dark:text-blue-400">{currentUserTimezone}</span>
-              <Clock className="h-3 w-3 text-emerald-500 ml-1" />
+              <span className="text-gray-500 dark:text-gray-400 hidden xs:inline">Your Timezone:</span>
+              <span className="font-mono font-medium text-blue-600 dark:text-blue-400 truncate max-w-[80px] sm:max-w-none">{currentUserTimezone.split('/').pop()}</span>
+              <Clock className="h-3 w-3 text-emerald-500 ml-0 sm:ml-1" />
               <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">{currentTime}</span>
             </div>
           </div>
@@ -853,36 +941,37 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
           )}
 
-          {/* Table Section - Colorful */}
+          {/* Table Section - Responsive */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-blue-50 via-purple-50 to-indigo-50 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-indigo-900/20">
-                  <TableHead className="w-12">
+                  <TableHead className="w-8 sm:w-12">
                     <span className="sr-only">Select</span>
                   </TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Duty Title & Site</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Scheduled Time (Site Timezone)</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Your Time ({currentUserTimezone})</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Time Difference</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Type</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Guards</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Coverage</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Status</TableHead>
-                  <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold">Actions</TableHead>
+                  <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Shift</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Duty Title & Site</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Scheduled Time (Site)</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Your Time</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Diff</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Type</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Guards</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Coverage</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {duties.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12">
+                    <TableCell colSpan={11} className="text-center py-8 sm:py-12">
                       <div className="flex flex-col items-center justify-center">
-                        <File className="h-12 w-12 text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        <File className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4" />
+                        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                           No duties found
                         </h3>
-                        <p className="text-gray-500 mb-4">
+                        <p className="text-sm text-gray-500 mb-4">
                           {searchTerm || siteFilter !== "all" || statusFilter !== "all"
                             ? "Try adjusting your search or filters"
                             : "Get started by creating a new duty"}
@@ -903,16 +992,19 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     const timeDiff = getTimeDifference(siteTimezone);
                     const dateChanged = doesDateChange(duty.start_datetime, siteTimezone);
 
+                    // Get shift type based on duty start time
+                    const shiftType = getShiftType(duty.start_datetime);
+
                     // Site timezone display (properly formatted)
                     const siteDate = convertToSiteTimezone(duty.start_datetime, 'MMM dd, yyyy', siteTimezone);
-                    const siteStartTime = convertToSiteTimezone(duty.start_datetime, 'HH:mm', siteTimezone);
-                    const siteEndTime = convertToSiteTimezone(duty.end_datetime, 'HH:mm', siteTimezone);
+                    const siteStartTime = convertToSiteTimezone(duty.start_datetime, 'hh:mm a', siteTimezone);
+                    const siteEndTime = convertToSiteTimezone(duty.end_datetime, 'hh:mm a', siteTimezone);
                     const siteDuration = calculateDuration(duty.start_datetime, duty.end_datetime);
 
                     // User timezone display (properly converted)
                     const userDate = convertToUserTimezone(duty.start_datetime, 'MMM dd, yyyy');
-                    const userStartTime = convertToUserTimezone(duty.start_datetime, 'HH:mm');
-                    const userEndTime = convertToUserTimezone(duty.end_datetime, 'HH:mm');
+                    const userStartTime = convertToUserTimezone(duty.start_datetime, 'hh:mm a');
+                    const userEndTime = convertToUserTimezone(duty.end_datetime, 'hh:mm a');
 
                     let rowBgColor = '';
                     let borderColor = '';
@@ -942,76 +1034,82 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         onClick={() => handleViewClick(duty)}
                       >
                         {/* Select Checkbox */}
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell onClick={(e) => e.stopPropagation()} className="py-2 sm:py-3 px-2 sm:px-3">
                           <Checkbox
                             checked={selectedDuties.includes(duty.id)}
                             onCheckedChange={(checked) =>
                               handleSelectDuty(duty.id, checked as boolean)
                             }
+                            className="h-3 w-3 sm:h-4 sm:w-4"
                           />
                         </TableCell>
 
+                        {/* Shift Type - First Column after checkbox */}
+                        <TableCell className="text-center py-2 sm:py-3 px-1 sm:px-2">
+                          <ShiftTypeDisplay shiftType={shiftType} />
+                        </TableCell>
+
                         {/* Duty Title & Site */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <Shield className={`h-4 w-4 ${
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                              <Shield className={`h-3 w-3 sm:h-4 sm:w-4 ${
                                 isToday ? 'text-blue-500' :
                                 isTomorrow ? 'text-purple-500' :
                                 isYesterday ? 'text-amber-500' : 'text-gray-400'
                               }`} />
-                              <span className="font-medium text-gray-900 dark:text-white">
+                              <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">
                                 {duty.title}
                               </span>
                               {isToday && (
-                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border-0 text-[10px] px-2 py-0">
+                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border-0 text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0">
                                   Today
                                 </Badge>
                               )}
                               {isTomorrow && (
-                                <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0 text-[10px] px-2 py-0">
+                                <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0 text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0">
                                   Tomorrow
                                 </Badge>
                               )}
                               {isYesterday && (
-                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[10px] px-2 py-0">
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 border-0 text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0">
                                   Yesterday
                                 </Badge>
                               )}
                             </div>
                             {duty.site && (
-                              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                <Building className="h-3 w-3" />
-                                <span>{duty.site.site_name}</span>
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">
+                                <Building className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                <span className="text-xs sm:text-sm">{duty.site.site_name}</span>
                                 {duty.site.address && (
                                   <>
-                                    <span className="text-gray-300">•</span>
-                                    <span className="text-xs truncate max-w-[150px]">{duty.site.address}</span>
+                                    <span className="text-gray-300 hidden xs:inline">•</span>
+                                    <span className="text-[10px] xs:text-xs truncate max-w-[80px] xs:max-w-[120px] sm:max-w-[150px] hidden xs:inline">{duty.site.address}</span>
                                   </>
                                 )}
                               </div>
                             )}
                             {duty.duty_schedule && (
-                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                Schedule: {duty.duty_schedule.title}
+                              <div className="text-[9px] xs:text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                                <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                <span className="hidden xs:inline">Schedule:</span> {duty.duty_schedule.title}
                               </div>
                             )}
                             {siteTimezone && (
-                              <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-400">
-                                <Globe className="h-3 w-3" />
-                                <span className="font-mono">{siteTimezone}</span>
+                              <div className="flex items-center gap-1 mt-0.5 text-[9px] xs:text-xs text-gray-400">
+                                <Globe className="h-2.5 w-2.5" />
+                                <span className="font-mono truncate max-w-[80px] xs:max-w-none">{siteTimezone}</span>
                               </div>
                             )}
                           </div>
                         </TableCell>
 
                         {/* Scheduled Time (Site Timezone) */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3 w-3 text-gray-400" />
-                              <span className={`text-sm font-medium ${
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-gray-400" />
+                              <span className={`text-[10px] sm:text-sm font-medium ${
                                 isToday ? 'text-blue-600 dark:text-blue-400' :
                                 isTomorrow ? 'text-purple-600 dark:text-purple-400' :
                                 isYesterday ? 'text-amber-600 dark:text-amber-400' : ''
@@ -1019,14 +1117,14 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 {siteDate}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Clock className="h-3 w-3 text-gray-400" />
-                              <span className="text-sm">
+                            <div className="flex items-center gap-1 sm:gap-2 mt-0.5 sm:mt-1">
+                              <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-gray-400" />
+                              <span className="text-[10px] sm:text-sm font-mono">
                                 {siteStartTime} - {siteEndTime}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className={`text-xs px-2 py-0 ${
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-0.5 sm:mt-1">
+                              <Badge variant="outline" className={`text-[8px] sm:text-xs px-1 sm:px-2 py-0 ${
                                 isToday ? 'border-blue-300 text-blue-600 bg-blue-50' :
                                 isTomorrow ? 'border-purple-300 text-purple-600 bg-purple-50' :
                                 isYesterday ? 'border-amber-300 text-amber-600 bg-amber-50' :
@@ -1034,83 +1132,83 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                               }`}>
                                 {dayName}, {dateLabel}
                               </Badge>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-[8px] sm:text-xs text-gray-400">
                                 {siteDuration}h
                               </span>
                             </div>
                             {siteTimezone && (
-                              <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                                <Globe className="h-3 w-3" />
-                                <span className="font-mono">{siteTimezone}</span>
+                              <div className="flex items-center gap-1 mt-0.5 text-[8px] sm:text-xs text-gray-400 hidden xs:flex">
+                                <Globe className="h-2.5 w-2.5" />
+                                <span className="font-mono truncate max-w-[60px] sm:max-w-none">{siteTimezone}</span>
                               </div>
                             )}
                           </div>
                         </TableCell>
 
                         {/* Your Time (User Timezone) */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
                           {showUserTime ? (
                             <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <User className="h-3 w-3 text-blue-400" />
-                                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-400" />
+                                <span className="text-[10px] sm:text-sm font-medium text-blue-600 dark:text-blue-400">
                                   {userDate}
                                   {dateChanged && (
-                                    <span className="text-amber-500 text-xs ml-1">*</span>
+                                    <span className="text-amber-500 text-[8px] sm:text-xs ml-0.5 sm:ml-1">*</span>
                                   )}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 mt-1 ml-5">
-                                <Clock className="h-3 w-3 text-emerald-400" />
-                                <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                              <div className="flex items-center gap-1 sm:gap-2 mt-0.5 sm:mt-1 ml-4 sm:ml-5">
+                                <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-400" />
+                                <span className="text-[10px] sm:text-sm font-mono text-emerald-600 dark:text-emerald-400">
                                   {userStartTime} - {userEndTime}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1 mt-1 ml-5 text-xs text-gray-400">
-                                <Globe className="h-3 w-3" />
-                                <span className="font-mono">{currentUserTimezone}</span>
+                              <div className="flex items-center gap-1 mt-0.5 ml-4 sm:ml-5 text-[8px] sm:text-xs text-gray-400 hidden xs:flex">
+                                <Globe className="h-2.5 w-2.5" />
+                                <span className="font-mono truncate max-w-[60px] sm:max-w-none">{currentUserTimezone}</span>
                               </div>
                               {dateChanged && (
-                                <div className="flex items-center gap-1 mt-1 ml-5 text-xs text-amber-500">
-                                  <AlertCircle className="h-3 w-3" />
-                                  <span>Date differs from site timezone</span>
+                                <div className="flex items-center gap-1 mt-0.5 ml-4 sm:ml-5 text-[8px] sm:text-xs text-amber-500">
+                                  <AlertCircle className="h-2.5 w-2.5" />
+                                  <span className="hidden xs:inline">Date differs from site</span>
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <User className="h-3 w-3" />
-                              <span>Same timezone</span>
+                            <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm text-gray-400">
+                              <User className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                              <span className="hidden xs:inline">Same timezone</span>
                             </div>
                           )}
                         </TableCell>
 
                         {/* Time Difference */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
                           {siteTimezone && timeDiff !== 'Same' && timeDiff !== 'N/A' ? (
-                            <Badge variant="outline" className={`text-xs px-2 py-1 ${
+                            <Badge variant="outline" className={`text-[8px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 ${
                               timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
                               timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
                               'border-gray-300 text-gray-500'
                             }`}>
-                              <Timer className="h-3 w-3 mr-1" />
+                              <Timer className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                               {timeDiff}
                             </Badge>
                           ) : timeDiff === 'Same' ? (
-                            <Badge variant="outline" className="text-xs px-2 py-1 border-emerald-300 text-emerald-600 bg-emerald-50">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Same time
+                            <Badge variant="outline" className="text-[8px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 border-emerald-300 text-emerald-600 bg-emerald-50">
+                              <CheckCircle className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                              <span className="hidden xs:inline">Same</span>
                             </Badge>
                           ) : (
-                            <span className="text-xs text-gray-400">N/A</span>
+                            <span className="text-[8px] sm:text-xs text-gray-400">N/A</span>
                           )}
                         </TableCell>
 
                         {/* Type */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
                           <Badge
                             variant="outline"
-                            className={`${sourceTypeColors[duty.source_type || 'manual']} border-0 px-3 py-1 font-medium`}
+                            className={`${sourceTypeColors[duty.source_type || 'manual']} border-0 px-1.5 sm:px-3 py-0.5 sm:py-1 font-medium text-[8px] sm:text-xs`}
                           >
                             {duty.source_type === 'scheduled' ? 'Scheduled' :
                              duty.source_type === 'one_time' ? 'One Time' :
@@ -1119,63 +1217,63 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         </TableCell>
 
                         {/* Guards */}
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-gray-900 dark:text-white">
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                          <div className="flex items-center gap-0.5 sm:gap-2">
+                            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+                            <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">
                               {duty.assigned_guards_count || 0}
                             </span>
-                            <span className="text-gray-400">/</span>
-                            <span className="text-gray-700 dark:text-gray-300">{duty.guards_required}</span>
+                            <span className="text-gray-400 text-[8px] sm:text-xs">/</span>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">{duty.guards_required}</span>
                             {duty.assigned_guards_count === duty.guards_required && duty.guards_required > 0 && (
-                              <CheckCircle className="h-3 w-3 text-emerald-500" />
+                              <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-500" />
                             )}
                           </div>
                         </TableCell>
 
                         {/* Coverage */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
                           <Badge
-                            className={`${coverageStatusColors[duty.coverage_status || 'unassigned']} border px-3 py-1 flex items-center gap-1.5 w-fit font-medium`}
+                            className={`${coverageStatusColors[duty.coverage_status || 'unassigned']} border px-1.5 sm:px-3 py-0.5 sm:py-1 flex items-center gap-1 w-fit font-medium text-[8px] sm:text-xs`}
                           >
                             {getCoverageIcon(duty.coverage_status || 'unassigned')}
-                            {getCoverageStatusDisplay(duty.coverage_status || 'unassigned')}
+                            <span className="hidden xs:inline">{getCoverageStatusDisplay(duty.coverage_status || 'unassigned')}</span>
                           </Badge>
                         </TableCell>
 
                         {/* Status */}
-                        <TableCell>
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
                           <Badge
-                            className={`${dutyStatusColors[duty.status] || 'bg-gray-100 text-gray-800'} border px-3 py-1 font-medium`}
+                            className={`${dutyStatusColors[duty.status] || 'bg-gray-100 text-gray-800'} border px-1.5 sm:px-3 py-0.5 sm:py-1 font-medium text-[8px] sm:text-xs`}
                           >
                             {getStatusDisplay(duty.status)}
                           </Badge>
                         </TableCell>
 
                         {/* Actions */}
-                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center py-2 sm:py-3 px-1 sm:px-2" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
-                                <EllipsisVertical className="h-4 w-4" />
+                              <Button variant="ghost" className="h-6 w-6 sm:h-8 sm:w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+                                <EllipsisVertical className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 shadow-lg rounded-xl">
-                              <DropdownMenuItem onClick={() => handleViewClick(duty)} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer">
-                                <Eye className="mr-2 h-4 w-4 text-blue-500" />
+                            <DropdownMenuContent align="end" className="w-48 sm:w-56 shadow-lg rounded-xl">
+                              <DropdownMenuItem onClick={() => handleViewClick(duty)} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer text-xs sm:text-sm">
+                                <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
                                 View details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEdit(duty)} className="hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg cursor-pointer">
-                                <Pencil className="mr-2 h-4 w-4 text-amber-500" />
+                              <DropdownMenuItem onClick={() => handleEdit(duty)} className="hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg cursor-pointer text-xs sm:text-sm">
+                                <Pencil className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-amber-500" />
                                 Edit duty
                               </DropdownMenuItem>
 
                               {canChangeTo(duty.status, 'approved') && (
                                 <DropdownMenuItem
                                   onClick={(e) => handleDutyStatusUpdate(e, duty, 'approved')}
-                                  className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer"
+                                  className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer text-xs sm:text-sm"
                                 >
-                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-500" />
+                                  <CheckCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                                   Approve Duty
                                 </DropdownMenuItem>
                               )}
@@ -1183,9 +1281,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                               {canChangeTo(duty.status, 'completed') && (
                                 <DropdownMenuItem
                                   onClick={(e) => handleDutyStatusUpdate(e, duty, 'completed')}
-                                  className="hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg cursor-pointer"
+                                  className="hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg cursor-pointer text-xs sm:text-sm"
                                 >
-                                  <CheckCheck className="mr-2 h-4 w-4 text-sky-500" />
+                                  <CheckCheck className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-sky-500" />
                                   Mark Completed
                                 </DropdownMenuItem>
                               )}
@@ -1193,9 +1291,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={(e) => handleDeleteClick(e, duty)}
-                                className="hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg cursor-pointer text-red-600 hover:text-red-700"
+                                className="hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg cursor-pointer text-red-600 hover:text-red-700 text-xs sm:text-sm"
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Trash2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                                 Delete duty
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -1209,7 +1307,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </Table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination - Original Style */}
           {duties.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t bg-gray-50/50 dark:bg-gray-900/20">
               <div className="text-sm text-gray-600 dark:text-gray-400">
