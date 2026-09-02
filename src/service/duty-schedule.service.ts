@@ -1,13 +1,13 @@
 // service/duty-schedule.service.ts
 
 import { ApiResponse } from "@/app/types/api.types";
-import api, { handleApiResponse } from "./api.service";
 import {
+  CreateDutyScheduleDto,
   DutySchedule,
   DutyScheduleParams,
-  CreateDutyScheduleDto,
   UpdateDutyScheduleDto,
 } from "@/app/types/duty-schedule";
+import api, { handleApiResponse } from "./api.service";
 
 export const dutyScheduleService = {
   // Get all duty schedules

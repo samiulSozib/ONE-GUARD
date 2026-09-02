@@ -287,7 +287,7 @@ export function OnGoingShifts() {
                             variant="ghost"
                             onClick={handleViewAllClick}
                         >
-                            View All ({ongoingShifts.length}) 
+                            View All ({ongoingShifts.length})
                             <span className="ml-2 text-gray-400">→</span>
                         </Button>
                     </div>

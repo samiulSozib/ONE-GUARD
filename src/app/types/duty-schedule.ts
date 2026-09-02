@@ -14,6 +14,8 @@ export interface DutySchedule {
   title: string;
   description: string | null;
   schedule_type: 'one_time' | 'recurring';
+  service_mode: 'continuous_shift' | 'patrol_visits';
+  required_visits: number | null;
   start_date: string;
   end_date: string | null;
   is_open_ended: boolean;
@@ -52,6 +54,8 @@ export interface CreateDutyScheduleDto {
   title: string;
   description?: string | null;
   schedule_type: 'one_time' | 'recurring';
+  service_mode: 'continuous_shift' | 'patrol_visits';
+  required_visits?: number | null;
   start_date: string;
   end_date?: string | null;
   is_open_ended?: boolean;
@@ -78,6 +82,8 @@ export interface UpdateDutyScheduleDto {
   title?: string;
   description?: string | null;
   schedule_type?: 'one_time' | 'recurring';
+  service_mode?: 'continuous_shift' | 'patrol_visits';
+  required_visits?: number | null;
   start_date?: string;
   end_date?: string | null;
   is_open_ended?: boolean;
@@ -104,6 +110,7 @@ export interface DutyScheduleParams {
   site_location_id?: number;
   client_contract_service_id?: number;
   schedule_type?: 'one_time' | 'recurring';
+  service_mode?: 'continuous_shift' | 'patrol_visits';
   recurrence_frequency?: 'daily' | 'weekly' | 'monthly' | 'custom';
   status?: string;
   is_active?: boolean;

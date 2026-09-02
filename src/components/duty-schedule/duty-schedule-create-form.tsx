@@ -41,7 +41,8 @@ import {
   Package,
   FileText,
   Repeat,
-  AlertCircle
+  AlertCircle,
+  Target,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
@@ -49,6 +50,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 const scheduleTypes = [
   { value: "one_time", label: "One Time" },
   { value: "recurring", label: "Recurring" },
+];
+
+// Service modes
+const serviceModes = [
+  { value: "continuous_shift", label: "Continuous Shift" },
+  { value: "patrol_visits", label: "Patrol Visits" },
 ];
 
 // Recurrence frequencies
@@ -156,6 +163,17 @@ const dutyScheduleSchema = z.object({
   schedule_type: z.string()
     .min(1, { message: "Schedule type is required" }),
 
+  service_mode: z.string()
+    .min(1, { message: "Service mode is required" }),
+
+  required_visits: z.number()
+    .optional()
+    .nullable()
+    .refine((val) => {
+      if (val === null || val === undefined) return true;
+      return val >= 1 && val <= 20;
+    }, { message: "Required visits must be between 1 and 20" }),
+
   start_date: z.string()
     .min(1, { message: "Start date is required" }),
 
@@ -201,6 +219,15 @@ const dutyScheduleSchema = z.object({
   status: z.string(),
   is_active: z.boolean(),
   notes: z.string().optional().nullable(),
+}).refine((data) => {
+  // If service_mode is patrol_visits, required_visits must be provided
+  if (data.service_mode === 'patrol_visits') {
+    return data.required_visits !== null && data.required_visits !== undefined && data.required_visits > 0;
+  }
+  return true;
+}, {
+  message: "Required visits is mandatory for Patrol Visits mode",
+  path: ["required_visits"]
 });
 
 type DutyScheduleFormData = z.infer<typeof dutyScheduleSchema>;
@@ -252,6 +279,8 @@ export function DutyScheduleCreateForm({
       title: "",
       description: "",
       schedule_type: "recurring",
+      service_mode: "continuous_shift",
+      required_visits: null,
       start_date: "",
       end_date: "",
       is_open_ended: false,
@@ -271,6 +300,7 @@ export function DutyScheduleCreateForm({
   });
 
   const formValues = watch();
+  const isPatrolMode = formValues.service_mode === 'patrol_visits';
 
   // Fetch data when dialog opens
   useEffect(() => {
@@ -388,6 +418,8 @@ export function DutyScheduleCreateForm({
         title: data.title.trim(),
         description: data.description?.trim() || null,
         schedule_type: data.schedule_type as 'one_time' | 'recurring',
+        service_mode: data.service_mode as 'continuous_shift' | 'patrol_visits',
+        required_visits: data.service_mode === 'patrol_visits' ? data.required_visits : null,
         start_date: data.start_date,
         end_date: data.is_open_ended ? null : data.end_date || null,
         is_open_ended: data.is_open_ended,
@@ -539,6 +571,73 @@ export function DutyScheduleCreateForm({
             </div>
           </div>
 
+          {/* Service Mode */}
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Target className="h-4 w-4" />
+              Service Mode
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Service Mode *
+                </Label>
+                <Select
+                  value={formValues.service_mode}
+                  onValueChange={(value) => {
+                    setValue("service_mode", value, { shouldValidate: true });
+                    if (value === 'patrol_visits') {
+                      setValue("required_visits", 2);
+                    } else {
+                      setValue("required_visits", null);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select service mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceModes.map((mode) => (
+                      <SelectItem key={mode.value} value={mode.value}>
+                        {mode.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.service_mode && (
+                  <p className="text-sm text-red-500 mt-1">{errors.service_mode.message}</p>
+                )}
+              </div>
+
+              {isPatrolMode && (
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Required Visits *"
+                    type="number"
+                    min="1"
+                    max="20"
+                    {...register("required_visits", { valueAsNumber: true })}
+                    error={errors.required_visits?.message}
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Number of patrol visits required during the time window
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {isPatrolMode && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  <strong>Patrol Mode:</strong> The guard will make {formValues.required_visits || 'N/A'} visit(s) during the time window.
+                  The start and end times define the <strong>allowed visit window</strong>, not continuous working hours.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Location & Contract */}
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -562,7 +661,7 @@ export function DutyScheduleCreateForm({
                     // Find the selected site and get its timezone
                     const selectedSite = sites.find((site: Site) => site.id === siteId);
                     if (selectedSite) {
-                      setSelectedSiteTimezone(selectedSite.timezone||undefined);
+                      setSelectedSiteTimezone(selectedSite.timezone || undefined);
                     } else {
                       setSelectedSiteTimezone(undefined);
                     }
@@ -636,7 +735,7 @@ export function DutyScheduleCreateForm({
             </div>
 
             {/* Contract Service - Hidden for recurring schedules */}
-            { formValues.site_id && (
+            {formValues.site_id && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Contract Service (Optional)
@@ -826,28 +925,34 @@ export function DutyScheduleCreateForm({
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
               <Clock className="h-4 w-4" />
-              Time & Guards
+              {isPatrolMode ? 'Visit Window' : 'Time & Guards'}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <FloatingLabelInput
-                  label="Start Time *"
+                  label={isPatrolMode ? "Window Start *" : "Start Time *"}
                   type="time"
                   {...register("start_time")}
                   error={errors.start_time?.message}
                   disabled={isLoading}
                 />
+                {isPatrolMode && (
+                  <p className="text-xs text-gray-500">Earliest time for patrol visits</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <FloatingLabelInput
-                  label="End Time *"
+                  label={isPatrolMode ? "Window End *" : "End Time *"}
                   type="time"
                   {...register("end_time")}
                   error={errors.end_time?.message}
                   disabled={isLoading}
                 />
+                {isPatrolMode && (
+                  <p className="text-xs text-gray-500">Latest time for patrol visits</p>
+                )}
               </div>
             </div>
 
@@ -875,6 +980,9 @@ export function DutyScheduleCreateForm({
                   error={errors.required_hours?.message}
                   disabled={isLoading}
                 />
+                {isPatrolMode && (
+                  <p className="text-xs text-gray-500">Total time for all visits combined</p>
+                )}
               </div>
             </div>
 
@@ -900,7 +1008,7 @@ export function DutyScheduleCreateForm({
                   }}
                   options={dutyTimeTypes.map((type: DutyTimeType) => ({
                     value: type.id,
-                    label:  type.title || `Type ${type.id}`,
+                    label: type.title || `Type ${type.id}`,
                     ...type
                   }))}
                   onSearch={(search) => {

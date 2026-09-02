@@ -28,6 +28,7 @@ import {
   User,
   AlertCircle,
   CheckCheck,
+  Target,
 } from "lucide-react";
 import {
   Card,
@@ -325,6 +326,14 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     }));
   };
 
+  const handleServiceModeFilter = (mode: string) => {
+    setFilters(prev => ({
+      ...prev,
+      page: 1,
+      service_mode: mode === "all" ? undefined : mode as 'continuous_shift' | 'patrol_visits'
+    }));
+  };
+
   const handleStatusFilter = (status: string) => {
     setFilters(prev => ({
       ...prev,
@@ -481,6 +490,22 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     );
   };
 
+  const getServiceModeBadge = (item: DutySchedule) => {
+    if (item.service_mode === 'patrol_visits') {
+      return (
+        <Badge variant="outline" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700 flex items-center gap-1 px-3 py-1 font-medium">
+          <Target className="h-3 w-3" />
+          Patrol {item.required_visits ? `(${item.required_visits})` : ''}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700 px-3 py-1 font-medium">
+        Continuous
+      </Badge>
+    );
+  };
+
   if (isLoading && items.length === 0) {
     return (
       <Card className="shadow-sm rounded-2xl border-0">
@@ -596,6 +621,22 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
             </div>
 
             <div className="xs:col-span-1 sm:col-span-1">
+              <Select value={filters.service_mode || "all"} onValueChange={handleServiceModeFilter}>
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Service Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Service Mode</SelectLabel>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="continuous_shift">Continuous Shift</SelectItem>
+                    <SelectItem value="patrol_visits">Patrol Visits</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="xs:col-span-1 sm:col-span-1">
               <Select value={filters.status || "all"} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Status" />
@@ -642,7 +683,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
             </div>
           </div>
 
-          {/* Table Section - Like duty page with full timezone info */}
+          {/* Table Section - Like duty page with full timezone info and service mode */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -652,6 +693,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                   </TableHead>
                   <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Shift</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Title & Site</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Service Mode</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Schedule Time (Site)</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Your Time</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Diff</TableHead>
@@ -665,7 +707,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 sm:py-12">
+                    <TableCell colSpan={11} className="text-center py-8 sm:py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4" />
                         <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
@@ -764,6 +806,11 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                           </div>
                         </TableCell>
 
+                        {/* Service Mode */}
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                          {getServiceModeBadge(item)}
+                        </TableCell>
+
                         {/* Schedule Time (Site Timezone) */}
                         <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex flex-col">
@@ -783,6 +830,12 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                               <Globe className="h-2.5 w-2.5" />
                               <span className="font-mono">{siteTimezone}</span>
                             </div>
+                            {item.service_mode === 'patrol_visits' && (
+                              <div className="flex items-center gap-1 mt-0.5 text-[8px] sm:text-xs text-purple-500 dark:text-purple-400">
+                                <Target className="h-2.5 w-2.5" />
+                                <span>{item.required_visits} visit{item.required_visits !== 1 ? 's' : ''}</span>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
 
@@ -818,11 +871,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                         {/* Time Difference */}
                         <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
                           {timeDiff !== 'Same' && timeDiff !== 'N/A' ? (
-                            <Badge variant="outline" className={`text-[8px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 ${
-                              timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
-                              timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' :
-                              'border-gray-300 text-gray-500'
-                            }`}>
+                            <Badge variant="outline" className={`text-[8px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 ${timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' : timeDiff.startsWith('-') ? 'border-amber-300 text-amber-600 bg-amber-50' : 'border-gray-300 text-gray-500'}`}>
                               <Timer className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                               {timeDiff}
                             </Badge>

@@ -27,7 +27,8 @@ import {
   Package,
   User,
   CalendarDays,
-  Timer
+  Timer,
+  Target
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -204,21 +205,13 @@ export function DutyScheduleShow({
         </div>
 
         <div className="space-y-6">
-          <div className={`p-4 rounded-lg flex items-center gap-3 ${
-            item.is_active && item.status === 'active'
-              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-          }`}>
+          <div className={`p-4 rounded-lg flex items-center gap-3 ${item.is_active && item.status === 'active' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
             {item.is_active && item.status === 'active' ? (
               <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             ) : (
               <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
             )}
-            <span className={`font-medium ${
-              item.is_active && item.status === 'active'
-                ? 'text-green-700 dark:text-green-300'
-                : 'text-red-700 dark:text-red-300'
-            }`}>
+            <span className={`font-medium ${item.is_active && item.status === 'active' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
               {item.is_active && item.status === 'active' ? 'Active' : 'Inactive'}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
@@ -233,6 +226,33 @@ export function DutyScheduleShow({
             {item.description && (
               <p className="text-gray-600 dark:text-gray-400">
                 {item.description}
+              </p>
+            )}
+          </div>
+
+          {/* Service Mode */}
+          <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+              <Target className="h-4 w-4" />
+              Service Mode
+            </div>
+            {item.service_mode === 'patrol_visits' ? (
+              <div className="flex items-center gap-2">
+                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-0">
+                  Patrol Visits
+                </Badge>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {item.required_visits} visit{item.required_visits !== 1 ? 's' : ''} required
+                </span>
+              </div>
+            ) : (
+              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-0">
+                Continuous Shift
+              </Badge>
+            )}
+            {item.service_mode === 'patrol_visits' && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Start and end times define the <strong>allowed visit window</strong>, not continuous working hours.
               </p>
             )}
           </div>
@@ -286,7 +306,7 @@ export function DutyScheduleShow({
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
                 <Clock className="h-4 w-4" />
-                Time
+                {item.service_mode === 'patrol_visits' ? 'Visit Window' : 'Time'}
               </div>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {formatTime(item.start_time)} - {formatTime(item.end_time)}
@@ -294,6 +314,11 @@ export function DutyScheduleShow({
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {item.required_hours} hours
               </p>
+              {item.service_mode === 'patrol_visits' && (
+                <p className="text-xs text-purple-600 dark:text-purple-400">
+                  {item.required_visits} visit{item.required_visits !== 1 ? 's' : ''} required within this window
+                </p>
+              )}
             </div>
           </div>
 
