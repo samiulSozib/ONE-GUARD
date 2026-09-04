@@ -1,52 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import * as React from "react";
-import { format } from "date-fns";
-import {
-  CalendarIcon,
-  DownloadIcon,
-  EllipsisVertical,
-  File,
-  ListFilter,
-  Search,
-  Eye,
-  Pencil,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Clock,
-  MapPin,
-  MessageSquare,
-  User,
-  Shield,
-  Check,
-  X,
-  Globe,
-  EyeOff,
-  AlertTriangle,
-  Building2,
-  FileImage,
-  Clock as ClockIcon,
-  Mail,
-  PhoneCall,
-  MapPin as MapPinIcon,
-  Camera,
-  Image,
-  Film,
-  File as FileIcon,
-  ChevronDown,
-  ChevronUp,
-  X as CloseIcon,
-  Download,
-  FileWarning
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardTitle,
   CardContent,
+  CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -63,41 +24,62 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "../ui/checkbox";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { FloatingLabelInput } from "../ui/floating-input";
-import { Calendar as CalendarComponent } from "../ui/calender";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { format } from "date-fns";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+  AlertCircle,
+  AlertTriangle,
+  Building2,
+  CalendarIcon,
+  Check,
+  Clock as ClockIcon,
+  DownloadIcon,
+  EllipsisVertical,
+  Eye,
+  EyeOff,
+  File,
+  FileImage,
+  Globe,
+  Hammer,
+  ListFilter,
+  Lock,
+  MapPin,
+  MessageSquare,
+  Pencil,
+  Phone,
+  Search,
+  ShieldAlert,
+  Trash2,
+  User,
+  X
+} from "lucide-react";
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { Calendar as CalendarComponent } from "../ui/calender";
+import { Checkbox } from "../ui/checkbox";
+import { FloatingLabelInput } from "../ui/floating-input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import { Label } from "../ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 // Redux
+import { DutyStatusReport, DutyStatusReportParams } from "@/app/types/dutyStatusReport";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import {
-  fetchReports,
   deleteReport,
+  fetchReports,
   toggleVisibility,
 } from "@/store/slices/dutyStatusReportSlice";
-import { DutyStatusReport, DutyStatusReportParams } from "@/app/types/dutyStatusReport";
 
 // Components
-import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
+import { DeleteDialog } from "../shared/delete-dialog";
 import { DutyStatusReportEditForm } from "./duty-status-report-edit-form";
 import { DutyStatusReportViewDialog } from "./duty-status-report-view-dialog";
 
@@ -112,15 +94,15 @@ const visibilityColors: Record<string, string> = {
   false: "bg-gray-100 text-gray-800",
 };
 
-// Incident type colors and icons
-const incidentIcons: Record<string, { icon: any; color: string; label: string }> = {
-  had_incident: { icon: AlertTriangle, color: "text-red-500", label: "Had Incident" },
-  suspicious_activity: { icon: AlertTriangle, color: "text-yellow-500", label: "Suspicious Activity" },
-  security_safety_concern: { icon: AlertTriangle, color: "text-orange-500", label: "Security Concern" },
-  unauthorized_access: { icon: AlertTriangle, color: "text-red-600", label: "Unauthorized Access" },
-  property_damage: { icon: AlertTriangle, color: "text-red-400", label: "Property Damage" },
-  emergency_services_contacted: { icon: AlertTriangle, color: "text-blue-500", label: "Emergency Services" },
-  requires_follow_up: { icon: ClockIcon, color: "text-purple-500", label: "Requires Follow-up" },
+// Issue type mapping
+const issueTypes: Record<string, { icon: any; color: string; label: string; bgColor: string }> = {
+  had_incident: { icon: AlertTriangle, color: "text-red-500", label: "Incident", bgColor: "bg-red-100" },
+  suspicious_activity: { icon: ShieldAlert, color: "text-yellow-600", label: "Suspicious Activity", bgColor: "bg-yellow-100" },
+  security_safety_concern: { icon: AlertCircle, color: "text-orange-500", label: "Safety Concern", bgColor: "bg-orange-100" },
+  unauthorized_access: { icon: Lock, color: "text-red-600", label: "Unauthorized Access", bgColor: "bg-red-100" },
+  property_damage: { icon: Hammer, color: "text-red-400", label: "Property Damage", bgColor: "bg-red-100" },
+  emergency_services_contacted: { icon: Phone, color: "text-blue-500", label: "Emergency Called", bgColor: "bg-blue-100" },
+  requires_follow_up: { icon: ClockIcon, color: "text-purple-500", label: "Follow-up Needed", bgColor: "bg-purple-100" },
 };
 
 // Helper functions
@@ -134,6 +116,18 @@ const hasIncidents = (report: DutyStatusReport): boolean => {
     report.requires_follow_up;
 };
 
+const getActiveIssues = (report: DutyStatusReport): string[] => {
+  const issues = [];
+  if (report.had_incident) issues.push('had_incident');
+  if (report.suspicious_activity) issues.push('suspicious_activity');
+  if (report.security_safety_concern) issues.push('security_safety_concern');
+  if (report.unauthorized_access) issues.push('unauthorized_access');
+  if (report.property_damage) issues.push('property_damage');
+  if (report.emergency_services_contacted) issues.push('emergency_services_contacted');
+  if (report.requires_follow_up) issues.push('requires_follow_up');
+  return issues;
+};
+
 const getIncidentCount = (report: DutyStatusReport): number => {
   let count = 0;
   if (report.had_incident) count++;
@@ -144,18 +138,6 @@ const getIncidentCount = (report: DutyStatusReport): number => {
   if (report.emergency_services_contacted) count++;
   if (report.requires_follow_up) count++;
   return count;
-};
-
-const getActiveIncidentsList = (report: DutyStatusReport): string[] => {
-  const incidents = [];
-  if (report.had_incident) incidents.push('had_incident');
-  if (report.suspicious_activity) incidents.push('suspicious_activity');
-  if (report.security_safety_concern) incidents.push('security_safety_concern');
-  if (report.unauthorized_access) incidents.push('unauthorized_access');
-  if (report.property_damage) incidents.push('property_damage');
-  if (report.emergency_services_contacted) incidents.push('emergency_services_contacted');
-  if (report.requires_follow_up) incidents.push('requires_follow_up');
-  return incidents;
 };
 
 interface DutyStatusReportDataTableProps {
@@ -181,7 +163,6 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
   const [reportToDelete, setReportToDelete] = useState<DutyStatusReport | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReportForEdit, setSelectedReportForEdit] = useState<DutyStatusReport | null>(null);
-  const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<DutyStatusReport | null>(null);
 
@@ -345,11 +326,6 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
   const getSiteName = (report: DutyStatusReport) => report.duty_details?.site_name || report.duty?.site?.site_name || 'N/A';
   const getMediaCount = (report: DutyStatusReport) => report.media?.length || 0;
   const getInitials = (name: string) => name ? name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) : '?';
-
-  // Toggle expanded row
-  const toggleExpandRow = (reportId: number) => {
-    setExpandedReportId(expandedReportId === reportId ? null : reportId);
-  };
 
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
@@ -515,7 +491,7 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                   <TableHead>Duty / Site</TableHead>
                   <TableHead>Message</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Incidents</TableHead>
+                  <TableHead className="min-w-[200px]">Issues</TableHead>
                   <TableHead>Visibility</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Media</TableHead>
@@ -541,14 +517,12 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                   </TableRow>
                 ) : (
                   reports.map((report: DutyStatusReport) => {
-                    const isExpanded = expandedReportId === report.id;
-                    const incidentCount = getIncidentCount(report);
-                    const hasIncident = hasIncidents(report);
-                    const activeIncidents = getActiveIncidentsList(report);
+                    const activeIssues = getActiveIssues(report);
+                    const hasIssue = activeIssues.length > 0;
 
                     return (
                       <React.Fragment key={report.id}>
-                        <TableRow className={`hover:bg-gray-50 dark:hover:bg-black ${hasIncident ? 'bg-red-50/30' : ''}`}>
+                        <TableRow className={`hover:bg-gray-50 dark:hover:bg-black ${hasIssue ? 'bg-red-50/30' : ''}`}>
                           <TableCell className="font-medium text-gray-900 dark:text-white">#{report.id}</TableCell>
 
                           <TableCell className="text-gray-700 dark:text-gray-300">
@@ -589,41 +563,36 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                             </Badge>
                           </TableCell>
 
+                          {/* Issues Column */}
                           <TableCell>
-                            {hasIncident ? (
-                              <div className="flex flex-col gap-1">
-                                <Badge
-                                  className="bg-red-100 text-red-800 border-0 flex items-center gap-1 cursor-pointer"
-                                  onClick={() => toggleExpandRow(report.id)}
-                                >
-                                  <AlertTriangle className="h-3 w-3" />
-                                  {incidentCount} incident{incidentCount > 1 ? 's' : ''}
-                                </Badge>
-                                {isExpanded && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {activeIncidents.map((incidentKey) => {
-                                      const incident = incidentIcons[incidentKey];
-                                      if (!incident) return null;
-                                      const Icon = incident.icon;
-                                      return (
-                                        <TooltipProvider key={incidentKey}>
-                                          <Tooltip>
-                                            <TooltipTrigger>
-                                              <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                                <Icon className={`h-3 w-3 ${incident.color}`} />
-                                                <span className="hidden sm:inline">{incident.label}</span>
-                                              </Badge>
-                                            </TooltipTrigger>
-                                            <TooltipContent><p>{incident.label}</p></TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      );
-                                    })}
-                                  </div>
-                                )}
+                            {activeIssues.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {activeIssues.map((issueKey) => {
+                                  const issue = issueTypes[issueKey];
+                                  if (!issue) return null;
+                                  const Icon = issue.icon;
+                                  return (
+                                    <TooltipProvider key={issueKey}>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Badge
+                                            variant="outline"
+                                            className={`${issue.bgColor} border-0 text-[10px] flex items-center gap-0.5 px-1.5 py-0.5`}
+                                          >
+                                            <Icon className={`h-2.5 w-2.5 ${issue.color}`} />
+                                            <span className="hidden sm:inline">{issue.label}</span>
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{issue.label}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })}
                               </div>
                             ) : (
-                              <span className="text-gray-400 text-sm">No incidents</span>
+                              <span className="text-gray-400 text-sm">No issues</span>
                             )}
                           </TableCell>
 
@@ -714,38 +683,6 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-
-                        {isExpanded && hasIncident && (
-                          <TableRow className="bg-gray-50">
-                            <TableCell colSpan={11} className="px-4 py-3">
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {activeIncidents.map((incidentKey) => {
-                                  const incident = incidentIcons[incidentKey];
-                                  if (!incident) return null;
-                                  const Icon = incident.icon;
-                                  return (
-                                    <div key={incidentKey} className="flex items-center gap-2 p-2 bg-white rounded-md border">
-                                      <Icon className={`h-5 w-5 ${incident.color}`} />
-                                      <span className="text-sm font-medium">{incident.label}</span>
-                                      <Badge variant="outline" className="ml-auto bg-red-50 text-red-700 border-red-200">
-                                        Reported
-                                      </Badge>
-                                    </div>
-                                  );
-                                })}
-                                {report.message && (
-                                  <div className="flex items-start gap-2 p-2 bg-white rounded-md border col-span-full">
-                                    <MessageSquare className="h-5 w-5 text-gray-500 mt-0.5" />
-                                    <div>
-                                      <span className="text-sm font-medium">Message: </span>
-                                      <span className="text-sm">{report.message}</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
                       </React.Fragment>
                     );
                   })

@@ -179,9 +179,8 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {group.items.map((item) => {
-                  const isActive =
-                    pathname === item.url ||
-                    (item.url !== "/" && pathname?.startsWith(item.url))
+                  const isActive = pathname === item.url
+
 
                   return (
                     <SidebarMenuItem key={item.title}>

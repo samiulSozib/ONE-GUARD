@@ -1,37 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DutyStatusReport } from "@/app/types/dutyStatusReport";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  User,
-  Shield,
-  Building2,
-  MapPin,
-  MessageSquare,
-  Globe,
-  EyeOff,
-  AlertTriangle,
-  Clock,
-  Mail,
-  PhoneCall,
-  MapPin as MapPinIcon,
-  Camera,
-  X as CloseIcon,
-  Pencil,
-  FileWarning,
-  File as FileIcon,
-  Download,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -39,7 +11,93 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { DutyStatusReport } from "@/app/types/dutyStatusReport";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Building2,
+  Camera,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  X as CloseIcon,
+  Download,
+  File as FileIcon,
+  FileWarning,
+  Hammer,
+  Lock,
+  Mail,
+  MapPin,
+  MapPin as MapPinIcon,
+  MessageSquare,
+  Pencil,
+  Phone,
+  PhoneCall,
+  Shield,
+  ShieldAlert,
+  User,
+  XCircle
+} from "lucide-react";
+import { useState } from "react";
+
+// Issue type mapping
+const issueTypes: Record<string, { icon: any; color: string; label: string; bgColor: string; description: string }> = {
+  had_incident: {
+    icon: AlertTriangle,
+    color: "text-red-500",
+    label: "Incident",
+    bgColor: "bg-red-50 border-red-200",
+    description: "An incident was reported during the duty."
+  },
+  suspicious_activity: {
+    icon: ShieldAlert,
+    color: "text-yellow-600",
+    label: "Suspicious Activity",
+    bgColor: "bg-yellow-50 border-yellow-200",
+    description: "Suspicious activity was observed during the duty."
+  },
+  security_safety_concern: {
+    icon: AlertCircle,
+    color: "text-orange-500",
+    label: "Safety Concern",
+    bgColor: "bg-orange-50 border-orange-200",
+    description: "A security or safety concern was identified."
+  },
+  unauthorized_access: {
+    icon: Lock,
+    color: "text-red-600",
+    label: "Unauthorized Access",
+    bgColor: "bg-red-50 border-red-200",
+    description: "Unauthorized access was detected."
+  },
+  property_damage: {
+    icon: Hammer,
+    color: "text-red-400",
+    label: "Property Damage",
+    bgColor: "bg-red-50 border-red-200",
+    description: "Property damage was reported."
+  },
+  emergency_services_contacted: {
+    icon: Phone,
+    color: "text-blue-500",
+    label: "Emergency Called",
+    bgColor: "bg-blue-50 border-blue-200",
+    description: "Emergency services were contacted."
+  },
+  requires_follow_up: {
+    icon: Clock,
+    color: "text-purple-500",
+    label: "Follow-up Needed",
+    bgColor: "bg-purple-50 border-purple-200",
+    description: "This report requires follow-up action."
+  },
+};
 
 // Helper functions
 const hasIncidents = (report: DutyStatusReport): boolean => {
@@ -52,23 +110,16 @@ const hasIncidents = (report: DutyStatusReport): boolean => {
     report.requires_follow_up;
 };
 
-const getActiveIncidents = (report: DutyStatusReport): Array<{ key: string; label: string; icon: any; color: string }> => {
-  const incidentMap: Record<string, { label: string; icon: any; color: string }> = {
-    had_incident: { label: "Had Incident", icon: AlertTriangle, color: "text-red-500" },
-    suspicious_activity: { label: "Suspicious Activity", icon: AlertTriangle, color: "text-yellow-500" },
-    security_safety_concern: { label: "Security Concern", icon: AlertTriangle, color: "text-orange-500" },
-    unauthorized_access: { label: "Unauthorized Access", icon: AlertTriangle, color: "text-red-600" },
-    property_damage: { label: "Property Damage", icon: AlertTriangle, color: "text-red-400" },
-    emergency_services_contacted: { label: "Emergency Services", icon: AlertTriangle, color: "text-blue-500" },
-    requires_follow_up: { label: "Requires Follow-up", icon: AlertTriangle, color: "text-purple-500" },
-  };
-  const incidents: Array<{ key: string; label: string; icon: any; color: string }> = [];
-  Object.keys(incidentMap).forEach(key => {
-    if ((report as any)[key]) {
-      incidents.push({ key, ...incidentMap[key] });
-    }
-  });
-  return incidents;
+const getActiveIssues = (report: DutyStatusReport): string[] => {
+  const issues = [];
+  if (report.had_incident) issues.push('had_incident');
+  if (report.suspicious_activity) issues.push('suspicious_activity');
+  if (report.security_safety_concern) issues.push('security_safety_concern');
+  if (report.unauthorized_access) issues.push('unauthorized_access');
+  if (report.property_damage) issues.push('property_damage');
+  if (report.emergency_services_contacted) issues.push('emergency_services_contacted');
+  if (report.requires_follow_up) issues.push('requires_follow_up');
+  return issues;
 };
 
 const getIncidentCount = (report: DutyStatusReport): number => {
@@ -136,8 +187,9 @@ export function DutyStatusReportViewDialog({
     );
   }
 
+  const activeIssues = getActiveIssues(report);
+  const hasIssue = activeIssues.length > 0;
   const incidentCount = getIncidentCount(report);
-  const hasIncident = hasIncidents(report);
 
   return (
     <>
@@ -158,7 +210,7 @@ export function DutyStatusReportViewDialog({
           bg-white dark:bg-gray-950
           shadow-2xl
         ">
-          {/* Header - Compact */}
+          {/* Header */}
           <div className="flex-shrink-0 border-b bg-white dark:bg-gray-950 px-3 sm:px-5 md:px-7 py-2 sm:py-3 md:py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -168,11 +220,18 @@ export function DutyStatusReportViewDialog({
                 </DialogTitle>
                 <div className="flex items-center gap-1.5 ml-1">
                   <Badge className={`${report.is_ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} border-0 text-[10px] sm:text-xs px-1.5 sm:px-2`}>
-                    {report.is_ok ? '✓ OK' : '⚠ Issue'}
+                    {report.is_ok ? <CheckCircle className="h-2.5 w-2.5 inline mr-0.5" /> : <XCircle className="h-2.5 w-2.5 inline mr-0.5" />}
+                    {report.is_ok ? 'All OK' : 'Issues Found'}
                   </Badge>
                   <Badge className={`${report.visible_to_client ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} border-0 text-[10px] sm:text-xs px-1.5 sm:px-2 hidden sm:inline-flex`}>
                     {report.visible_to_client ? '👁 Visible' : '👁 Hidden'}
                   </Badge>
+                  {hasIssue && (
+                    <Badge className="bg-red-100 text-red-700 border-0 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                      <AlertTriangle className="h-2.5 w-2.5 inline mr-0.5" />
+                      {incidentCount} {incidentCount === 1 ? 'Issue' : 'Issues'}
+                    </Badge>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
@@ -200,12 +259,6 @@ export function DutyStatusReportViewDialog({
               <Badge className={`${report.visible_to_client ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} border-0 text-[10px] sm:hidden px-1.5`}>
                 {report.visible_to_client ? '👁 Visible' : '👁 Hidden'}
               </Badge>
-              {hasIncident && (
-                <Badge className="bg-red-100 text-red-700 border-0 text-[10px] sm:text-xs px-1.5 sm:px-2 flex items-center gap-0.5">
-                  <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                  {incidentCount} {incidentCount === 1 ? 'Incident' : 'Incidents'}
-                </Badge>
-              )}
               <span className="text-[10px] sm:text-xs text-gray-500">{formatDateTime(report.created_at)}</span>
               {report.time_ago && (
                 <span className="text-[10px] sm:text-xs text-gray-400 hidden xs:inline">• {report.time_ago}</span>
@@ -213,7 +266,7 @@ export function DutyStatusReportViewDialog({
             </div>
           </div>
 
-          {/* Content - Two Column Grid with better spacing */}
+          {/* Content */}
           <div className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/30">
             <div className="
               grid grid-cols-1
@@ -223,7 +276,7 @@ export function DutyStatusReportViewDialog({
               max-w-full
               h-full
             ">
-              {/* Left Column - Main Content (3/5) */}
+              {/* Left Column - Main Content */}
               <div className="lg:col-span-3 space-y-3 sm:space-y-4">
                 {/* Message Card */}
                 <div className="bg-white dark:bg-gray-950 rounded-xl shadow-sm border p-3 sm:p-4 md:p-5">
@@ -250,6 +303,43 @@ export function DutyStatusReportViewDialog({
                       </Button>
                     )}
                   </div>
+                </div>
+
+                {/* Issues Section - Full Details */}
+                <div className="bg-white dark:bg-gray-950 rounded-xl shadow-sm border p-3 sm:p-4 md:p-5">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                    <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
+                    Issues Reported ({activeIssues.length})
+                  </h3>
+                  {hasIssue ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {activeIssues.map((issueKey) => {
+                        const issue = issueTypes[issueKey];
+                        if (!issue) return null;
+                        const Icon = issue.icon;
+                        return (
+                          <div
+                            key={issueKey}
+                            className={`flex items-start gap-3 p-3 rounded-lg border ${issue.bgColor}`}
+                          >
+                            <Icon className={`h-5 w-5 flex-shrink-0 mt-0.5 ${issue.color}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{issue.label}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{issue.description}</p>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] bg-white/50 flex-shrink-0">
+                              Reported
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-sm text-green-700 font-medium">No issues reported for this duty</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Guard Info Card */}
@@ -293,30 +383,6 @@ export function DutyStatusReportViewDialog({
                   </div>
                 </div>
 
-                {/* Incidents Card */}
-                {hasIncident && (
-                  <div className="bg-white dark:bg-gray-950 rounded-xl shadow-sm border p-3 sm:p-4 md:p-5">
-                    <h3 className="font-semibold mb-2 flex items-center gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                      <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
-                      Incident Details
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
-                      {getActiveIncidents(report).map((incident) => {
-                        const Icon = incident.icon;
-                        return (
-                          <div key={incident.key} className="flex items-center gap-2 p-2 bg-red-50/50 dark:bg-red-950/20 rounded-lg border border-red-100 dark:border-red-900/30">
-                            <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${incident.color}`} />
-                            <span className="text-[10px] sm:text-xs font-medium truncate">{incident.label}</span>
-                            <Badge className="ml-auto text-[8px] sm:text-[10px] bg-red-100 text-red-700 border-red-200 flex-shrink-0 px-1.5 py-0">
-                              ✓
-                            </Badge>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
                 {/* Media Card */}
                 {report.media && report.media.length > 0 && (
                   <div className="bg-white dark:bg-gray-950 rounded-xl shadow-sm border p-3 sm:p-4 md:p-5">
@@ -355,7 +421,7 @@ export function DutyStatusReportViewDialog({
                 )}
               </div>
 
-              {/* Right Column - Details (2/5) */}
+              {/* Right Column - Details */}
               <div className="lg:col-span-2 space-y-3 sm:space-y-4">
                 {/* Duty Details */}
                 <div className="bg-white dark:bg-gray-950 rounded-xl shadow-sm border p-3 sm:p-4 md:p-5">
@@ -483,7 +549,7 @@ export function DutyStatusReportViewDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Media Modal - Fullscreen on mobile, clean on desktop */}
+      {/* Media Modal */}
       <Dialog open={isMediaModalOpen} onOpenChange={setIsMediaModalOpen}>
         <DialogContent className="
           w-full max-w-full
