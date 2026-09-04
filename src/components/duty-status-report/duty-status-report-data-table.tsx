@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import * as React from "react";
 import { format } from "date-fns";
 import {
   CalendarIcon,
@@ -22,11 +23,26 @@ import {
   Check,
   X,
   Globe,
-  EyeOff
+  EyeOff,
+  AlertTriangle,
+  Building2,
+  FileImage,
+  Clock as ClockIcon,
+  Mail,
+  PhoneCall,
+  MapPin as MapPinIcon,
+  Camera,
+  Image,
+  Film,
+  File as FileIcon,
+  ChevronDown,
+  ChevronUp,
+  X as CloseIcon,
+  Download,
+  FileWarning
 } from "lucide-react";
 import {
   Card,
-  CardHeader,
   CardTitle,
   CardContent,
 } from "@/components/ui/card";
@@ -51,10 +67,23 @@ import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { FloatingLabelInput } from "../ui/floating-input";
-import { Calendar } from "../ui/calender";
+import { Calendar as CalendarComponent } from "../ui/calender";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Redux
 import { useAppDispatch } from "@/hooks/useAppDispatch";
@@ -70,6 +99,7 @@ import { DutyStatusReport, DutyStatusReportParams } from "@/app/types/dutyStatus
 import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
 import { DutyStatusReportEditForm } from "./duty-status-report-edit-form";
+import { DutyStatusReportViewDialog } from "./duty-status-report-view-dialog";
 
 // Status colors mapping
 const statusColors: Record<string, string> = {
@@ -80,6 +110,52 @@ const statusColors: Record<string, string> = {
 const visibilityColors: Record<string, string> = {
   true: "bg-blue-100 text-blue-800",
   false: "bg-gray-100 text-gray-800",
+};
+
+// Incident type colors and icons
+const incidentIcons: Record<string, { icon: any; color: string; label: string }> = {
+  had_incident: { icon: AlertTriangle, color: "text-red-500", label: "Had Incident" },
+  suspicious_activity: { icon: AlertTriangle, color: "text-yellow-500", label: "Suspicious Activity" },
+  security_safety_concern: { icon: AlertTriangle, color: "text-orange-500", label: "Security Concern" },
+  unauthorized_access: { icon: AlertTriangle, color: "text-red-600", label: "Unauthorized Access" },
+  property_damage: { icon: AlertTriangle, color: "text-red-400", label: "Property Damage" },
+  emergency_services_contacted: { icon: AlertTriangle, color: "text-blue-500", label: "Emergency Services" },
+  requires_follow_up: { icon: ClockIcon, color: "text-purple-500", label: "Requires Follow-up" },
+};
+
+// Helper functions
+const hasIncidents = (report: DutyStatusReport): boolean => {
+  return report.had_incident ||
+    report.suspicious_activity ||
+    report.security_safety_concern ||
+    report.unauthorized_access ||
+    report.property_damage ||
+    report.emergency_services_contacted ||
+    report.requires_follow_up;
+};
+
+const getIncidentCount = (report: DutyStatusReport): number => {
+  let count = 0;
+  if (report.had_incident) count++;
+  if (report.suspicious_activity) count++;
+  if (report.security_safety_concern) count++;
+  if (report.unauthorized_access) count++;
+  if (report.property_damage) count++;
+  if (report.emergency_services_contacted) count++;
+  if (report.requires_follow_up) count++;
+  return count;
+};
+
+const getActiveIncidentsList = (report: DutyStatusReport): string[] => {
+  const incidents = [];
+  if (report.had_incident) incidents.push('had_incident');
+  if (report.suspicious_activity) incidents.push('suspicious_activity');
+  if (report.security_safety_concern) incidents.push('security_safety_concern');
+  if (report.unauthorized_access) incidents.push('unauthorized_access');
+  if (report.property_damage) incidents.push('property_damage');
+  if (report.emergency_services_contacted) incidents.push('emergency_services_contacted');
+  if (report.requires_follow_up) incidents.push('requires_follow_up');
+  return incidents;
 };
 
 interface DutyStatusReportDataTableProps {
@@ -105,6 +181,9 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
   const [reportToDelete, setReportToDelete] = useState<DutyStatusReport | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReportForEdit, setSelectedReportForEdit] = useState<DutyStatusReport | null>(null);
+  const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<DutyStatusReport | null>(null);
 
   // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -115,7 +194,6 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
       ...filters,
       search: searchTerm || undefined,
     };
-
     dispatch(fetchReports(fetchParams));
   }, [dispatch, filters, searchTerm]);
 
@@ -146,10 +224,8 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
     }));
   };
 
-  // Handle date filter
   const handleDateChange = (date: Date | undefined) => {
     setDateFilter(date);
-
     if (date) {
       const formattedDate = format(date, 'yyyy-MM-dd');
       setFilters(prev => ({
@@ -166,24 +242,18 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
     }
   };
 
-  // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
     setMessageSearch("");
     setDateFilter(undefined);
-    setFilters({
-      page: 1,
-      per_page: 10,
-    });
+    setFilters({ page: 1, per_page: 10 });
     setSelectedReports([]);
   };
 
   // Handle report selection
   const handleSelectReport = (reportId: number) => {
     setSelectedReports(prev =>
-      prev.includes(reportId)
-        ? prev.filter(id => id !== reportId)
-        : [...prev, reportId]
+      prev.includes(reportId) ? prev.filter(id => id !== reportId) : [...prev, reportId]
     );
   };
 
@@ -205,26 +275,15 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
     if (reportToDelete) {
       try {
         await dispatch(deleteReport(reportToDelete.id)).unwrap();
-
-        SweetAlertService.success(
-          'Report Deleted',
-          `Report has been deleted successfully.`,
-          {
-            timer: 1500,
-            showConfirmButton: false,
-          }
-        );
-
+        SweetAlertService.success('Report Deleted', 'Report has been deleted successfully.', {
+          timer: 1500,
+          showConfirmButton: false,
+        });
         setDeleteDialogOpen(false);
         setReportToDelete(null);
-
-        // Refresh list
         dispatch(fetchReports(filters));
       } catch (error) {
-        SweetAlertService.error(
-          'Delete Failed',
-          'There was an error deleting the report. Please try again.'
-        );
+        SweetAlertService.error('Delete Failed', 'There was an error deleting the report. Please try again.');
       }
     }
   };
@@ -236,82 +295,68 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
         id: report.id,
         visible_to_client: !report.visible_to_client
       })).unwrap();
-
       SweetAlertService.success(
         'Visibility Updated',
         `Report visibility has been ${!report.visible_to_client ? 'enabled' : 'disabled'} for clients.`
       );
-      
-      // Refresh the list to show updated data
       dispatch(fetchReports(filters));
     } catch (error) {
-      SweetAlertService.error(
-        'Update Failed',
-        'Failed to update report visibility. Please try again.'
-      );
+      SweetAlertService.error('Update Failed', 'Failed to update report visibility. Please try again.');
     }
   };
 
   // Handle edit
   const handleEdit = (report: DutyStatusReport) => {
-    setSelectedReportForEdit(report);
-    setEditDialogOpen(true);
+    if (onEditClick) {
+      onEditClick(report);
+    } else {
+      setSelectedReportForEdit(report);
+      setEditDialogOpen(true);
+    }
   };
 
-  // Format date and time
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM dd, yyyy');
-    } catch (error) {
-      return dateString;
+  // Handle view details
+  const handleViewDetails = (report: DutyStatusReport) => {
+    if (onViewClick) {
+      onViewClick(report);
+    } else {
+      setSelectedReport(report);
+      setViewDialogOpen(true);
     }
+  };
+
+  // Format helpers
+  const formatDate = (dateString: string) => {
+    try { return format(new Date(dateString), 'MMM dd, yyyy'); } catch { return dateString; }
   };
 
   const formatTime = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'HH:mm');
-    } catch (error) {
-      return dateString;
-    }
+    try { return format(new Date(dateString), 'HH:mm'); } catch { return dateString; }
   };
 
-  // Truncate message
   const truncateMessage = (message: string, maxLength: number = 50) => {
     if (message.length <= maxLength) return message;
     return message.substring(0, maxLength) + '...';
   };
 
-  // Get status display
-  const getStatusDisplay = (isOk: boolean) => {
-    return isOk ? "All OK" : "Issue Reported";
+  const getStatusDisplay = (isOk: boolean) => isOk ? "All OK" : "Issue Reported";
+  const getGuardName = (report: DutyStatusReport) => report.guard?.full_name || `Officer #${report.guard_id || 'N/A'}`;
+  const getDutyTitle = (report: DutyStatusReport) => report.duty?.title || report.duty_details?.title || `Duty #${report.duty_id || 'N/A'}`;
+  const getSiteName = (report: DutyStatusReport) => report.duty_details?.site_name || report.duty?.site?.site_name || 'N/A';
+  const getMediaCount = (report: DutyStatusReport) => report.media?.length || 0;
+  const getInitials = (name: string) => name ? name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) : '?';
+
+  // Toggle expanded row
+  const toggleExpandRow = (reportId: number) => {
+    setExpandedReportId(expandedReportId === reportId ? null : reportId);
   };
 
-  // Get guard name
-  const getGuardName = (report: DutyStatusReport) => {
-    return report.guard?.full_name || `Officer #${report.guard_id || 'N/A'}`;
-  };
-
-  // Get duty title
-  const getDutyTitle = (report: DutyStatusReport) => {
-    return report.duty?.title || `Duty #${report.duty_id || 'N/A'}`;
-  };
-
-  // Get media count
-  const getMediaCount = (report: DutyStatusReport) => {
-    return report.media?.length || 0;
-  };
-
-  // Pagination handlers
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  // Export functionality
   const handleExport = () => {
-    SweetAlertService.info(
-      'Export Feature',
-      'Export functionality will be implemented soon.'
-    );
+    SweetAlertService.info('Export Feature', 'Export functionality will be implemented soon.');
   };
 
   // Loading skeleton
@@ -345,15 +390,10 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
             <ListFilter size="14px" />
             Filters
           </CardTitle>
-
-          <CardTitle
-            className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80"
-            onClick={handleExport}
-          >
+          <CardTitle className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80" onClick={handleExport}>
             <DownloadIcon size="14px" />
             Export
           </CardTitle>
-
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
             <Checkbox
               id="terms"
@@ -368,8 +408,7 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
         <CardContent className="p-0">
           {/* Filters Section */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
-            {/* Message Search Input */}
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <InputGroup>
                 <InputGroupInput
                   placeholder="Search messages..."
@@ -383,7 +422,6 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
               </InputGroup>
             </div>
 
-            {/* Status Filter */}
             <div className="sm:col-span-2">
               <div className="flex gap-2">
                 <Button
@@ -391,21 +429,18 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                   size="sm"
                   onClick={() => handleStatusFilter(filters.is_ok === true ? null : true)}
                 >
-                  <Check className="mr-1 h-3 w-3" />
-                  OK
+                  <Check className="mr-1 h-3 w-3" /> OK
                 </Button>
                 <Button
                   variant={filters.is_ok === false ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleStatusFilter(filters.is_ok === false ? null : false)}
                 >
-                  <X className="mr-1 h-3 w-3" />
-                  Issues
+                  <X className="mr-1 h-3 w-3" /> Issues
                 </Button>
               </div>
             </div>
 
-            {/* Visibility Filter */}
             <div className="sm:col-span-2">
               <div className="flex gap-2">
                 <Button
@@ -413,22 +448,19 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                   size="sm"
                   onClick={() => handleVisibilityFilter(filters.visible_to_client === true ? null : true)}
                 >
-                  <Globe className="mr-1 h-3 w-3" />
-                  Visible
+                  <Globe className="mr-1 h-3 w-3" /> Visible
                 </Button>
                 <Button
                   variant={filters.visible_to_client === false ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleVisibilityFilter(filters.visible_to_client === false ? null : false)}
                 >
-                  <EyeOff className="mr-1 h-3 w-3" />
-                  Hidden
+                  <EyeOff className="mr-1 h-3 w-3" /> Hidden
                 </Button>
               </div>
             </div>
 
-            {/* Date Filter */}
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <Popover>
                 <PopoverTrigger asChild>
                   <FloatingLabelInput
@@ -440,26 +472,34 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                   />
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateFilter}
-                    onSelect={handleDateChange}
-                    initialFocus
-                  />
+                  <CalendarComponent mode="single" selected={dateFilter} onSelect={handleDateChange} initialFocus />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <div className="sm:col-span-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const hasIncident = filters.has_incident === true ? undefined : true;
+                  setFilters(prev => ({ ...prev, page: 1, has_incident: hasIncident }));
+                }}
+                className={filters.has_incident === true ? "bg-red-50 border-red-300" : ""}
+              >
+                <AlertTriangle className="mr-1 h-3 w-3" />
+                Incidents
+                {filters.has_incident === true && (
+                  <Badge variant="secondary" className="ml-1 bg-red-200">Active</Badge>
+                )}
+              </Button>
             </div>
           </div>
 
           {/* Clear Filters Button */}
-          {(searchTerm || filters.is_ok !== undefined || filters.visible_to_client !== undefined || dateFilter) && (
+          {(searchTerm || filters.is_ok !== undefined || filters.visible_to_client !== undefined || dateFilter || filters.has_incident !== undefined) && (
             <div className="px-4 pt-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearFilters}
-                className="h-7 text-xs"
-              >
+              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="h-7 text-xs">
                 Clear all filters
               </Button>
             </div>
@@ -470,28 +510,27 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead className="w-[50px]">ID</TableHead>
                   <TableHead>Officer</TableHead>
-                  <TableHead>Duty</TableHead>
+                  <TableHead>Duty / Site</TableHead>
                   <TableHead>Message</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Incidents</TableHead>
                   <TableHead>Visibility</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Media</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-center w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12">
+                    <TableCell colSpan={11} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-12 w-12 text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          No reports found
-                        </h3>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No reports found</h3>
                         <p className="text-gray-500 mb-4">
                           {searchTerm || Object.keys(filters).length > 2
                             ? "Try adjusting your search or filters"
@@ -501,172 +540,215 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                     </TableCell>
                   </TableRow>
                 ) : (
-                  reports.map((report: DutyStatusReport) => (
-                    <TableRow
-                      key={report.id}
-                      className="hover:bg-gray-50 dark:hover:bg-black"
-                    >
-                      {/* ID */}
-                      <TableCell className="font-medium text-gray-900 dark:text-white">
-                        #{report.id}
-                      </TableCell>
+                  reports.map((report: DutyStatusReport) => {
+                    const isExpanded = expandedReportId === report.id;
+                    const incidentCount = getIncidentCount(report);
+                    const hasIncident = hasIncidents(report);
+                    const activeIncidents = getActiveIncidentsList(report);
 
-                      {/* Guard */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span>{getGuardName(report)}</span>
-                          {report.guard?.guard_code && (
-                            <Badge variant="outline" className="text-xs">
-                              {report.guard.guard_code}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                    return (
+                      <React.Fragment key={report.id}>
+                        <TableRow className={`hover:bg-gray-50 dark:hover:bg-black ${hasIncident ? 'bg-red-50/30' : ''}`}>
+                          <TableCell className="font-medium text-gray-900 dark:text-white">#{report.id}</TableCell>
 
-                      {/* Duty */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{getDutyTitle(report)}</span>
-                          {report.duty?.duty_type && (
-                            <Badge
-                              variant="outline"
-                              className={`text-xs mt-1 ${report.duty.duty_type === 'night'
-                                  ? 'bg-indigo-100 text-indigo-800 border-0'
-                                  : 'bg-sky-100 text-sky-800 border-0'
-                                }`}
-                            >
-                              {report.duty.duty_type.charAt(0).toUpperCase() + report.duty.duty_type.slice(1)}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Message */}
-                      <TableCell className="text-gray-700 dark:text-gray-300 max-w-xs">
-                        <div className="flex items-start gap-2">
-                          <MessageSquare className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                          <span className="truncate">{truncateMessage(report.message)}</span>
-                        </div>
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`${statusColors[report.is_ok.toString()]} border-0 flex items-center gap-1`}
-                        >
-                          {report.is_ok ? (
-                            <Check className="h-3 w-3" />
-                          ) : (
-                            <X className="h-3 w-3" />
-                          )}
-                          {getStatusDisplay(report.is_ok)}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Visibility */}
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Switch
-                            checked={report.visible_to_client}
-                            onCheckedChange={() => handleToggleVisibility(report)}
-                            className="mr-2"
-                          />
-                          <Badge
-                            variant="outline"
-                            className={`${visibilityColors[report.visible_to_client.toString()]} border-0`}
-                          >
-                            {report.visible_to_client ? 'Visible' : 'Hidden'}
-                          </Badge>
-                        </div>
-                      </TableCell>
-
-                      {/* Location */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {report.latitude && report.longitude ? (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4 text-gray-500" />
-                            <span className="text-xs">
-                              {parseFloat(report.latitude).toFixed(4)}, {parseFloat(report.longitude).toFixed(4)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">No location</span>
-                        )}
-                      </TableCell>
-
-                      {/* Media */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex items-center gap-1">
-                          {getMediaCount(report) > 0 ? (
-                            <>
-                              <Badge variant="outline" className="bg-gray-100">
-                                {getMediaCount(report)} file{getMediaCount(report) !== 1 ? 's' : ''}
-                              </Badge>
-                            </>
-                          ) : (
-                            <span className="text-gray-400 text-sm">No media</span>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Created At */}
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex flex-col">
-                          <span>{formatDate(report.created_at)}</span>
-                          <span className="text-xs text-gray-500">
-                            {formatTime(report.created_at)}
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onViewClick?.(report)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(report)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit report
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleToggleVisibility(report)}
-                              className="text-blue-600"
-                            >
-                              {report.visible_to_client ? (
-                                <>
-                                  <EyeOff className="mr-2 h-4 w-4" />
-                                  Hide from client
-                                </>
-                              ) : (
-                                <>
-                                  <Globe className="mr-2 h-4 w-4" />
-                                  Show to client
-                                </>
+                          <TableCell className="text-gray-700 dark:text-gray-300">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span>{getGuardName(report)}</span>
+                              {report.guard?.guard_code && (
+                                <Badge variant="outline" className="text-xs">{report.guard.guard_code}</Badge>
                               )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(report)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete report
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="text-gray-700 dark:text-gray-300">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{getDutyTitle(report)}</span>
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <Building2 className="h-3 w-3" /> {getSiteName(report)}
+                              </span>
+                              {report.duty_details?.service_mode && (
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {report.duty_details.service_mode.replace('_', ' ').toUpperCase()}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="text-gray-700 dark:text-gray-300 max-w-xs">
+                            <div className="flex items-start gap-2">
+                              <MessageSquare className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                              <span className="truncate">{truncateMessage(report.message)}</span>
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge variant="outline" className={`${statusColors[report.is_ok.toString()]} border-0 flex items-center gap-1`}>
+                              {report.is_ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              {getStatusDisplay(report.is_ok)}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell>
+                            {hasIncident ? (
+                              <div className="flex flex-col gap-1">
+                                <Badge
+                                  className="bg-red-100 text-red-800 border-0 flex items-center gap-1 cursor-pointer"
+                                  onClick={() => toggleExpandRow(report.id)}
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {incidentCount} incident{incidentCount > 1 ? 's' : ''}
+                                </Badge>
+                                {isExpanded && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {activeIncidents.map((incidentKey) => {
+                                      const incident = incidentIcons[incidentKey];
+                                      if (!incident) return null;
+                                      const Icon = incident.icon;
+                                      return (
+                                        <TooltipProvider key={incidentKey}>
+                                          <Tooltip>
+                                            <TooltipTrigger>
+                                              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                                <Icon className={`h-3 w-3 ${incident.color}`} />
+                                                <span className="hidden sm:inline">{incident.label}</span>
+                                              </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>{incident.label}</p></TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">No incidents</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Switch
+                                checked={report.visible_to_client}
+                                onCheckedChange={() => handleToggleVisibility(report)}
+                                className="mr-2"
+                              />
+                              <Badge variant="outline" className={`${visibilityColors[report.visible_to_client.toString()]} border-0`}>
+                                {report.visible_to_client ? 'Visible' : 'Hidden'}
+                              </Badge>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="text-gray-700 dark:text-gray-300">
+                            {report.latitude && report.longitude ? (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4 text-gray-500" />
+                                <span className="text-xs">
+                                  {parseFloat(String(report.latitude)).toFixed(4)}, {parseFloat(String(report.longitude)).toFixed(4)}
+                                </span>
+                                {report.has_location && (
+                                  <Badge variant="outline" className="text-xs bg-green-50">Live</Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">No location</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-gray-700 dark:text-gray-300">
+                            <div className="flex items-center gap-1">
+                              {getMediaCount(report) > 0 ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Badge variant="outline" className="bg-gray-100 flex items-center gap-1">
+                                        <FileImage className="h-3 w-3" /> {getMediaCount(report)}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{getMediaCount(report)} media file{getMediaCount(report) > 1 ? 's' : ''}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <span className="text-gray-400 text-sm">No media</span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="text-gray-700 dark:text-gray-300">
+                            <div className="flex flex-col">
+                              <span>{formatDate(report.created_at)}</span>
+                              <span className="text-xs text-gray-500">{formatTime(report.created_at)}</span>
+                              {report.time_ago && <span className="text-xs text-gray-400">{report.time_ago}</span>}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="text-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <EllipsisVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleViewDetails(report)}>
+                                  <Eye className="mr-2 h-4 w-4" /> View details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEdit(report)}>
+                                  <Pencil className="mr-2 h-4 w-4" /> Edit report
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleToggleVisibility(report)} className="text-blue-600">
+                                  {report.visible_to_client ? (
+                                    <><EyeOff className="mr-2 h-4 w-4" /> Hide from client</>
+                                  ) : (
+                                    <><Globe className="mr-2 h-4 w-4" /> Show to client</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDeleteClick(report)} className="text-red-600">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete report
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+
+                        {isExpanded && hasIncident && (
+                          <TableRow className="bg-gray-50">
+                            <TableCell colSpan={11} className="px-4 py-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {activeIncidents.map((incidentKey) => {
+                                  const incident = incidentIcons[incidentKey];
+                                  if (!incident) return null;
+                                  const Icon = incident.icon;
+                                  return (
+                                    <div key={incidentKey} className="flex items-center gap-2 p-2 bg-white rounded-md border">
+                                      <Icon className={`h-5 w-5 ${incident.color}`} />
+                                      <span className="text-sm font-medium">{incident.label}</span>
+                                      <Badge variant="outline" className="ml-auto bg-red-50 text-red-700 border-red-200">
+                                        Reported
+                                      </Badge>
+                                    </div>
+                                  );
+                                })}
+                                {report.message && (
+                                  <div className="flex items-start gap-2 p-2 bg-white rounded-md border col-span-full">
+                                    <MessageSquare className="h-5 w-5 text-gray-500 mt-0.5" />
+                                    <div>
+                                      <span className="text-sm font-medium">Message: </span>
+                                      <span className="text-sm">{report.message}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -677,11 +759,7 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-6 border-t">
               <div className="text-sm text-gray-700">
                 Showing {reports.length} of {pagination.total} reports
-                {selectedReports.length > 0 && (
-                  <span className="ml-2 text-blue-600">
-                    ({selectedReports.length} selected)
-                  </span>
-                )}
+                {selectedReports.length > 0 && <span className="ml-2 text-blue-600">({selectedReports.length} selected)</span>}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -692,9 +770,7 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
                 >
                   Previous
                 </Button>
-                <span className="text-sm px-3">
-                  Page {pagination.current_page} of {pagination.last_page}
-                </span>
+                <span className="text-sm px-3">Page {pagination.current_page} of {pagination.last_page}</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -709,24 +785,36 @@ export function DutyStatusReportDataTable({ onViewClick, onEditClick }: DutyStat
         </CardContent>
       </Card>
 
+      {/* View Details Dialog */}
+      <DutyStatusReportViewDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        report={selectedReport}
+        onEdit={() => {
+          if (selectedReport) {
+            setViewDialogOpen(false);
+            handleEdit(selectedReport);
+          }
+        }}
+      />
+
       {/* Delete Dialog */}
       <DeleteDialog
         isOpen={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
         title="Delete Report"
-        description={`Are you sure you want to delete this report? This action cannot be undone.`}
+        description="Are you sure you want to delete this report? This action cannot be undone."
       />
 
       {/* Edit Form Dialog */}
       {selectedReportForEdit && (
         <DutyStatusReportEditForm
-          trigger={<div />} // Hidden trigger since we control via state
+          trigger={<div />}
           report={selectedReportForEdit}
           isOpen={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
-            // Refresh the list after successful edit
             dispatch(fetchReports(filters));
           }}
         />

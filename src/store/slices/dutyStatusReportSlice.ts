@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { dutyStatusReportService } from "@/service/dutyStatusReport.service";
-import { 
-  DutyStatusReport, 
-  DutyStatusReportParams, 
+import {
+  DutyStatusReport,
+  DutyStatusReportParams,
   DutyStatusReportState,
   CreateDutyStatusReportDto,
   UpdateDutyStatusReportDto
@@ -27,7 +27,8 @@ export const fetchReports = createAsyncThunk(
   "dutyStatusReport/fetchReports",
   async (params: DutyStatusReportParams = {}, { rejectWithValue }) => {
     try {
-      return await dutyStatusReportService.getReports(params);
+      const response = await dutyStatusReportService.getReports(params);
+      return response;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -40,12 +41,10 @@ export const fetchReports = createAsyncThunk(
 
 export const fetchReport = createAsyncThunk(
   "dutyStatusReport/fetchReport",
-  async (
-    { id, params }: { id: number; params?: { include?: string[] } },
-    { rejectWithValue }
-  ) => {
+  async (id: number, { rejectWithValue }) => {
     try {
-      return await dutyStatusReportService.getReport(id, params);
+      const response = await dutyStatusReportService.getReport(id);
+      return response;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -58,12 +57,10 @@ export const fetchReport = createAsyncThunk(
 
 export const createReport = createAsyncThunk(
   "dutyStatusReport/createReport",
-  async (
-    data: CreateDutyStatusReportDto,
-    { rejectWithValue }
-  ) => {
+  async (data: CreateDutyStatusReportDto, { rejectWithValue }) => {
     try {
-      return await dutyStatusReportService.createReport(data);
+      const response = await dutyStatusReportService.createReport(data);
+      return response;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -81,7 +78,8 @@ export const updateReport = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await dutyStatusReportService.updateReport(id, data);
+      const response = await dutyStatusReportService.updateReport(id, data);
+      return response;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -115,9 +113,8 @@ export const toggleVisibility = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-       await dutyStatusReportService.toggleVisibility(id, visible_to_client);
-       const updatedDutyStatusReport=await dutyStatusReportService.getReport(id)
-       return updatedDutyStatusReport.item
+      const response = await dutyStatusReportService.toggleVisibility(id, visible_to_client);
+      return response.item;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -135,7 +132,8 @@ export const addMedia = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await dutyStatusReportService.addMedia(id, files);
+      const response = await dutyStatusReportService.addMedia(id, files);
+      return response;
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -278,10 +276,7 @@ const dutyStatusReportSlice = createSlice({
         if (state.currentReport?.id === action.payload) {
           state.currentReport = null;
         }
-        state.pagination.total = Math.max(
-          0,
-          state.pagination.total - 1
-        );
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
       })
       .addCase(deleteReport.rejected, (state, action) => {
         state.isLoading = false;
@@ -340,8 +335,7 @@ const dutyStatusReportSlice = createSlice({
       .addCase(deleteMedia.fulfilled, (state, action) => {
         state.isLoading = false;
         const { reportId, mediaId } = action.payload;
-        
-        // Update report in list
+
         const reportIndex = state.reports.findIndex(
           (report) => report.id === reportId
         );
@@ -350,8 +344,7 @@ const dutyStatusReportSlice = createSlice({
             (media) => media.id !== mediaId
           );
         }
-        
-        // Update current report if it matches
+
         if (state.currentReport?.id === reportId && state.currentReport.media) {
           state.currentReport.media = state.currentReport.media.filter(
             (media) => media.id !== mediaId
