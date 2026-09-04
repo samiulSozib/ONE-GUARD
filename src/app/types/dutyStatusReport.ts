@@ -233,6 +233,8 @@ export interface DutyStatusReportMedia {
   url: string;
   media_type: 'image' | 'video' | 'document';
   category?: MediaCategory;
+  type: 'image' | 'video' | 'document';
+  thumbnail_url?: string;
 }
 
 export interface MediaCategory {

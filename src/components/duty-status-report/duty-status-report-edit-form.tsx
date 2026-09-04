@@ -82,7 +82,7 @@ export function DutyStatusReportEditForm({
     const [isLoading, setIsLoading] = useState(false)
     const [isFetching, setIsFetching] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    
+
     // Existing media from the report
     const [existingMedia, setExistingMedia] = useState<DutyStatusReportMedia[]>([])
     // New files to be uploaded
@@ -92,7 +92,6 @@ export function DutyStatusReportEditForm({
     // Redux states for dropdown data
     const { duties, isLoading: dutiesLoading } = useAppSelector((state) => state.duty)
     const { guards, isLoading: guardsLoading } = useAppSelector((state) => state.guard)
-    const { currentReport } = useAppSelector((state) => state.dutyStatusReport)
 
     // Search states for comboboxes
     const [dutySearch, setDutySearch] = useState("")
@@ -134,14 +133,14 @@ export function DutyStatusReportEditForm({
     // Fetch dropdown data when dialog opens
     useEffect(() => {
         if (isOpen) {
-            dispatch(fetchDuties({ 
-                page: 1, 
-                per_page: 1000, 
+            dispatch(fetchDuties({
+                page: 1,
+                per_page: 1000,
                 is_active: true,
                 status: "approved"
             }))
-            dispatch(fetchGuards({ 
-                page: 1, 
+            dispatch(fetchGuards({
+                page: 1,
                 per_page: 1000,
             }))
         }
@@ -184,21 +183,19 @@ export function DutyStatusReportEditForm({
 
         setIsFetching(true)
         try {
-            const result = await dispatch(fetchReport({
-                id: report.id,
-                params: { include: ['media'] }
-            }))
+            // Fix: Pass only the id, not an object
+            const result = await dispatch(fetchReport(report.id))
 
             if (fetchReport.fulfilled.match(result)) {
                 const data = result.payload.item
-                
+
                 // Set existing media
                 setExistingMedia(data.media || [])
-                
+
                 // Get duty and guard data from the fetched report
                 const reportDuty = data.duty
                 const reportGuard = data.guard
-                
+
                 // Set search values for dropdown display
                 if (reportDuty) {
                     setDutySearch(formatDutyDisplay(reportDuty))
@@ -211,8 +208,8 @@ export function DutyStatusReportEditForm({
                 reset({
                     message: data.message || "",
                     is_ok: data.is_ok || true,
-                    latitude: data.latitude || "",
-                    longitude: data.longitude || "",
+                    latitude: data.latitude ? String(data.latitude) : "",
+                    longitude: data.longitude ? String(data.longitude) : "",
                     visible_to_client: data.visible_to_client !== undefined ? data.visible_to_client : true,
                     guard_id: data?.guard?.id || undefined,
                     duty_id: data?.duty?.id || undefined
@@ -229,7 +226,7 @@ export function DutyStatusReportEditForm({
     // Get current location
     const getCurrentLocation = () => {
         setLocationLoading(true)
-        
+
         if (!navigator.geolocation) {
             SweetAlertService.error(
                 'Location Error',
@@ -243,11 +240,11 @@ export function DutyStatusReportEditForm({
             (position) => {
                 const lat = position.coords.latitude.toFixed(6)
                 const lng = position.coords.longitude.toFixed(6)
-                
+
                 setValue('latitude', lat, { shouldValidate: true })
                 setValue('longitude', lng, { shouldValidate: true })
                 setLocationLoading(false)
-                
+
                 SweetAlertService.success(
                     'Location Captured',
                     `Latitude: ${lat}, Longitude: ${lng}`
@@ -256,7 +253,7 @@ export function DutyStatusReportEditForm({
             (error) => {
                 setLocationLoading(false)
                 let errorMessage = "Unable to retrieve your location."
-                
+
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
                         errorMessage = "Location permission denied. Please enable location services."
@@ -268,7 +265,7 @@ export function DutyStatusReportEditForm({
                         errorMessage = "Location request timed out."
                         break
                 }
-                
+
                 SweetAlertService.error('Location Error', errorMessage)
             },
             {
@@ -286,7 +283,7 @@ export function DutyStatusReportEditForm({
 
         const newFiles = Array.from(files)
         const totalFiles = newMediaFiles.length + newFiles.length
-        
+
         // Limit to 5 total new files
         if (totalFiles > 5) {
             SweetAlertService.error(
@@ -322,7 +319,7 @@ export function DutyStatusReportEditForm({
 
         if (validFiles.length > 0) {
             setNewMediaFiles(prev => [...prev, ...validFiles])
-            
+
             // Create previews for images
             validFiles.forEach(file => {
                 if (file.type.startsWith('image/')) {
@@ -344,7 +341,7 @@ export function DutyStatusReportEditForm({
     // Remove new file
     const removeNewFile = (index: number) => {
         setNewMediaFiles(prev => prev.filter((_, i) => i !== index))
-        
+
         // Also remove preview if it's an image
         if (newMediaPreviews[index]) {
             setNewMediaPreviews(prev => prev.filter((_, i) => i !== index))
@@ -367,10 +364,10 @@ export function DutyStatusReportEditForm({
                         reportId: report.id,
                         mediaId: mediaId
                     })).unwrap()
-                    
+
                     // Remove from local state
                     setExistingMedia(prev => prev.filter(media => media.id !== mediaId))
-                    
+
                     SweetAlertService.success(
                         'Media Deleted',
                         'Media file has been deleted successfully.'
@@ -391,15 +388,33 @@ export function DutyStatusReportEditForm({
 
         setIsLoading(true)
         try {
-            // Prepare UpdateDutyStatusReportDto object
-            const submitData = {
+            // Prepare UpdateDutyStatusReportDto object with proper types
+            const submitData: {
+                message: string;
+                is_ok: boolean;
+                visible_to_client: boolean;
+                latitude?: string;
+                longitude?: string;
+                guard_id?: number;
+                duty_id?: number;
+            } = {
                 message: data.message.trim(),
                 is_ok: data.is_ok,
                 visible_to_client: data.visible_to_client,
-                ...(data.latitude && { latitude: data.latitude }),
-                ...(data.longitude && { longitude: data.longitude }),
-                ...(data.guard_id && { guard_id: data.guard_id }),
-                ...(data.duty_id && { duty_id: data.duty_id })
+            }
+
+            // Only add optional fields if they have values
+            if (data.latitude && data.latitude.trim()) {
+                submitData.latitude = data.latitude.trim()
+            }
+            if (data.longitude && data.longitude.trim()) {
+                submitData.longitude = data.longitude.trim()
+            }
+            if (data.guard_id) {
+                submitData.guard_id = data.guard_id
+            }
+            if (data.duty_id) {
+                submitData.duty_id = data.duty_id
             }
 
             // First update the report
@@ -424,7 +439,7 @@ export function DutyStatusReportEditForm({
                     // Reset new media states
                     setNewMediaFiles([])
                     setNewMediaPreviews([])
-                    
+
                     onSuccess?.()
                     onOpenChange?.(false)
                 })
@@ -508,7 +523,7 @@ export function DutyStatusReportEditForm({
     }
 
     // Format duty display
-    const formatDutyDisplay = (duty: Partial<Duty>) => {
+    const formatDutyDisplay = (duty: Duty) => {
         if (!duty) return ""
         const date = duty.start_datetime ? format(new Date(duty.start_datetime), 'MMM dd') : ''
         const time = duty.start_datetime ? format(new Date(duty.start_datetime), 'HH:mm') : ''
@@ -637,8 +652,8 @@ export function DutyStatusReportEditForm({
                                             variant={formValues.is_ok ? "default" : "ghost"}
                                             className={cn(
                                                 "flex-1 transition-all duration-200",
-                                                formValues.is_ok 
-                                                    ? "bg-green-100 text-green-800 hover:bg-green-200 border-green-300" 
+                                                formValues.is_ok
+                                                    ? "bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
                                                     : ""
                                             )}
                                             onClick={() => setValue("is_ok", true, { shouldValidate: true })}
@@ -652,8 +667,8 @@ export function DutyStatusReportEditForm({
                                             variant={!formValues.is_ok ? "default" : "ghost"}
                                             className={cn(
                                                 "flex-1 transition-all duration-200",
-                                                !formValues.is_ok 
-                                                    ? "bg-red-100 text-red-800 hover:bg-red-200 border-red-300" 
+                                                !formValues.is_ok
+                                                    ? "bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
                                                     : ""
                                             )}
                                             onClick={() => setValue("is_ok", false, { shouldValidate: true })}
@@ -686,7 +701,7 @@ export function DutyStatusReportEditForm({
                                         </div>
                                         <Switch
                                             checked={formValues.visible_to_client}
-                                            onCheckedChange={(checked) => 
+                                            onCheckedChange={(checked) =>
                                                 setValue("visible_to_client", checked, { shouldValidate: true })
                                             }
                                             disabled={isLoading || isFetching}
@@ -709,7 +724,6 @@ export function DutyStatusReportEditForm({
                                     label="Describe the duty status, any issues, or observations..."
                                     rows={4}
                                     {...register("message")}
-                                    //error={errors.message?.message}
                                     disabled={isLoading || isFetching}
                                     className="resize-none"
                                 />
@@ -777,7 +791,7 @@ export function DutyStatusReportEditForm({
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                 Media Attachments
                             </h3>
-                            
+
                             {/* Existing Media */}
                             {existingMedia.length > 0 && (
                                 <div className="mb-6">
@@ -786,7 +800,7 @@ export function DutyStatusReportEditForm({
                                     </Label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
                                         {existingMedia.map((media) => (
-                                            <div 
+                                            <div
                                                 key={media.id}
                                                 className="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800"
                                             >
@@ -801,11 +815,11 @@ export function DutyStatusReportEditForm({
                                                 >
                                                     <Trash2 className="h-3 w-3" />
                                                 </Button>
-                                                
+
                                                 {/* Media preview */}
                                                 <div className="aspect-square flex items-center justify-center">
                                                     {media.type === 'image' ? (
-                                                        <div 
+                                                        <div
                                                             className="w-full h-full bg-cover bg-center"
                                                             style={{ backgroundImage: `url(${media.thumbnail_url || media.url})` }}
                                                         />
@@ -833,9 +847,9 @@ export function DutyStatusReportEditForm({
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Add New Media (Optional)
                                 </Label>
-                                
+
                                 {/* File upload area */}
-                                <div 
+                                <div
                                     className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
@@ -871,7 +885,7 @@ export function DutyStatusReportEditForm({
                                         </Label>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                             {newMediaFiles.map((file, index) => (
-                                                <div 
+                                                <div
                                                     key={index}
                                                     className="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800"
                                                 >
@@ -889,11 +903,11 @@ export function DutyStatusReportEditForm({
                                                     >
                                                         <XCircle className="h-3 w-3" />
                                                     </Button>
-                                                    
+
                                                     {/* File preview */}
                                                     <div className="aspect-square flex items-center justify-center">
                                                         {file.type.startsWith('image/') && newMediaPreviews[index] ? (
-                                                            <div 
+                                                            <div
                                                                 className="w-full h-full bg-cover bg-center"
                                                                 style={{ backgroundImage: `url(${newMediaPreviews[index]})` }}
                                                             />
