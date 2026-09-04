@@ -25,7 +25,8 @@ import {
     User,
     Briefcase,
     CalendarDays,
-    CheckCheck
+    CheckCheck,
+    Target,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -103,6 +104,20 @@ const sourceTypeConfig: Record<string, { label: string; color: string }> = {
     one_time: { label: 'One Time', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
     manual: { label: 'Manual', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300' },
     exception: { label: 'Exception', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+};
+
+// Service Mode configuration
+const serviceModeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    continuous_shift: {
+        label: 'Continuous Shift',
+        color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+        icon: <Clock className="h-3 w-3" />
+    },
+    patrol_visits: {
+        label: 'Patrol Visits',
+        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700',
+        icon: <Target className="h-3 w-3" />
+    },
 };
 
 export default function DutyViewPage() {
@@ -324,6 +339,23 @@ export default function DutyViewPage() {
         );
     };
 
+    const getServiceModeBadge = (serviceMode: string) => {
+        const config = serviceModeConfig[serviceMode];
+        if (!config) {
+            return (
+                <Badge variant="outline" className="bg-gray-100 text-gray-800 border-0">
+                    {serviceMode}
+                </Badge>
+            );
+        }
+        return (
+            <Badge className={`${config.color} border-0 px-3 py-1 flex items-center gap-1`}>
+                {config.icon}
+                {config.label}
+            </Badge>
+        );
+    };
+
     const getAvailableStatuses = () => {
         if (!currentDuty?.status) return [];
         const currentStatus = currentDuty.status;
@@ -416,14 +448,14 @@ export default function DutyViewPage() {
                 </Button>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                    {/* <Button
+                    <Button
                         variant="outline"
                         onClick={() => setEditDialogOpen(true)}
                         disabled={isDeleting || isUpdating}
                     >
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
-                    </Button> */}
+                    </Button>
                     <Button
                         variant="destructive"
                         onClick={() => setDeleteDialogOpen(true)}
@@ -605,15 +637,35 @@ export default function DutyViewPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Site & Location */}
+                        {/* Service Mode & Site */}
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
-                                    <Building className="h-5 w-5" />
-                                    Site & Location
+                                    <Target className="h-5 w-5" />
+                                    Service Mode & Site
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
+                                {/* Service Mode */}
+                                <div>
+                                    <p className="text-sm text-gray-500">Service Mode</p>
+                                    <div className="mt-1">
+                                        {getServiceModeBadge(currentDuty.service_mode || 'continuous_shift')}
+                                        {currentDuty.service_mode === 'patrol_visits' && currentDuty.required_visits && (
+                                            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                                                {currentDuty.required_visits} visit{currentDuty.required_visits !== 1 ? 's' : ''} required
+                                            </span>
+                                        )}
+                                        {currentDuty.service_mode === 'patrol_visits' && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Start and end times define the <strong>allowed visit window</strong>, not continuous working hours.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <Separator />
+
                                 {currentDuty.site && (
                                     <div>
                                         <p className="text-sm text-gray-500">Site</p>
@@ -723,7 +775,7 @@ export default function DutyViewPage() {
                 </TabsContent>
 
                 {/* Assignments Tab */}
-                {/* <TabsContent value="assignments" className="space-y-6 mt-0">
+                <TabsContent value="assignments" className="space-y-6 mt-0">
                     <Card>
                         <CardHeader>
                             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -797,7 +849,7 @@ export default function DutyViewPage() {
                             )}
                         </CardContent>
                     </Card>
-                </TabsContent> */}
+                </TabsContent>
             </Tabs>
 
             {/* Dialogs */}

@@ -35,6 +35,10 @@ import {
   Zap,
   Minus,
   Timer,
+  Target,
+  ChevronDown,
+  ChevronUp,
+  Filter,
 } from "lucide-react";
 import {
   Card,
@@ -75,6 +79,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { cn } from "@/lib/utils";
 
 // Redux
 import { useAppDispatch } from "@/hooks/useAppDispatch";
@@ -156,6 +161,12 @@ const sourceTypeColors: Record<string, string> = {
   one_time: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700",
   manual: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300 border-gray-200 dark:border-gray-700",
   exception: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-700",
+};
+
+// Service Mode colors
+const serviceModeColors: Record<string, string> = {
+  continuous_shift: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700",
+  patrol_visits: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700",
 };
 
 const coverageIcons: Record<string, React.ReactNode> = {
@@ -280,7 +291,11 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [coverageFilter, setCoverageFilter] = useState("all");
   const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
+  const [serviceModeFilter, setServiceModeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+
+  // Mobile filter collapse state
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Get current user timezone
   const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -449,6 +464,10 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       fetchParams.source_type = sourceTypeFilter as DutyParams['source_type'];
     }
 
+    if (serviceModeFilter !== "all") {
+      fetchParams.service_mode = serviceModeFilter as 'continuous_shift' | 'patrol_visits';
+    }
+
     if (dateFilter) {
       const formattedDate = format(dateFilter, 'yyyy-MM-dd');
       fetchParams.date_from = formattedDate;
@@ -456,7 +475,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }
 
     dispatch(fetchDuties(fetchParams));
-  }, [dispatch, filters.page, searchTerm, siteFilter, statusFilter, sourceTypeFilter, dateFilter]);
+  }, [dispatch, filters.page, searchTerm, siteFilter, statusFilter, sourceTypeFilter, serviceModeFilter, dateFilter]);
 
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitleSearch(e.target.value);
@@ -475,6 +494,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     setStatusFilter("all");
     setCoverageFilter("all");
     setSourceTypeFilter("all");
+    setServiceModeFilter("all");
     setFilters({ page: 1, per_page: 10 });
     setSelectedDuties([]);
   };
@@ -708,6 +728,19 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     return { id, name: duty?.site?.site_name || `Site ${id}` };
   });
 
+  // Count active filters
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (siteFilter !== "all") count++;
+    if (statusFilter !== "all") count++;
+    if (coverageFilter !== "all") count++;
+    if (sourceTypeFilter !== "all") count++;
+    if (serviceModeFilter !== "all") count++;
+    if (dateFilter) count++;
+    return count;
+  };
+
   if (isLoading && duties.length === 0) {
     return (
       <Card className="shadow-sm rounded-2xl">
@@ -770,8 +803,36 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
         </div>
 
         <CardContent className="p-0">
-          {/* Filters Section - Responsive */}
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 border-b px-3 sm:px-4 py-2 sm:py-3">
+          {/* Mobile Filter Toggle */}
+          <div className="block sm:hidden border-b px-3 py-2 bg-gray-50/50 dark:bg-gray-800/20">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="w-full flex items-center justify-between h-8 text-xs"
+            >
+              <span className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5" />
+                Filters
+                {getActiveFilterCount() > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                    {getActiveFilterCount()}
+                  </Badge>
+                )}
+              </span>
+              {isFilterOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Filters Section - Collapsible on Mobile */}
+          <div className={cn(
+            "grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 border-b px-3 sm:px-4 py-2 sm:py-3 transition-all duration-300 ease-in-out",
+            isFilterOpen ? "block" : "hidden sm:grid"
+          )}>
             <div className="xs:col-span-2 sm:col-span-3">
               <InputGroup>
                 <InputGroupInput
@@ -835,6 +896,40 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     <SelectItem value="partial">Partial</SelectItem>
                     <SelectItem value="covered">Covered</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="xs:col-span-1 sm:col-span-1">
+              <Select value={sourceTypeFilter} onValueChange={setSourceTypeFilter}>
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Source Type</SelectLabel>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="one_time">One Time</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="exception">Exception</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="xs:col-span-1 sm:col-span-1">
+              <Select value={serviceModeFilter} onValueChange={setServiceModeFilter}>
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Service Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Service Mode</SelectLabel>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="continuous_shift">Continuous Shift</SelectItem>
+                    <SelectItem value="patrol_visits">Patrol Visits</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -954,6 +1049,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Scheduled Time (Site)</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Your Time</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Diff</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Service Mode</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Type</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Guards</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Coverage</TableHead>
@@ -965,7 +1061,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
               <TableBody>
                 {duties.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 sm:py-12">
+                    <TableCell colSpan={12} className="text-center py-8 sm:py-12">
                       <div className="flex flex-col items-center justify-center">
                         <File className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-3 sm:mb-4" />
                         <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
@@ -1201,6 +1297,20 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                             </Badge>
                           ) : (
                             <span className="text-[8px] sm:text-xs text-gray-400">N/A</span>
+                          )}
+                        </TableCell>
+
+                        {/* Service Mode */}
+                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                          {duty.service_mode === 'patrol_visits' ? (
+                            <Badge variant="outline" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700 flex items-center gap-1 px-2 py-1">
+                              <Target className="h-3 w-3" />
+                              Patrol {duty.required_visits ? `(${duty.required_visits})` : ''}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700 px-2 py-1">
+                              Continuous
+                            </Badge>
                           )}
                         </TableCell>
 

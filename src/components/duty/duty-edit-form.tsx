@@ -1,3 +1,5 @@
+// components/duty/duty-edit-form.tsx
+
 'use client'
 
 import {
@@ -11,7 +13,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, MapPin, Building, Clock as ClockIcon } from "lucide-react"
+import { CalendarIcon, MapPin, Building, Clock as ClockIcon, Target } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
@@ -33,6 +35,7 @@ import { SiteLocation } from "@/app/types/siteLocation.types"
 import { DutyTimeType } from "@/app/types/dutyTimeType"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
 import { CustomTimePicker } from "../ui/custom-time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 interface DutyEditFormProps {
     trigger: ReactNode
@@ -42,7 +45,7 @@ interface DutyEditFormProps {
     onSuccess?: () => void
 }
 
-// Zod schema matching the create form
+// Zod schema - fixed service_mode to be optional with default
 const dutySchema = z.object({
     title: z.string()
         .min(1, { message: "Title is required" })
@@ -69,6 +72,18 @@ const dutySchema = z.object({
 
     duty_type: z.enum(["day", "night"]),
 
+    service_mode: z.enum(["continuous_shift", "patrol_visits"])
+        .default("continuous_shift")
+        .optional(),
+
+    required_visits: z.number()
+        .optional()
+        .nullable()
+        .refine((val) => {
+            if (val === null || val === undefined) return true;
+            return val >= 1 && val <= 20;
+        }, { message: "Required visits must be between 1 and 20" }),
+
     required_hours: z.number()
         .min(1, { message: "Minimum 1 hour required" })
         .max(24, { message: "Maximum 24 hours allowed" }),
@@ -87,6 +102,15 @@ const dutySchema = z.object({
 }, {
     message: "End date/time must be after start date/time",
     path: ["end_datetime"]
+}).refine((data) => {
+    // Only check if service_mode is defined and is patrol_visits
+    if (data.service_mode === 'patrol_visits') {
+        return data.required_visits !== null && data.required_visits !== undefined && data.required_visits > 0;
+    }
+    return true;
+}, {
+    message: "Required visits is mandatory for Patrol Visits mode",
+    path: ["required_visits"]
 })
 
 type DutyFormData = z.infer<typeof dutySchema>
@@ -201,6 +225,8 @@ export function DutyEditForm({
             end_datetime: "",
             guards_required: 1,
             duty_type: "day",
+            service_mode: "continuous_shift",
+            required_visits: null,
             required_hours: 8,
             mandatory_check_in_time: "",
             notes: "",
@@ -210,6 +236,7 @@ export function DutyEditForm({
     })
 
     const formValues = watch()
+    const isPatrolMode = formValues.service_mode === 'patrol_visits'
 
     // Fetch duty details when dialog opens
     useEffect(() => {
@@ -251,33 +278,27 @@ export function DutyEditForm({
             if (fetchDuty.fulfilled.match(result)) {
                 const data = result.payload.item
 
-                // Parse dates and times
                 const startDatetime = parseISO(data.start_datetime)
                 const endDatetime = parseISO(data.end_datetime)
                 const checkInDatetime = data.mandatory_check_in_time ? parseISO(data.mandatory_check_in_time) : null
 
-                // Set date states
                 setStartDate(startDatetime)
                 setEndDate(endDatetime)
                 setCheckInDate(checkInDatetime || undefined)
 
-                // Set time states
                 setStartTime(format(startDatetime, 'HH:mm'))
                 setEndTime(format(endDatetime, 'HH:mm'))
                 setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
 
-                // Set the timezone from the site data
                 if (data.site?.timezone) {
                     setSelectedSiteTimezone(data.site.timezone)
                 }
 
-                // Set site search for dropdown display
                 const selectedSite = sites.find(s => s.id === data.site?.id)
                 if (selectedSite) {
                     setSiteSearch(selectedSite.site_name || "")
                 }
 
-                // Populate form with existing data
                 reset({
                     title: data.title || "",
                     site_id: data.site?.id || undefined,
@@ -287,6 +308,8 @@ export function DutyEditForm({
                     end_datetime: data.end_datetime || "",
                     guards_required: data.guards_required || 1,
                     duty_type: (data.duty_type as "day" | "night") || "day",
+                    service_mode: (data.service_mode as "continuous_shift" | "patrol_visits") || "continuous_shift",
+                    required_visits: data.required_visits || null,
                     required_hours: data.required_hours || 8,
                     mandatory_check_in_time: data.mandatory_check_in_time || "",
                     notes: data.notes || "",
@@ -339,6 +362,9 @@ export function DutyEditForm({
 
         setIsLoading(true)
         try {
+            // Ensure service_mode has a value
+            const serviceMode = data.service_mode || 'continuous_shift'
+
             const submitData: Partial<Duty> = {
                 title: data.title.trim(),
                 site_id: data.site_id,
@@ -348,6 +374,8 @@ export function DutyEditForm({
                 end_datetime: data.end_datetime,
                 guards_required: data.guards_required,
                 duty_type: data.duty_type,
+                service_mode: serviceMode,
+                required_visits: serviceMode === 'patrol_visits' ? data.required_visits : null,
                 required_hours: data.required_hours,
                 mandatory_check_in_time: data.mandatory_check_in_time,
                 notes: data.notes?.trim() || null,
@@ -427,7 +455,6 @@ export function DutyEditForm({
                                 Duty Information
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                                {/* Title */}
                                 <div className="sm:col-span-2 lg:col-span-3">
                                     <FloatingLabelInput
                                         label="Title"
@@ -437,7 +464,6 @@ export function DutyEditForm({
                                     />
                                 </div>
 
-                                {/* Site */}
                                 <div className="space-y-2">
                                     <Label htmlFor="site" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Site *
@@ -450,7 +476,6 @@ export function DutyEditForm({
                                             setValue("site_location_id", 0)
                                             setLocationSearch("")
 
-                                            // Find the selected site and get its timezone
                                             const selectedSite = sites.find((site: Site) => site.id === siteId)
                                             if (selectedSite) {
                                                 setSelectedSiteTimezone(selectedSite.timezone || undefined)
@@ -490,7 +515,6 @@ export function DutyEditForm({
                                     )}
                                 </div>
 
-                                {/* Site Location */}
                                 <div className="space-y-2">
                                     <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Location *
@@ -541,7 +565,6 @@ export function DutyEditForm({
                                     )}
                                 </div>
 
-                                {/* Duty Time Type */}
                                 <div className="space-y-2">
                                     <Label htmlFor="timeType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Duty Time Type *
@@ -583,7 +606,6 @@ export function DutyEditForm({
                                     )}
                                 </div>
 
-                                {/* Guards Required */}
                                 <div className="space-y-2">
                                     <FloatingLabelInput
                                         label="Guards Required"
@@ -596,7 +618,6 @@ export function DutyEditForm({
                                     />
                                 </div>
 
-                                {/* Required Hours */}
                                 <div className="space-y-2">
                                     <FloatingLabelInput
                                         label="Required Hours"
@@ -612,13 +633,74 @@ export function DutyEditForm({
                             </div>
                         </div>
 
+                        {/* Service Mode Section */}
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
+                                Service Mode
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="service_mode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Service Mode *
+                                    </Label>
+                                    <Select
+                                        value={formValues.service_mode || "continuous_shift"}
+                                        onValueChange={(value) => {
+                                            setValue("service_mode", value as "continuous_shift" | "patrol_visits", { shouldValidate: true })
+                                            if (value === 'patrol_visits') {
+                                                setValue("required_visits", 2)
+                                            } else {
+                                                setValue("required_visits", null)
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select service mode" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="continuous_shift">Continuous Shift</SelectItem>
+                                            <SelectItem value="patrol_visits">Patrol Visits</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.service_mode && (
+                                        <p className="text-sm text-red-500 mt-1">{errors.service_mode.message}</p>
+                                    )}
+                                </div>
+
+                                {isPatrolMode && (
+                                    <div className="space-y-2">
+                                        <FloatingLabelInput
+                                            label="Required Visits *"
+                                            type="number"
+                                            min="1"
+                                            max="20"
+                                            {...register("required_visits", { valueAsNumber: true })}
+                                            error={errors.required_visits?.message}
+                                            disabled={isLoading || isFetching}
+                                        />
+                                        <p className="text-xs text-gray-500">
+                                            Number of patrol visits required during the time window
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {isPatrolMode && (
+                                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                                        <strong>Patrol Mode:</strong> The guard will make {formValues.required_visits || 'N/A'} visit(s) during the time window.
+                                        The start and end times define the <strong>allowed visit window</strong>, not continuous working hours.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Duty Type Section */}
                         <div className="mb-4 sm:mb-6">
                             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
                                 Duty Details
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                                {/* Duty Type */}
                                 <div className="space-y-2">
                                     <Label htmlFor="duty_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Duty Type *
@@ -648,7 +730,6 @@ export function DutyEditForm({
                                     )}
                                 </div>
 
-                                {/* Status */}
                                 <div className="space-y-2">
                                     <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Status *
@@ -695,7 +776,6 @@ export function DutyEditForm({
                                 Date & Time
                             </h3>
 
-                            {/* Start Date & Time */}
                             <div className="mb-4 sm:mb-6">
                                 <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     Start Date & Time
@@ -747,7 +827,6 @@ export function DutyEditForm({
                                 </div>
                             </div>
 
-                            {/* End Date & Time */}
                             <div className="mb-4 sm:mb-6">
                                 <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     End Date & Time
@@ -799,7 +878,6 @@ export function DutyEditForm({
                                 </div>
                             </div>
 
-                            {/* Check-in Date & Time */}
                             <div className="mb-4 sm:mb-6">
                                 <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     Mandatory Check-in

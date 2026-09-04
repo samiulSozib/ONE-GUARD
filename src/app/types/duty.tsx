@@ -17,6 +17,8 @@ export interface Duty {
   site_location_id: number | null;
   duty_time_type_id: number | null;
   duty_type: string | null;
+  service_mode: 'continuous_shift' | 'patrol_visits';
+  required_visits: number | null;
   required_hours: number;
   mandatory_check_in_time: string | null;
   guards_required: number;
@@ -72,6 +74,7 @@ export interface DutyParams {
   duty_time_type_id?: number;
   duty_schedule_id?: number;
   source_type?: 'scheduled' | 'one_time' | 'manual' | 'exception';
+  service_mode?: 'continuous_shift' | 'patrol_visits';
   duty_type?: 'day' | 'night' | string;
   status?: 'pending' | 'approved' | 'completed' | string;
   is_active?: boolean;
@@ -139,4 +142,21 @@ export const getStatusColor = (status: string): string => {
     'completed': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   };
   return map[status] || 'bg-gray-100 text-gray-800';
+};
+
+// Service mode helpers
+export const getServiceModeDisplay = (mode: string): string => {
+  const map: Record<string, string> = {
+    'continuous_shift': 'Continuous Shift',
+    'patrol_visits': 'Patrol Visits',
+  };
+  return map[mode] || mode;
+};
+
+export const getServiceModeColor = (mode: string): string => {
+  const map: Record<string, string> = {
+    'continuous_shift': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+    'patrol_visits': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700',
+  };
+  return map[mode] || 'bg-gray-100 text-gray-700';
 };

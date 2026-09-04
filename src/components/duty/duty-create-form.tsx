@@ -1,3 +1,5 @@
+// components/duty/duty-create-form.tsx
+
 'use client'
 
 import {
@@ -11,7 +13,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import Image from "next/image"
 import { FloatingLabelInput } from "../ui/floating-input"
 import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Plus } from "lucide-react"
+import { CalendarIcon, Plus, Target } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
@@ -38,6 +40,7 @@ import { DutyTimeTypeCreateForm } from "../duty-time-type/duty-time-type-create-
 import { CreateSiteWithClientForm } from '@/components/clients/create-site-with-client-form'
 import { Client } from "@/app/types/client"
 import { CustomTimePicker } from "../ui/custom-time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 interface DutyCreateFormProps {
     trigger: ReactNode
@@ -47,7 +50,7 @@ interface DutyCreateFormProps {
     defaultClientId?: number
 }
 
-// Zod schema matching exactly your DutyTimeTypeCreateForm pattern
+// Zod schema
 const dutySchema = z.object({
     title: z.string()
         .min(1, { message: "Title is required" })
@@ -74,6 +77,17 @@ const dutySchema = z.object({
 
     duty_type: z.enum(["day", "night"]),
 
+    service_mode: z.enum(["continuous_shift", "patrol_visits"])
+        .default("continuous_shift"),
+
+    required_visits: z.number()
+        .optional()
+        .nullable()
+        .refine((val) => {
+            if (val === null || val === undefined) return true;
+            return val >= 1 && val <= 20;
+        }, { message: "Required visits must be between 1 and 20" }),
+
     required_hours: z.number()
         .min(1, { message: "Minimum 1 hour required" })
         .max(24, { message: "Maximum 24 hours allowed" }),
@@ -92,6 +106,14 @@ const dutySchema = z.object({
 }, {
     message: "End date/time must be after start date/time",
     path: ["end_datetime"]
+}).refine((data) => {
+    if (data.service_mode === 'patrol_visits') {
+        return data.required_visits !== null && data.required_visits !== undefined && data.required_visits > 0;
+    }
+    return true;
+}, {
+    message: "Required visits is mandatory for Patrol Visits mode",
+    path: ["required_visits"]
 })
 
 type DutyFormData = z.infer<typeof dutySchema>
@@ -209,6 +231,8 @@ export function DutyCreateForm({
             end_datetime: "",
             guards_required: 1,
             duty_type: "day",
+            service_mode: "continuous_shift",
+            required_visits: null,
             required_hours: 8,
             mandatory_check_in_time: "",
             notes: "",
@@ -218,6 +242,7 @@ export function DutyCreateForm({
     })
 
     const formValues = watch()
+    const isPatrolMode = formValues.service_mode === 'patrol_visits'
 
     // Initial fetch on mount
     useEffect(() => {
@@ -316,23 +341,15 @@ export function DutyCreateForm({
 
     // Handle site creation success - Refresh sites list and clear location
     const handleSiteCreated = (site: Site) => {
-        // Refetch sites to get the new one
         dispatch(fetchSites({ page: 1, per_page: 10, is_active: true }))
-
-        // Reset location selection since the site changed
         setValue("site_location_id", 0)
         setLocationSearch("")
 
-        // If the site was created, automatically select it in the dropdown
         if (site && site.id) {
             setValue("site_id", site.id, { shouldValidate: true })
-
-            // Set the timezone for the new site
             if (site.timezone) {
                 setSelectedSiteTimezone(site.timezone)
             }
-
-            // Fetch locations for the newly created site
             dispatch(fetchSiteLocations({
                 page: 1,
                 per_page: 10,
@@ -341,27 +358,20 @@ export function DutyCreateForm({
             }))
         }
 
-        // Close the site create dialog
         setSiteCreateDialogOpen(false)
-
-        // Show success message (optional - the form already shows success)
         SweetAlertService.success('Site Created', `${site.site_name} has been created successfully.`)
     }
 
     // Handle duty time type creation success
     const handleTimeTypeCreated = (timeType: DutyTimeType) => {
-        // Refetch duty time types to get the new one
         dispatch(fetchDutyTimeTypes({ page: 1, per_page: 10, is_active: true }))
-        // Close the time type create dialog
         setTimeTypeCreateDialogOpen(false)
-        // Show success message
         SweetAlertService.success('Time Type Created', `${timeType.title} has been created successfully.`)
     }
 
     const onSubmit = async (data: DutyFormData) => {
         setIsLoading(true)
         try {
-            // Prepare data exactly as your example
             const submitData: Partial<Duty> = {
                 title: data.title.trim(),
                 site_id: data.site_id,
@@ -371,6 +381,8 @@ export function DutyCreateForm({
                 end_datetime: data.end_datetime,
                 guards_required: data.guards_required,
                 duty_type: data.duty_type,
+                service_mode: data.service_mode,
+                required_visits: data.service_mode === 'patrol_visits' ? data.required_visits : null,
                 required_hours: data.required_hours,
                 mandatory_check_in_time: data.mandatory_check_in_time,
                 notes: data.notes?.trim() || null,
@@ -384,7 +396,6 @@ export function DutyCreateForm({
                     'Duty Created Successfully',
                     `${data.title} has been created successfully.`
                 ).then(() => {
-                    // Reset all states
                     reset()
                     setStartDate(undefined)
                     setEndDate(undefined)
@@ -517,15 +528,13 @@ export function DutyCreateForm({
                             setValue("site_id", siteId, { shouldValidate: true })
                             setValue("site_location_id", 0)
 
-                            // Find the selected site and get its timezone
                             const selectedSite = sites.find((site: Site) => site.id === siteId)
                             if (selectedSite) {
-                                setSelectedSiteTimezone(selectedSite.timezone||undefined)
+                                setSelectedSiteTimezone(selectedSite.timezone || undefined)
                             } else {
                                 setSelectedSiteTimezone(undefined)
                             }
 
-                            // Fetch locations when site changes
                             if (siteId) {
                                 dispatch(fetchSiteLocations({
                                     page: 1,
@@ -663,7 +672,6 @@ export function DutyCreateForm({
                                 Duty Information
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                                {/* Title - Full width on mobile, 2 columns on medium, 3 on large */}
                                 <div className="sm:col-span-2 lg:col-span-3">
                                     <FloatingLabelInput
                                         label="Title"
@@ -673,12 +681,10 @@ export function DutyCreateForm({
                                     />
                                 </div>
 
-                                {/* Site */}
                                 <div className="sm:col-span-1">
                                     {renderSiteDropdown()}
                                 </div>
 
-                                {/* Site Location */}
                                 <div className="space-y-2">
                                     <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Location *
@@ -729,12 +735,10 @@ export function DutyCreateForm({
                                     )}
                                 </div>
 
-                                {/* Duty Time Type */}
                                 <div className="sm:col-span-1">
                                     {renderTimeTypeDropdown()}
                                 </div>
 
-                                {/* Guards Required & Required Hours in one row on large screens */}
                                 <div className="space-y-2">
                                     <FloatingLabelInput
                                         label="Guards Required"
@@ -762,13 +766,74 @@ export function DutyCreateForm({
                             </div>
                         </div>
 
+                        {/* Service Mode Section */}
+                        <div className="mb-4 sm:mb-6">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
+                                Service Mode
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="service_mode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Service Mode *
+                                    </Label>
+                                    <Select
+                                        value={formValues.service_mode}
+                                        onValueChange={(value) => {
+                                            setValue("service_mode", value as "continuous_shift" | "patrol_visits", { shouldValidate: true })
+                                            if (value === 'patrol_visits') {
+                                                setValue("required_visits", 2)
+                                            } else {
+                                                setValue("required_visits", null)
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select service mode" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="continuous_shift">Continuous Shift</SelectItem>
+                                            <SelectItem value="patrol_visits">Patrol Visits</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.service_mode && (
+                                        <p className="text-sm text-red-500 mt-1">{errors.service_mode.message}</p>
+                                    )}
+                                </div>
+
+                                {isPatrolMode && (
+                                    <div className="space-y-2">
+                                        <FloatingLabelInput
+                                            label="Required Visits *"
+                                            type="number"
+                                            min="1"
+                                            max="20"
+                                            {...register("required_visits", { valueAsNumber: true })}
+                                            error={errors.required_visits?.message}
+                                            disabled={isLoading}
+                                        />
+                                        <p className="text-xs text-gray-500">
+                                            Number of patrol visits required during the time window
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {isPatrolMode && (
+                                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                                        <strong>Patrol Mode:</strong> The guard will make {formValues.required_visits || 'N/A'} visit(s) during the time window.
+                                        The start and end times define the <strong>allowed visit window</strong>, not continuous working hours.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Duty Type Section */}
                         <div className="mb-4 sm:mb-6">
                             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">
                                 Duty Details
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                                {/* Duty Type */}
                                 <div className="space-y-2">
                                     <Label htmlFor="duty_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Duty Type *
@@ -806,7 +871,6 @@ export function DutyCreateForm({
                                 Date & Time
                             </h3>
 
-                            {/* Start Date & Time */}
                             <div className="mb-4 sm:mb-6">
                                 <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     Start Date & Time
@@ -858,7 +922,6 @@ export function DutyCreateForm({
                                 </div>
                             </div>
 
-                            {/* End Date & Time */}
                             <div className="mb-4 sm:mb-6">
                                 <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     End Date & Time
@@ -910,7 +973,6 @@ export function DutyCreateForm({
                                 </div>
                             </div>
 
-                            {/* Check-in Date & Time */}
                             <div className="mb-4 sm:mb-6">
                                 <h4 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
                                     Mandatory Check-in
@@ -994,7 +1056,6 @@ export function DutyCreateForm({
                 </DialogContent>
             </Dialog>
 
-            {/* Site Create Dialog - Use the form with client dropdown */}
             <CreateSiteWithClientForm
                 trigger={<div />}
                 isOpen={siteCreateDialogOpen}
@@ -1003,7 +1064,6 @@ export function DutyCreateForm({
                 initialClientId={defaultClientId}
             />
 
-            {/* Duty Time Type Create Dialog */}
             <DutyTimeTypeCreateForm
                 trigger={<div />}
                 isOpen={timeTypeCreateDialogOpen}
