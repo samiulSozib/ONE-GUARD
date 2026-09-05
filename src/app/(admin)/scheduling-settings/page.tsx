@@ -2,12 +2,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAppDispatch } from "@/hooks/useAppDispatch";
-import {
-  fetchSchedulingSettings,
-  updateSchedulingSettings,
-} from "@/store/slices/schedulingSlice";
+import { GenerationMode, UpdateSchedulingSettingsDto } from '@/app/types/scheduling';
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,8 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -25,26 +20,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { useAppSelector } from '@/hooks/useAppSelector';
+import SweetAlertService from "@/lib/sweetAlert";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  fetchSchedulingSettings,
+  updateSchedulingSettings,
+} from "@/store/slices/schedulingSlice";
 import {
-  Save,
-  RefreshCw,
-  Clock,
-  Settings,
   AlertCircle,
   CheckCircle,
+  Clock,
   Info,
+  RefreshCw,
+  Save,
+  Settings,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import SweetAlertService from "@/lib/sweetAlert";
-import { cn } from "@/lib/utils";
-import { useAppSelector } from '@/hooks/useAppSelector';
+import { useEffect, useState } from "react";
 
 export default function SchedulingSettingsPage() {
   const dispatch = useAppDispatch();
@@ -52,10 +46,10 @@ export default function SchedulingSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Local form state
-  const [formData, setFormData] = useState({
-    duty_generation_mode: "rolling",
+  const [formData, setFormData] = useState<UpdateSchedulingSettingsDto>({
+    duty_generation_mode: "rolling" as GenerationMode,
     duty_generation_horizon_days: 1,
-    assignment_generation_mode: "rolling",
+    assignment_generation_mode: "rolling" as GenerationMode,
     assignment_generation_horizon_days: 1,
     generate_duties_on_schedule_create: true,
     generate_assignments_on_plan_create: true,
@@ -75,9 +69,9 @@ export default function SchedulingSettingsPage() {
   useEffect(() => {
     if (settings) {
       setFormData({
-        duty_generation_mode: settings.duty_generation_mode || "rolling",
+        duty_generation_mode: settings.duty_generation_mode || ("rolling" as GenerationMode),
         duty_generation_horizon_days: settings.duty_generation_horizon_days || 1,
-        assignment_generation_mode: settings.assignment_generation_mode || "rolling",
+        assignment_generation_mode: settings.assignment_generation_mode || ("rolling" as GenerationMode),
         assignment_generation_horizon_days: settings.assignment_generation_horizon_days || 1,
         generate_duties_on_schedule_create: settings.generate_duties_on_schedule_create ?? true,
         generate_assignments_on_plan_create: settings.generate_assignments_on_plan_create ?? true,
@@ -92,7 +86,7 @@ export default function SchedulingSettingsPage() {
     }
   }, [settings]);
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = <K extends keyof UpdateSchedulingSettingsDto>(field: K, value: UpdateSchedulingSettingsDto[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -121,9 +115,9 @@ export default function SchedulingSettingsPage() {
   const handleReset = () => {
     if (settings) {
       setFormData({
-        duty_generation_mode: settings.duty_generation_mode || "rolling",
+        duty_generation_mode: settings.duty_generation_mode || ("rolling" as GenerationMode),
         duty_generation_horizon_days: settings.duty_generation_horizon_days || 1,
-        assignment_generation_mode: settings.assignment_generation_mode || "rolling",
+        assignment_generation_mode: settings.assignment_generation_mode || ("rolling" as GenerationMode),
         assignment_generation_horizon_days: settings.assignment_generation_horizon_days || 1,
         generate_duties_on_schedule_create: settings.generate_duties_on_schedule_create ?? true,
         generate_assignments_on_plan_create: settings.generate_assignments_on_plan_create ?? true,
@@ -211,7 +205,7 @@ export default function SchedulingSettingsPage() {
                   <Label className="text-sm font-medium">Generation Mode</Label>
                   <Select
                     value={formData.duty_generation_mode}
-                    onValueChange={(value) => handleChange("duty_generation_mode", value)}
+                    onValueChange={(value) => handleChange("duty_generation_mode", value as GenerationMode)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select mode" />
@@ -323,7 +317,7 @@ export default function SchedulingSettingsPage() {
                   <Label className="text-sm font-medium">Generation Mode</Label>
                   <Select
                     value={formData.assignment_generation_mode}
-                    onValueChange={(value) => handleChange("assignment_generation_mode", value)}
+                    onValueChange={(value) => handleChange("assignment_generation_mode", value as GenerationMode)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select mode" />
