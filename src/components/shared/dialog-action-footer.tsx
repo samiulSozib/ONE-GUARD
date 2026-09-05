@@ -1,13 +1,13 @@
 "use client"
 
-import React from "react"
-import { DialogClose, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { DialogClose, DialogFooter } from "@/components/ui/dialog"
+import React from "react"
 
 interface DialogActionFooterProps {
   cancelText?: string
   submitText?: string
-  onSubmit?: () => void
+  onSubmit?: (...args: any[]) => void | Promise<void>
   isSubmitting?: boolean
   submitColor?: string // optional color override
 }
@@ -34,7 +34,7 @@ export const DialogActionFooter: React.FC<DialogActionFooterProps> = ({
       <Button
         type="submit"
         size="lg"
-        onClick={onSubmit}
+        onClick={(e) => onSubmit?.(e)}
         disabled={isSubmitting}
         className={`${submitColor} text-white w-full sm:w-auto`}
       >
