@@ -11,7 +11,7 @@ class SoundService {
       this.onlineSound = new Audio('/sounds/online.mp3');
       this.offlineSound = new Audio('/sounds/offline.mp3');
       this.awaySound = new Audio('/sounds/online.mp3');
-      
+
       // Preload sounds
       this.onlineSound.load();
       this.offlineSound.load();
@@ -54,6 +54,26 @@ class SoundService {
     if (this.enabled && this.awaySound) {
       this.awaySound.currentTime = 0;
       this.awaySound.play().catch(err => console.log('Sound play failed:', err));
+    }
+  }
+
+  playNotification(type?: string) {
+    switch (type) {
+      case 'error':
+      case 'alert':
+      case 'warning':
+        this.playOffline();
+        break;
+      case 'away':
+      case 'location':
+        this.playAway();
+        break;
+      case 'success':
+      case 'info':
+      case 'status':
+      default:
+        this.playOnline();
+        break;
     }
   }
 }

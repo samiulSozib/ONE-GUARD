@@ -237,9 +237,8 @@
 // import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";
 // import GuardedRoute from "@/components/authGuardedRoute";
 // import { SocketProvider } from "@/components/contexts/SocketContext";
-
-
 // app/layout.tsx
+
 "use client";
 
 import { Geist, Geist_Mono } from "next/font/google";
@@ -260,6 +259,10 @@ import {
 } from "@/components/ui/sidebar";
 import { store } from "@/store/store";
 import { Provider } from "react-redux";
+
+// Import Socket providers
+import { SocketProvider } from "@/components/contexts/SocketContext";
+import { SocketNotificationProvider } from "@/components/contexts/SocketNotificationContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -321,18 +324,15 @@ export default function RootLayout({
             disableTransitionOnChange
             storageKey="ogs-theme"
           >
-            {/* Only render SweetAlertProvider on client */}
             {mounted && <SweetAlertProvider />}
 
             {isPublicRoute ? (
-              // Public routes (login, register, etc.) - no sidebar, no protection
               <AlertProvider>
                 <main className="flex flex-1 flex-col h-full">
                   {children}
                 </main>
               </AlertProvider>
             ) : (
-              // Protected routes - require authentication, show sidebar
               <ClientOnly>
                 <GuardedRoute>
                   <SidebarToggleProvider>
@@ -346,15 +346,17 @@ export default function RootLayout({
                     >
                       <ConditionalSidebar />
                       <SidebarInset>
-                        <SiteHeader />
-                        <AlertProvider>
-                          {/* Socket Provider for real-time updates */}
+                        {/* Wrap everything inside SidebarInset with providers */}
+                        <SocketNotificationProvider>
                           <SocketProvider>
-                            <main className="flex flex-1 flex-col h-full">
-                              {children}
-                            </main>
+                            <SiteHeader />
+                            <AlertProvider>
+                              <main className="flex flex-1 flex-col h-full">
+                                {children}
+                              </main>
+                            </AlertProvider>
                           </SocketProvider>
-                        </AlertProvider>
+                        </SocketNotificationProvider>
                       </SidebarInset>
                     </SidebarProvider>
                   </SidebarToggleProvider>
@@ -392,6 +394,5 @@ function ConditionalSidebar() {
 }
 
 import GuardedRoute from "@/components/authGuardedRoute";
-import { SocketProvider } from "@/components/contexts/SocketContext";
 import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider";
 import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";
