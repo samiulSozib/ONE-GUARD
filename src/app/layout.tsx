@@ -243,23 +243,23 @@
 "use client";
 
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
-import { useState, useEffect } from "react";
+import "./globals.css";
 
-import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppSidebarSecondary } from "@/components/app-sidebar-secondary";
+import { AlertProvider } from "@/components/contexts/AlertContext";
+import { SidebarToggleProvider } from "@/components/providers/sidebar-toggle-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { AlertProvider } from "@/components/contexts/AlertContext";
-import { SidebarToggleProvider } from "@/components/providers/sidebar-toggle-provider";
-import { Provider } from "react-redux";
 import { store } from "@/store/store";
+import { Provider } from "react-redux";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -333,45 +333,49 @@ export default function RootLayout({
               </AlertProvider>
             ) : (
               // Protected routes - require authentication, show sidebar
-              <GuardedRoute>
-                <SidebarToggleProvider>
-                  <SidebarProvider
-                    style={
-                      {
-                        "--sidebar-width": "calc(var(--spacing) * 72)",
-                        "--header-height": "calc(var(--spacing) * 12)",
-                      } as React.CSSProperties
-                    }
-                  >
-                    <ConditionalSidebar />
-                    <SidebarInset>
-                      <SiteHeader />
-                      <AlertProvider>
-                        {/* Socket Provider for real-time updates */}
-                        <SocketProvider>
-                          <main className="flex flex-1 flex-col h-full">
-                            {children}
-                          </main>
-                        </SocketProvider>
-                      </AlertProvider>
-                    </SidebarInset>
-                  </SidebarProvider>
-                </SidebarToggleProvider>
-              </GuardedRoute>
+              <ClientOnly>
+                <GuardedRoute>
+                  <SidebarToggleProvider>
+                    <SidebarProvider
+                      style={
+                        {
+                          "--sidebar-width": "calc(var(--spacing) * 72)",
+                          "--header-height": "calc(var(--spacing) * 12)",
+                        } as React.CSSProperties
+                      }
+                    >
+                      <ConditionalSidebar />
+                      <SidebarInset>
+                        <SiteHeader />
+                        <AlertProvider>
+                          {/* Socket Provider for real-time updates */}
+                          <SocketProvider>
+                            <main className="flex flex-1 flex-col h-full">
+                              {children}
+                            </main>
+                          </SocketProvider>
+                        </AlertProvider>
+                      </SidebarInset>
+                    </SidebarProvider>
+                  </SidebarToggleProvider>
+                </GuardedRoute>
+              </ClientOnly>
             )}
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: 'var(--background)',
-                  color: 'var(--foreground)',
-                  border: '1px solid var(--border)',
-                },
-              }}
-            />
+            {mounted && (
+              <Toaster
+                position="top-right"
+                richColors
+                closeButton
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: 'var(--background)',
+                    color: 'var(--foreground)',
+                    border: '1px solid var(--border)',
+                  },
+                }}
+              />
+            )}
           </ThemeProvider>
         </Provider>
       </body>
@@ -387,7 +391,7 @@ function ConditionalSidebar() {
     <AppSidebarSecondary variant="inset" />;
 }
 
-import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider";
-import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";
 import GuardedRoute from "@/components/authGuardedRoute";
 import { SocketProvider } from "@/components/contexts/SocketContext";
+import { useSidebarToggle } from "@/components/providers/sidebar-toggle-provider";
+import { SweetAlertProvider } from "@/components/providers/sweetAlertProvider";

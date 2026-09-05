@@ -35,6 +35,8 @@ import companyServiceComponentReducer from './slices/company-service-component.s
 import clientContractServiceReducer from './slices/client-contract-service.slice';
 import clientContractServiceComponentReducer from './slices/client-contract-service-component.slice';
 import dutyScheduleReducer from './slices/duty-schedule.slice';
+import schedulingReducer from './slices/schedulingSlice';
+
 
 
 export const store = configureStore({
@@ -75,6 +77,7 @@ export const store = configureStore({
     clientContractService: clientContractServiceReducer,
     clientContractServiceComponent: clientContractServiceComponentReducer,
     dutySchedule: dutyScheduleReducer,
+    scheduling: schedulingReducer,
 
   },
   middleware: (getDefaultMiddleware) =>

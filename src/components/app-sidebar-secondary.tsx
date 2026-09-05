@@ -24,6 +24,8 @@ import {
   Command,
   Dot,
   LocateIcon,
+  Settings,
+  Calendar,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -74,6 +76,8 @@ const navGroups = [
       { title: "Time Off", url: "/leave", icon: CalendarCheck },
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
+          { title: "Assignment Plans", url: "/assignment-plans", icon: Calendar },
+
       { title: "Contacts", url: "/contacts", icon: Phone },
       { title: "Location Tracking", url: "/location-tracking", icon: LocateIcon },
     ],
@@ -83,6 +87,8 @@ const navGroups = [
     items: [
        { title: "Shift List", url: "/duty", icon: ClipboardList },
       { title: "Site Schedules", url: "/duty-schedules", icon: AudioWaveform },
+          { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
+
 
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
       { title: "Time & Attendance", url: "/duty-attendance", icon: UserCheck },
