@@ -2,51 +2,50 @@
 
 "use client";
 
+import { ClientContractService } from "@/app/types/client-contract-service";
+import { DutySchedule, UpdateDutyScheduleDto } from "@/app/types/duty-schedule";
+import { DutyTimeType } from "@/app/types/dutyTimeType";
+import { Site } from "@/app/types/site";
+import { SiteLocation } from "@/app/types/siteLocation.types";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { ReactNode, useState, useEffect } from 'react';
-import Image from "next/image";
-import { FloatingLabelInput } from "../ui/floating-input";
-import { FloatingLabelTextarea } from "../ui/floating-textarea";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
-import {
-  updateDutySchedule,
-  fetchDutySchedule,
-} from "@/store/slices/duty-schedule.slice";
-import { fetchSites } from "@/store/slices/siteSlice";
-import { fetchSiteLocations } from "@/store/slices/siteLocationSlice";
-import { fetchClientContractServices } from "@/store/slices/client-contract-service.slice";
-import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice";
-import { DutySchedule, UpdateDutyScheduleDto } from "@/app/types/duty-schedule";
-import { Site } from "@/app/types/site";
-import { SiteLocation } from "@/app/types/siteLocation.types";
-import { ClientContractService } from "@/app/types/client-contract-service";
-import { DutyTimeType } from "@/app/types/dutyTimeType";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import SweetAlertService from "@/lib/sweetAlert";
-import { DialogActionFooter } from "../shared/dialog-action-footer";
-import { Switch } from "../ui/switch";
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon";
+import { fetchClientContractServices } from "@/store/slices/client-contract-service.slice";
+import {
+  fetchDutySchedule,
+  updateDutySchedule,
+} from "@/store/slices/duty-schedule.slice";
+import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice";
+import { fetchSiteLocations } from "@/store/slices/siteLocationSlice";
+import { fetchSites } from "@/store/slices/siteSlice";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Building,
-  MapPin,
   Calendar,
   Clock,
-  Users,
-  Package,
   FileText,
+  MapPin,
+  Package,
   Repeat,
-  Target,
+  Target
 } from "lucide-react";
+import Image from "next/image";
+import { ReactNode, useEffect, useState } from 'react';
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { DialogActionFooter } from "../shared/dialog-action-footer";
+import { FloatingLabelInput } from "../ui/floating-input";
+import { FloatingLabelTextarea } from "../ui/floating-textarea";
+import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Switch } from "../ui/switch";
 
 // Schedule types
 const scheduleTypes = [
@@ -519,80 +518,11 @@ export function DutyScheduleEditForm({
     if (open) {
       onOpenChange?.(true);
     } else {
-      const originalData = {
-        title: item?.title || "",
-        description: item?.description || "",
-        site_id: item?.site_id,
-        site_location_id: item?.site_location_id || null,
-        client_contract_service_id: item?.client_contract_service_id || null,
-        duty_time_type_id: item?.duty_time_type_id || null,
-        schedule_type: item?.schedule_type || "recurring",
-        service_mode: item?.service_mode || "continuous_shift",
-        required_visits: item?.required_visits || null,
-        start_date: item?.start_date || "",
-        end_date: item?.end_date || "",
-        is_open_ended: item?.is_open_ended || false,
-        recurrence_frequency: item?.recurrence_frequency || null,
-        recurrence_interval: item?.recurrence_interval || 1,
-        recurrence_days: item?.recurrence_days || [],
-        start_time: item?.start_time || "08:00",
-        end_time: item?.end_time || "16:00",
-        guards_required: item?.guards_required || 1,
-        required_hours: item?.required_hours || 8,
-        mandatory_check_in_time: item?.mandatory_check_in_time || null,
-        status: item?.status || "active",
-        is_active: item?.is_active !== undefined ? item.is_active : true,
-        notes: item?.notes || "",
-      };
-
-      const currentData = {
-        title: formValues.title || "",
-        description: formValues.description || "",
-        site_id: formValues.site_id,
-        site_location_id: formValues.site_location_id || null,
-        client_contract_service_id: formValues.client_contract_service_id || null,
-        duty_time_type_id: formValues.duty_time_type_id || null,
-        schedule_type: formValues.schedule_type || "recurring",
-        service_mode: formValues.service_mode || "continuous_shift",
-        required_visits: formValues.required_visits || null,
-        start_date: formValues.start_date || "",
-        end_date: formValues.end_date || "",
-        is_open_ended: formValues.is_open_ended || false,
-        recurrence_frequency: formValues.recurrence_frequency || null,
-        recurrence_interval: formValues.recurrence_interval || 1,
-        recurrence_days: formValues.recurrence_days || [],
-        start_time: formValues.start_time || "08:00",
-        end_time: formValues.end_time || "16:00",
-        guards_required: formValues.guards_required || 1,
-        required_hours: formValues.required_hours || 8,
-        mandatory_check_in_time: formValues.mandatory_check_in_time || null,
-        status: formValues.status || "active",
-        is_active: formValues.is_active !== undefined ? formValues.is_active : true,
-        notes: formValues.notes || "",
-      };
-
-      const hasChanges = JSON.stringify(originalData) !== JSON.stringify(currentData);
-
-      if (!hasChanges) {
-        setSelectedSiteTimezone(undefined);
-        onOpenChange?.(false);
-      } else {
-        SweetAlertService.confirm(
-          'Discard Changes?',
-          'You have unsaved changes. Are you sure you want to close?',
-          'Yes, discard',
-          'No, keep'
-        ).then((result) => {
-          if (result.isConfirmed) {
-            reset();
-            setSelectedWeekdays([]);
-            setSelectedSiteTimezone(undefined);
-            onOpenChange?.(false);
-          } else {
-            onOpenChange?.(true);
-          }
-        });
-      }
+      // Simply reset the form and close the dialog without prompting the user.
+      reset();
+      setSelectedWeekdays([]);
+      setSelectedSiteTimezone(undefined);
+      onOpenChange?.(false);
     }
   };
 
