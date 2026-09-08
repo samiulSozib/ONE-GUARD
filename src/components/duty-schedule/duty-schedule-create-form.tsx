@@ -499,7 +499,7 @@ export function DutyScheduleCreateForm({
         {/* Header */}
         <div className="flex items-center gap-2 text-base sm:text-lg font-semibold mb-3 sm:mb-6 pb-2 border-b">
           <Image src="/images/logo.png" alt="" width={20} height={20} className="sm:w-6 sm:h-6" />
-          <span className="whitespace-nowrap">Create Duty Schedule</span>
+          <span className="whitespace-nowrap">Create Shift Schedule</span>
         </div>
 
         {/* Timezone Display - Full Width at Top */}

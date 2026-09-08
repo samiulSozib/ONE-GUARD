@@ -231,7 +231,7 @@ export function AssignmentPlansForm({
                 {/* Duty Schedule Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="duty_schedule_id" className="text-sm font-medium">
-                    Duty Schedule *
+                    Shift Schedule *
                   </Label>
                   <Select
                     value={formData.duty_schedule_id}

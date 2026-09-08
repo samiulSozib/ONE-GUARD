@@ -82,7 +82,7 @@ const navGroups = [
     label: "Operations",
     items: [
        { title: "Shift List", url: "/duty", icon: ClipboardList },
-            { title: "Site Schedules", url: "/duty-schedules", icon: AudioWaveform },
+      { title: "Shift Schedules", url: "/duty-schedules", icon: AudioWaveform },
                 { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
 
 

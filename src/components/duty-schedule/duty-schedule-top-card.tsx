@@ -10,7 +10,7 @@ import { DutyScheduleCreateForm } from '@/components/duty-schedule/duty-schedule
 const DutyScheduleTopCard = () => {
   return (
     <Card className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-2 lg:p-4'>
-      <span className='text-lg font-bold dark:text-white'>Duty Schedules</span>
+      <span className='text-lg font-bold dark:text-white'>Shift Schedules</span>
       <div className='flex flex-row gap-2 w-full md:w-auto'>
         <DutyScheduleCreateForm
           trigger={

@@ -1,49 +1,46 @@
 "use client"
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard,
-  Shield,
-  Users,
-  UserCheck,
-  Wallet,
-  FolderKanban,
-  MessageSquareWarning,
-  Phone,
+  AlertTriangle,
+  AudioWaveform,
   BadgeCheck,
+  BarChart3,
+  Calendar,
+  CalendarCheck,
   ClipboardList,
   Clock,
-  UserPlus,
-  CalendarCheck,
-  BarChart3,
-  AlertTriangle,
+  FolderKanban,
   GalleryVerticalEnd,
-  AudioWaveform,
-  Command,
-  Dot,
+  LayoutDashboard,
   LocateIcon,
+  MessageSquareWarning,
+  Phone,
   Settings,
-  Calendar,
+  Shield,
+  UserCheck,
+  UserPlus,
+  Users,
+  Wallet
 } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import * as React from "react"
 
-import { cn } from "@/lib/utils"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 import { TeamSwitcher } from "./team-switcher"
-import { NavUser } from "./nav-user"
 
 const data = {
   user: {
@@ -76,7 +73,7 @@ const navGroups = [
       { title: "Time Off", url: "/leave", icon: CalendarCheck },
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
-          { title: "Assignment Plans", url: "/assignment-plans", icon: Calendar },
+      { title: "Assignment Plans", url: "/assignment-plans", icon: Calendar },
 
       { title: "Contacts", url: "/contacts", icon: Phone },
       { title: "Location Tracking", url: "/location-tracking", icon: LocateIcon },
@@ -85,9 +82,9 @@ const navGroups = [
   {
     label: "Operations",
     items: [
-       { title: "Shift List", url: "/duty", icon: ClipboardList },
-      { title: "Site Schedules", url: "/duty-schedules", icon: AudioWaveform },
-          { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
+      { title: "Shift List", url: "/duty", icon: ClipboardList },
+      { title: "Shift Schedules", url: "/duty-schedules", icon: AudioWaveform },
+      { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
 
 
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },

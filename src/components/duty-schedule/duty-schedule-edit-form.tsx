@@ -535,7 +535,7 @@ export function DutyScheduleEditForm({
       <DialogContent className="sm:max-w-[900px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] overflow-y-auto dark:bg-gray-900 p-3 sm:p-6">
         <div className="flex items-center gap-2 text-base sm:text-lg font-semibold mb-3 sm:mb-6 pb-2 border-b">
           <Image src="/images/logo.png" alt="" width={20} height={20} className="sm:w-6 sm:h-6" />
-          <span className="whitespace-nowrap">Edit Duty Schedule</span>
+          <span className="whitespace-nowrap">Edit Shift Schedule</span>
         </div>
 
         {/* Timezone Display - Full Width at Top */}

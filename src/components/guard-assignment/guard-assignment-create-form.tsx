@@ -723,7 +723,7 @@ export function GuardAssignmentCreateForm({
                     {/* Duty Schedule Selection */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Duty Schedule <span className="text-red-500">*</span>
+                        Shift Schedule <span className="text-red-500">*</span>
                       </Label>
                       <SearchableDropdownWithIcon
                         value={bulkFormValues.duty_schedule_id || 0}
