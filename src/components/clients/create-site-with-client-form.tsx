@@ -633,10 +633,9 @@ export function CreateSiteWithClientForm({
 
       <DialogContent
         className="sm:max-w-[1000px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] p-0 overflow-hidden"
-        onEscapeKeyDown={handleCancel}
+        onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => {
           e.preventDefault()
-          handleCancel()
         }}
       >
         {showClientStep && !initialClientId ? (

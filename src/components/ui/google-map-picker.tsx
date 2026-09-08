@@ -269,50 +269,50 @@ export default function GoogleMapPicker({
 
   if (!isOpen) return null
 
-  const dialogContentClass = ['sm:max-w-[800px]', 'w-[95vw]', 'max-h-[90vh]', 'p-0', 'overflow-hidden'].join(' ')
-  const mapContainerClass = ['relative', 'w-full', 'h-[400px]', 'sm:h-[500px]', 'rounded-lg', 'overflow-hidden', 'border'].join(' ')
+  const dialogContentClass = ['w-[95vw]', 'sm:w-[90vw]', 'md:max-w-[700px]', 'lg:max-w-[900px]', 'max-h-[95vh]', 'p-0', 'overflow-hidden'].join(' ')
+  const mapContainerClass = ['relative', 'w-full', 'h-[250px]', 'sm:h-[300px]', 'md:h-[350px]', 'lg:h-[450px]', 'rounded-lg', 'overflow-hidden', 'border'].join(' ')
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={dialogContentClass}>
-        <DialogHeader className="px-4 sm:px-6 py-3 border-b sticky top-0 bg-white dark:bg-gray-900 z-10">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              Pick Location on Map
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b sticky top-0 bg-white dark:bg-gray-900 z-10">
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold flex items-center gap-2 min-w-0">
+              <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+              <span className="truncate">Pick Location</span>
             </DialogTitle>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 shrink-0"
               onClick={onClose}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </DialogHeader>
 
-        <div className="p-4 space-y-4">
+        <div className="p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 md:space-y-4 overflow-y-auto max-h-[calc(95vh-80px)]">
           {/* Search Bar */}
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2 flex-col sm:flex-row">
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && searchLocation()}
-                placeholder="Search for a location..."
-                className="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600"
+                placeholder="Search location..."
+                className="w-full px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-10 text-xs sm:text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600"
                 disabled={!mapLoaded}
               />
-              <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+              <Search className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
             <Button
               onClick={searchLocation}
               disabled={isSearching || !mapLoaded}
-              className="shrink-0"
+              className="shrink-0 text-xs sm:text-sm h-8 sm:h-10"
             >
-              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+              {isSearching ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" /> : 'Search'}
             </Button>
           </div>
 
@@ -320,33 +320,33 @@ export default function GoogleMapPicker({
           <div className={mapContainerClass}>
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-blue-600" />
               </div>
             )}
             <div ref={mapRef} className="w-full h-full" />
           </div>
 
           {/* Selected Location Info */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Selected Location:</span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {selectedAddress || 'Click on map to select a location'}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 sm:p-3 md:p-4 space-y-1 sm:space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Selected:</span>
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
+                {selectedAddress || 'Click on map to select'}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <span>Lat: {selectedLat.toFixed(6)}</span>
-              <span>Lng: {selectedLng.toFixed(6)}</span>
+            <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs text-gray-500">
+              <span className="truncate">Lat: {selectedLat.toFixed(6)}</span>
+              <span className="truncate">Lng: {selectedLng.toFixed(6)}</span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-1 sm:gap-2 pt-1 sm:pt-2">
+            <Button variant="outline" onClick={onClose} className="text-xs sm:text-sm h-8 sm:h-10">
               Cancel
             </Button>
-            <Button onClick={handleConfirm} className="bg-blue-600 hover:bg-blue-700">
-              Confirm Location
+            <Button onClick={handleConfirm} className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm h-8 sm:h-10">
+              Confirm
             </Button>
           </div>
         </div>

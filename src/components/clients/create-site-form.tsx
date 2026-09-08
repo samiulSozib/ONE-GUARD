@@ -451,10 +451,9 @@ export function CreateSiteForm({
 
         <DialogContent
           className="sm:max-w-[1000px] w-[95vw] max-w-[95vw] mx-auto max-h-[90vh] p-0 overflow-hidden"
-          onEscapeKeyDown={handleCancel}
+          onEscapeKeyDown={(e) => e.preventDefault()}
           onInteractOutside={(e) => {
             e.preventDefault()
-            handleCancel()
           }}
         >
           <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b sticky top-0 bg-white dark:bg-gray-900 z-10">
