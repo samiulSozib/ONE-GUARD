@@ -69,6 +69,7 @@ export interface Client {
   company_name?: string | null;
   tax_id?: string | null;
   country?: string | null;
+  state?: string | null;
   city?: string | null;
   address?: string | null;
   zip_code?: string | null;

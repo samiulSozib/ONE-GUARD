@@ -2,7 +2,10 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Client } from "@/app/types/client"
+import { ClientContract } from "@/app/types/clientContract"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -10,37 +13,34 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Switch } from "@/components/ui/switch"
-import { FloatingLabelTextarea } from "../ui/floating-textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
-import {
-  Building,
-  MapPin,
-  Map,
-  Plus,
-  Trash2,
-  Check,
-  FileText,
-  Loader2,
-  X,
-  Crosshair,
-  Users,
-  Globe,
-} from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
-import { fetchClients } from "@/store/slices/clientSlice"
 import { fetchContracts } from "@/store/slices/clientContractSlice"
+import { fetchClients } from "@/store/slices/clientSlice"
 import { createSite } from "@/store/slices/siteSlice"
-import { ClientContract } from "@/app/types/clientContract"
-import { Client } from "@/app/types/client"
+import {
+  Building,
+  Check,
+  Crosshair,
+  FileText,
+  Globe,
+  Loader2,
+  Map,
+  MapPin,
+  Plus,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react"
+import { useCallback, useEffect, useState } from 'react'
+import { FloatingLabelTextarea } from "../ui/floating-textarea"
+import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
 
 // Timezone list
 const TIMEZONES = [
@@ -376,15 +376,15 @@ export function CreateSiteWithClientForm({
 
     // Check if form has data
     const hasData = formData.site_name ||
-                   formData.address ||
-                   formData.guards_required !== 1 ||
-                   formData.latitude ||
-                   formData.longitude ||
-                   formData.site_instruction ||
-                   formData.timezone ||
-                   locations.length > 0 ||
-                   formData.client_contract_id ||
-                   formData.client_id
+      formData.address ||
+      formData.guards_required !== 1 ||
+      formData.latitude ||
+      formData.longitude ||
+      formData.site_instruction ||
+      formData.timezone ||
+      locations.length > 0 ||
+      formData.client_contract_id ||
+      formData.client_id
 
     if (!hasData && !showClientStep) {
       setShowClientStep(!initialClientId)
