@@ -27,7 +27,12 @@ import {
     CalendarDays,
     CheckCheck,
     Target,
+    Timer,
+    Sun,
+    Moon,
 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +57,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Redux
 import { useAppDispatch } from '@/hooks/useAppDispatch';
@@ -64,10 +68,50 @@ import {
     clearCurrentDuty,
 } from '@/store/slices/dutySlice';
 import SweetAlertService from '@/lib/sweetAlert';
-import { format } from 'date-fns';
 import { DutyEditForm } from '@/components/duty/duty-edit-form';
 import Swal from 'sweetalert2';
 import { Duty, DutyParams } from '@/app/types/duty';
+import { cn } from '@/lib/utils';
+
+// ---------------------------------------------------------------------------
+// Timezone helpers
+// ---------------------------------------------------------------------------
+
+const getUserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const getTimezoneShortName = (tz: string) =>
+    tz.split('/').pop()?.replace(/_/g, ' ') || tz;
+
+/**
+ * Format an ISO UTC datetime in the SITE's timezone.
+ */
+const formatInSiteTz = (
+    iso: string | null | undefined,
+    tz: string,
+    fmt: string
+): string => {
+    if (!iso) return 'N/A';
+    try {
+        return formatInTimeZone(parseISO(iso), tz, fmt);
+    } catch {
+        return iso;
+    }
+};
+
+/**
+ * Format an ISO UTC datetime in the user's device timezone.
+ */
+const formatInUserTz = (
+    iso: string | null | undefined,
+    fmt: string
+): string => {
+    if (!iso) return 'N/A';
+    try {
+        return formatInTimeZone(parseISO(iso), getUserTimezone(), fmt);
+    } catch {
+        return iso;
+    }
+};
 
 // Status configuration
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -106,7 +150,6 @@ const sourceTypeConfig: Record<string, { label: string; color: string }> = {
     exception: { label: 'Exception', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
 };
 
-// Service Mode configuration
 const serviceModeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     continuous_shift: {
         label: 'Continuous Shift',
@@ -118,6 +161,73 @@ const serviceModeConfig: Record<string, { label: string; color: string; icon: Re
         color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700',
         icon: <Target className="h-3 w-3" />
     },
+};
+
+// ---------------------------------------------------------------------------
+// Small TimezoneInfo banner (mirrors the create/edit forms)
+// ---------------------------------------------------------------------------
+const TimezoneInfo = ({ siteTimezone }: { siteTimezone?: string }) => {
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const deviceTimezone = getUserTimezone();
+
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (!siteTimezone) return null;
+
+    const formatTime = (date: Date, timezone?: string) =>
+        date.toLocaleTimeString('en-US', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+        });
+
+    const sameTz = siteTimezone === deviceTimezone;
+
+    return (
+        <div className="w-full p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Timezone Information
+                </span>
+                {sameTz && (
+                    <Badge variant="outline" className="ml-auto text-[10px] border-emerald-300 text-emerald-600 bg-emerald-50">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Same as your device
+                    </Badge>
+                )}
+            </div>
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3 text-sm">
+                <div className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-md border border-blue-100 dark:border-blue-900">
+                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-1">
+                        <span>Site Time</span>
+                        <span className="font-medium text-blue-600 dark:text-blue-400 truncate max-w-[100px] sm:max-w-none">
+                            {getTimezoneShortName(siteTimezone)}
+                        </span>
+                    </div>
+                    <div className="font-mono font-semibold text-blue-600 dark:text-blue-400 mt-1 text-sm sm:text-base">
+                        {formatTime(currentTime, siteTimezone)}
+                    </div>
+                </div>
+                <div className="p-2 sm:p-3 bg-white dark:bg-gray-800 rounded-md border border-green-100 dark:border-green-900">
+                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-1">
+                        <span>Your Device</span>
+                        <span className="font-medium text-green-600 dark:text-green-400 truncate max-w-[100px] sm:max-w-none">
+                            {getTimezoneShortName(deviceTimezone)}
+                        </span>
+                    </div>
+                    <div className="font-mono font-semibold text-green-600 dark:text-green-400 mt-1 text-sm sm:text-base">
+                        {formatTime(currentTime)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default function DutyViewPage() {
@@ -251,32 +361,27 @@ export default function DutyViewPage() {
         }
     };
 
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return 'N/A';
-        try {
-            return format(new Date(dateString), 'PPP');
-        } catch {
-            return dateString;
-        }
-    };
+    // -----------------------------------------------------------------------
+    // Timezone-aware formatting helpers (site-aware)
+    // -----------------------------------------------------------------------
 
-    const formatDateTime = (dateString?: string) => {
-        if (!dateString) return 'N/A';
-        try {
-            return format(new Date(dateString), 'PPP p');
-        } catch {
-            return dateString;
-        }
-    };
+    const siteTimezone = currentDuty?.site?.timezone || 'UTC';
+    const userTimezone = getUserTimezone();
+    const sameTimezone = siteTimezone === userTimezone;
 
-    const formatTime = (dateString?: string) => {
-        if (!dateString) return 'N/A';
-        try {
-            return format(new Date(dateString), 'hh:mm a');
-        } catch {
-            return dateString;
-        }
-    };
+    // Site-local display
+    const formatSiteDate = (iso?: string | null) =>
+        formatInSiteTz(iso, siteTimezone, 'PPP');
+    const formatSiteDateTime = (iso?: string | null) =>
+        formatInSiteTz(iso, siteTimezone, 'PPP p');
+    const formatSiteTime = (iso?: string | null) =>
+        formatInSiteTz(iso, siteTimezone, 'hh:mm a');
+
+    // User-local display
+    const formatUserDate = (iso?: string | null) =>
+        formatInUserTz(iso, 'PPP');
+    const formatUserTime = (iso?: string | null) =>
+        formatInUserTz(iso, 'hh:mm a');
 
     const calculateDuration = () => {
         if (!currentDuty?.start_datetime || !currentDuty?.end_datetime) return 'N/A';
@@ -285,6 +390,29 @@ export default function DutyViewPage() {
             const end = new Date(currentDuty.end_datetime);
             const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
             return `${hours.toFixed(1)} hours`;
+        } catch {
+            return 'N/A';
+        }
+    };
+
+    // Human-friendly diff between site and user zones
+    const getTimezoneDiff = (): string => {
+        if (sameTimezone) return 'Same';
+        try {
+            const now = new Date();
+            const siteStr = formatInTimeZone(now, siteTimezone, 'HH:mm');
+            const userStr = formatInTimeZone(now, userTimezone, 'HH:mm');
+            const [sh, sm] = siteStr.split(':').map(Number);
+            const [uh, um] = userStr.split(':').map(Number);
+            let diff = (sh * 60 + sm) - (uh * 60 + um);
+            if (diff > 720) diff -= 1440;
+            if (diff < -720) diff += 1440;
+            if (diff === 0) return 'Same';
+            const sign = diff > 0 ? '+' : '';
+            const abs = Math.abs(diff);
+            const h = Math.floor(abs / 60);
+            const m = abs % 60;
+            return m === 0 ? `${sign}${h}h` : `${sign}${h}h ${m}m`;
         } catch {
             return 'N/A';
         }
@@ -433,6 +561,7 @@ export default function DutyViewPage() {
     }
 
     const availableStatuses = getAvailableStatuses();
+    const timeDiff = getTimezoneDiff();
 
     return (
         <div className="container mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -465,6 +594,11 @@ export default function DutyViewPage() {
                         Delete
                     </Button>
                 </div>
+            </div>
+
+            {/* Timezone banner - site vs. user */}
+            <div className="mb-6">
+                <TimezoneInfo siteTimezone={siteTimezone} />
             </div>
 
             {/* Main Content with Tabs */}
@@ -541,7 +675,7 @@ export default function DutyViewPage() {
                                     </CardTitle>
                                     <CardDescription className="flex items-center gap-2 mt-1 flex-wrap">
                                         <Calendar className="h-4 w-4" />
-                                        Created {formatDateTime(currentDuty.created_at)}
+                                        Created {formatSiteDateTime(currentDuty.created_at)} ({siteTimezone})
                                         {currentDuty.source_type && (
                                             <>
                                                 <span className="text-gray-300">•</span>
@@ -577,12 +711,26 @@ export default function DutyViewPage() {
                                     <Briefcase className="h-5 w-5" />
                                     Duty Information
                                 </CardTitle>
+                                {!sameTimezone && (
+                                    <CardDescription className="flex items-center gap-1 text-xs">
+                                        <Globe className="h-3 w-3" />
+                                        Times shown in <strong>{getTimezoneShortName(siteTimezone)}</strong> (site time).
+                                        Your device ({getTimezoneShortName(userTimezone)}) differs by {timeDiff}.
+                                    </CardDescription>
+                                )}
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-gray-500">Date</p>
-                                        <p className="font-medium">{formatDate(currentDuty.duty_date || currentDuty.start_datetime)}</p>
+                                        <p className="font-medium">
+                                            {formatSiteDate(currentDuty.duty_date || currentDuty.start_datetime)}
+                                        </p>
+                                        {!sameTimezone && (
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                Your device: {formatUserDate(currentDuty.duty_date || currentDuty.start_datetime)}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Duration</p>
@@ -598,14 +746,28 @@ export default function DutyViewPage() {
                                             <Clock className="h-3 w-3" />
                                             Start Time
                                         </p>
-                                        <p className="font-medium">{formatTime(currentDuty.start_datetime)}</p>
+                                        <p className="font-medium">
+                                            {formatSiteTime(currentDuty.start_datetime)}
+                                        </p>
+                                        {!sameTimezone && (
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                Your device: {formatUserTime(currentDuty.start_datetime)}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 flex items-center gap-1">
                                             <Clock className="h-3 w-3" />
                                             End Time
                                         </p>
-                                        <p className="font-medium">{formatTime(currentDuty.end_datetime)}</p>
+                                        <p className="font-medium">
+                                            {formatSiteTime(currentDuty.end_datetime)}
+                                        </p>
+                                        {!sameTimezone && (
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                Your device: {formatUserTime(currentDuty.end_datetime)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -630,7 +792,14 @@ export default function DutyViewPage() {
                                         <Separator />
                                         <div>
                                             <p className="text-sm text-gray-500">Mandatory Check-in Time</p>
-                                            <p className="font-medium">{formatTime(currentDuty.mandatory_check_in_time)}</p>
+                                            <p className="font-medium">
+                                                {formatSiteTime(currentDuty.mandatory_check_in_time)}
+                                            </p>
+                                            {!sameTimezone && (
+                                                <p className="text-xs text-gray-400 mt-0.5">
+                                                    Your device: {formatUserTime(currentDuty.mandatory_check_in_time)}
+                                                </p>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -720,6 +889,72 @@ export default function DutyViewPage() {
                         </Card>
                     </div>
 
+                    {/* Timezone Comparison Card (only when different) */}
+                    {!sameTimezone && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Timer className="h-5 w-5" />
+                                    Timezone Comparison
+                                </CardTitle>
+                                <CardDescription>
+                                    Site time vs. your device time — difference: <strong>{timeDiff}</strong>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                                                Site Time — {getTimezoneShortName(siteTimezone)}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="h-3 w-3 text-gray-400" />
+                                                <span>{formatSiteDate(currentDuty.start_datetime)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-3 w-3 text-gray-400" />
+                                                <span className="font-mono">
+                                                    {formatSiteTime(currentDuty.start_datetime)} — {formatSiteTime(currentDuty.end_datetime)}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 font-mono">
+                                                {siteTimezone}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <User className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                            <span className="font-medium text-green-700 dark:text-green-300">
+                                                Your Device — {getTimezoneShortName(userTimezone)}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="h-3 w-3 text-gray-400" />
+                                                <span>{formatUserDate(currentDuty.start_datetime)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-3 w-3 text-gray-400" />
+                                                <span className="font-mono">
+                                                    {formatUserTime(currentDuty.start_datetime)} — {formatUserTime(currentDuty.end_datetime)}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 font-mono">
+                                                {userTimezone}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Coverage Summary */}
                     <Card>
                         <CardHeader>
@@ -796,22 +1031,6 @@ export default function DutyViewPage() {
                         <CardContent>
                             {currentDuty.assigned_guards_count && currentDuty.assigned_guards_count > 0 ? (
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-10 w-10">
-                                                <AvatarFallback className="bg-primary/10 text-primary">
-                                                    <User className="h-5 w-5" />
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-medium">Guard Name</p>
-                                                <p className="text-sm text-gray-500">Guard Code</p>
-                                            </div>
-                                        </div>
-                                        <Badge className="bg-green-100 text-green-800 border-0">
-                                            Active
-                                        </Badge>
-                                    </div>
                                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-10 w-10">

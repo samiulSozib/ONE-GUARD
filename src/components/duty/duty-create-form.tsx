@@ -2,44 +2,43 @@
 
 'use client'
 
+import { Duty } from "@/app/types/duty"
+import { DutyTimeType } from "@/app/types/dutyTimeType"
+import { Site } from "@/app/types/site"
+import { SiteLocation } from "@/app/types/siteLocation.types"
+import { CreateSiteWithClientForm } from '@/components/clients/create-site-with-client-form'
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { ReactNode, useState, useEffect } from 'react'
-import Image from "next/image"
-import { FloatingLabelInput } from "../ui/floating-input"
-import { FloatingLabelTextarea } from "../ui/floating-textarea"
-import { CalendarIcon, Plus, Target } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
-import { Calendar } from "../ui/calender"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import { createDuty } from "@/store/slices/dutySlice"
-import { fetchSites } from "@/store/slices/siteSlice"
-import { fetchSiteLocations } from "@/store/slices/siteLocationSlice"
-import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice"
-import { fetchClients } from "@/store/slices/clientSlice"
-import { Duty } from "@/app/types/duty"
+import { useAppSelector } from "@/hooks/useAppSelector"
+import SweetAlertService from "@/lib/sweetAlert"
 import { cn } from "@/lib/utils"
+import { fetchClients } from "@/store/slices/clientSlice"
+import { createDuty } from "@/store/slices/dutySlice"
+import { fetchDutyTimeTypes } from "@/store/slices/dutyTimeTypesSlice"
+import { fetchSiteLocations } from "@/store/slices/siteLocationSlice"
+import { fetchSites } from "@/store/slices/siteSlice"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { format } from "date-fns"
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { Building, CalendarIcon, Clock as ClockIcon, MapPin, Plus } from "lucide-react"
+import Image from "next/image"
+import { ReactNode, useEffect, useState } from 'react'
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
-import { format } from "date-fns"
-import { DialogActionFooter } from "../shared/dialog-action-footer"
-import { useAppSelector } from "@/hooks/useAppSelector"
-import { Site } from "@/app/types/site"
-import { SiteLocation } from "@/app/types/siteLocation.types"
-import { DutyTimeType } from "@/app/types/dutyTimeType"
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
-import { MapPin, Building, Clock as ClockIcon } from "lucide-react"
 import { DutyTimeTypeCreateForm } from "../duty-time-type/duty-time-type-create-form"
-import { CreateSiteWithClientForm } from '@/components/clients/create-site-with-client-form'
-import { Client } from "@/app/types/client"
+import { DialogActionFooter } from "../shared/dialog-action-footer"
+import { Calendar } from "../ui/calender"
 import { CustomTimePicker } from "../ui/custom-time-picker"
+import { FloatingLabelInput } from "../ui/floating-input"
+import { FloatingLabelTextarea } from "../ui/floating-textarea"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 interface DutyCreateFormProps {
@@ -77,8 +76,7 @@ const dutySchema = z.object({
 
     duty_type: z.enum(["day", "night"]),
 
-    service_mode: z.enum(["continuous_shift", "patrol_visits"])
-        .default("continuous_shift"),
+    service_mode: z.enum(["continuous_shift", "patrol_visits"]),
 
     required_visits: z.number()
         .optional()
@@ -192,7 +190,6 @@ export function DutyCreateForm({
     const { sites, isLoading: sitesLoading } = useAppSelector((state) => state.site)
     const { siteLocations, isLoading: locationsLoading } = useAppSelector((state) => state.siteLocation)
     const { dutyTimeTypes, isLoading: timeTypesLoading } = useAppSelector((state) => state.dutyTimeTypes)
-    const { clients, isLoading: clientsLoading } = useAppSelector((state) => state.client)
 
     // Search states for comboboxes
     const [siteSearch, setSiteSearch] = useState("")
@@ -222,6 +219,7 @@ export function DutyCreateForm({
         watch,
         reset,
     } = useForm<DutyFormData>({
+        resolver: zodResolver(dutySchema),
         defaultValues: {
             title: "",
             site_id: undefined,
@@ -243,6 +241,35 @@ export function DutyCreateForm({
 
     const formValues = watch()
     const isPatrolMode = formValues.service_mode === 'patrol_visits'
+
+    // ------------------------------------------------------------------
+    // Convert site-local date + time to UTC string (YYYY-MM-DD HH:mm:ss)
+    // Example: date=2026-09-09, time="17:00", timezone="America/Los_Angeles"
+    //       -> "2026-09-10 00:00:00"  (UTC)
+    // ------------------------------------------------------------------
+    const convertToUTC = (date: Date, time: string, timezone: string): string => {
+        try {
+            const [hours, minutes] = time.split(':').map(Number)
+
+            // Build a "wall clock" date at the site's local time
+            const siteLocal = new Date(date)
+            siteLocal.setHours(hours, minutes, 0, 0)
+
+            // fromZonedTime: interpret the wall-clock values AS being in `timezone`,
+            // and return a Date representing the equivalent UTC instant.
+            const utcDate = fromZonedTime(siteLocal, timezone)
+
+            // Backend expects "YYYY-MM-DD HH:mm:ss" (no timezone suffix)
+            return formatInTimeZone(utcDate, 'UTC', "yyyy-MM-dd HH:mm:ss")
+        } catch (error) {
+            console.error('Error converting site time to UTC:', error)
+            // Fallback: treat as local
+            const fallback = new Date(date)
+            const [hours, minutes] = time.split(':').map(Number)
+            fallback.setHours(hours, minutes, 0, 0)
+            return format(fallback, "yyyy-MM-dd HH:mm:ss")
+        }
+    }
 
     // Initial fetch on mount
     useEffect(() => {
@@ -269,7 +296,7 @@ export function DutyCreateForm({
         return () => clearTimeout(timer)
     }, [siteSearch, dispatch])
 
-    // Fetch site locations when search changes
+    // Fetch site locations when site changes
     useEffect(() => {
         if (formValues.site_id) {
             dispatch(fetchSiteLocations({
@@ -297,49 +324,36 @@ export function DutyCreateForm({
         return () => clearTimeout(timer)
     }, [timeTypeSearch, dispatch])
 
-    // Update datetime fields when date or time changes
+    // Update start_datetime in UTC whenever start date/time/timezone changes
     useEffect(() => {
-        if (startDate) {
-            const datetime = new Date(startDate)
-            const [hours, minutes] = startTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('start_datetime', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+        if (startDate && selectedSiteTimezone) {
+            const utc = convertToUTC(startDate, startTime, selectedSiteTimezone)
+            setValue('start_datetime', utc, { shouldValidate: true })
         }
-    }, [startDate, startTime, setValue])
+    }, [startDate, startTime, selectedSiteTimezone, setValue])
 
+    // Update end_datetime in UTC
     useEffect(() => {
-        if (endDate) {
-            const datetime = new Date(endDate)
-            const [hours, minutes] = endTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('end_datetime', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+        if (endDate && selectedSiteTimezone) {
+            const utc = convertToUTC(endDate, endTime, selectedSiteTimezone)
+            setValue('end_datetime', utc, { shouldValidate: true })
         }
-    }, [endDate, endTime, setValue])
+    }, [endDate, endTime, selectedSiteTimezone, setValue])
 
+    // Update mandatory_check_in_time in UTC
     useEffect(() => {
-        if (checkInDate) {
-            const datetime = new Date(checkInDate)
-            const [hours, minutes] = checkInTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('mandatory_check_in_time', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+        if (checkInDate && selectedSiteTimezone) {
+            const utc = convertToUTC(checkInDate, checkInTime, selectedSiteTimezone)
+            setValue('mandatory_check_in_time', utc, { shouldValidate: true })
         }
-    }, [checkInDate, checkInTime, setValue])
-
-    const formatTimeDisplay = (time: string) => {
-        if (!time) return "Select time"
-        const [hours, minutes] = time.split(':')
-        const hour = parseInt(hours)
-        const period = hour >= 12 ? 'PM' : 'AM'
-        const displayHour = hour % 12 || 12
-        return `${displayHour}:${minutes} ${period}`
-    }
+    }, [checkInDate, checkInTime, selectedSiteTimezone, setValue])
 
     const formatDateDisplay = (date: Date | undefined) => {
         if (!date) return "Select date"
         return format(date, 'MMM dd, yyyy')
     }
 
-    // Handle site creation success - Refresh sites list and clear location
+    // Handle site creation success
     const handleSiteCreated = (site: Site) => {
         dispatch(fetchSites({ page: 1, per_page: 10, is_active: true }))
         setValue("site_location_id", 0)
@@ -377,6 +391,7 @@ export function DutyCreateForm({
                 site_id: data.site_id,
                 site_location_id: data.site_location_id,
                 duty_time_type_id: data.duty_time_type_id,
+                // These are already UTC strings thanks to the useEffects above
                 start_datetime: data.start_datetime,
                 end_datetime: data.end_datetime,
                 guards_required: data.guards_required,
@@ -889,7 +904,7 @@ export function DutyCreateForm({
                                                         "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !startDate && "text-muted-foreground"
                                                     )}
-                                                    disabled={isLoading}
+                                                    disabled={isLoading || !selectedSiteTimezone}
                                                 >
                                                     <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                                                     <span className="truncate">{formatDateDisplay(startDate)}</span>
@@ -904,6 +919,9 @@ export function DutyCreateForm({
                                                 />
                                             </PopoverContent>
                                         </Popover>
+                                        {!selectedSiteTimezone && (
+                                            <p className="text-xs text-amber-500">Please select a site first</p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -914,7 +932,7 @@ export function DutyCreateForm({
                                             value={startTime}
                                             onChange={setStartTime}
                                             placeholder="Select time"
-                                            disabled={isLoading}
+                                            disabled={isLoading || !selectedSiteTimezone}
                                             minuteInterval={30}
                                             format12h={true}
                                         />
@@ -940,7 +958,7 @@ export function DutyCreateForm({
                                                         "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !endDate && "text-muted-foreground"
                                                     )}
-                                                    disabled={isLoading}
+                                                    disabled={isLoading || !selectedSiteTimezone}
                                                 >
                                                     <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                                                     <span className="truncate">{formatDateDisplay(endDate)}</span>
@@ -965,7 +983,7 @@ export function DutyCreateForm({
                                             value={endTime}
                                             onChange={setEndTime}
                                             placeholder="Select time"
-                                            disabled={isLoading}
+                                            disabled={isLoading || !selectedSiteTimezone}
                                             minuteInterval={30}
                                             format12h={true}
                                         />
@@ -991,7 +1009,7 @@ export function DutyCreateForm({
                                                         "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !checkInDate && "text-muted-foreground"
                                                     )}
-                                                    disabled={isLoading}
+                                                    disabled={isLoading || !selectedSiteTimezone}
                                                 >
                                                     <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                                                     <span className="truncate">{formatDateDisplay(checkInDate)}</span>
@@ -1016,7 +1034,7 @@ export function DutyCreateForm({
                                             value={checkInTime}
                                             onChange={setCheckInTime}
                                             placeholder="Select time"
-                                            disabled={isLoading}
+                                            disabled={isLoading || !selectedSiteTimezone}
                                             minuteInterval={30}
                                             format12h={true}
                                         />

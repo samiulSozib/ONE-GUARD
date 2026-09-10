@@ -28,6 +28,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import SweetAlertService from "@/lib/sweetAlert"
 import { format, parseISO } from "date-fns"
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { useAppSelector } from "@/hooks/useAppSelector"
 import { Site } from "@/app/types/site"
@@ -45,7 +46,7 @@ interface DutyEditFormProps {
     onSuccess?: () => void
 }
 
-// Zod schema - fixed service_mode to be optional with default
+// Zod schema
 const dutySchema = z.object({
     title: z.string()
         .min(1, { message: "Title is required" })
@@ -103,7 +104,6 @@ const dutySchema = z.object({
     message: "End date/time must be after start date/time",
     path: ["end_datetime"]
 }).refine((data) => {
-    // Only check if service_mode is defined and is patrol_visits
     if (data.service_mode === 'patrol_visits') {
         return data.required_visits !== null && data.required_visits !== undefined && data.required_visits > 0;
     }
@@ -238,6 +238,28 @@ export function DutyEditForm({
     const formValues = watch()
     const isPatrolMode = formValues.service_mode === 'patrol_visits'
 
+    // ------------------------------------------------------------------
+    // Convert site-local date + time to UTC string (YYYY-MM-DD HH:mm:ss)
+    // ------------------------------------------------------------------
+    const convertToUTC = (date: Date, time: string, timezone: string): string => {
+        try {
+            const [hours, minutes] = time.split(':').map(Number)
+
+            const siteLocal = new Date(date)
+            siteLocal.setHours(hours, minutes, 0, 0)
+
+            const utcDate = fromZonedTime(siteLocal, timezone)
+
+            return formatInTimeZone(utcDate, 'UTC', "yyyy-MM-dd HH:mm:ss")
+        } catch (error) {
+            console.error('Error converting site time to UTC:', error)
+            const fallback = new Date(date)
+            const [hours, minutes] = time.split(':').map(Number)
+            fallback.setHours(hours, minutes, 0, 0)
+            return format(fallback, "yyyy-MM-dd HH:mm:ss")
+        }
+    }
+
     // Fetch duty details when dialog opens
     useEffect(() => {
         if (isOpen && duty?.id) {
@@ -277,19 +299,39 @@ export function DutyEditForm({
 
             if (fetchDuty.fulfilled.match(result)) {
                 const data = result.payload.item
+                const siteTimezone = data.site?.timezone || 'UTC'
 
-                const startDatetime = parseISO(data.start_datetime)
-                const endDatetime = parseISO(data.end_datetime)
-                const checkInDatetime = data.mandatory_check_in_time ? parseISO(data.mandatory_check_in_time) : null
+                // ---------------- Start datetime ----------------
+                const startUTC = parseISO(data.start_datetime)
+                const startSiteTime = formatInTimeZone(startUTC, siteTimezone, 'HH:mm')
+                const [startY, startM, startD] = formatInTimeZone(startUTC, siteTimezone, 'yyyy-MM-dd')
+                    .split('-').map(Number)
+                setStartDate(new Date(startY, startM - 1, startD))
+                setStartTime(startSiteTime)
 
-                setStartDate(startDatetime)
-                setEndDate(endDatetime)
-                setCheckInDate(checkInDatetime || undefined)
+                // ---------------- End datetime ----------------
+                const endUTC = parseISO(data.end_datetime)
+                const endSiteTime = formatInTimeZone(endUTC, siteTimezone, 'HH:mm')
+                const [endY, endM, endD] = formatInTimeZone(endUTC, siteTimezone, 'yyyy-MM-dd')
+                    .split('-').map(Number)
+                setEndDate(new Date(endY, endM - 1, endD))
+                setEndTime(endSiteTime)
 
-                setStartTime(format(startDatetime, 'HH:mm'))
-                setEndTime(format(endDatetime, 'HH:mm'))
-                setCheckInTime(checkInDatetime ? format(checkInDatetime, 'HH:mm') : "08:45")
+                // ---------------- Check-in datetime ----------------
+                if (data.mandatory_check_in_time) {
+                    const checkUTC = parseISO(data.mandatory_check_in_time)
+                    const checkSiteTime = formatInTimeZone(checkUTC, siteTimezone, 'HH:mm')
+                    const [cY, cM, cD] = formatInTimeZone(checkUTC, siteTimezone, 'yyyy-MM-dd')
+                        .split('-').map(Number)
+                    setCheckInDate(new Date(cY, cM - 1, cD))
+                    setCheckInTime(checkSiteTime)
+                } else {
+                    setCheckInDate(undefined)
+                    setCheckInTime("08:45")
+                }
 
+                // Set the site timezone BEFORE resetting the form,
+                // so the datetime sync effects fire correctly.
                 if (data.site?.timezone) {
                     setSelectedSiteTimezone(data.site.timezone)
                 }
@@ -324,33 +366,29 @@ export function DutyEditForm({
         }
     }
 
-    // Update datetime fields when date or time changes
+    // Update start_datetime in UTC whenever start date/time/timezone changes
     useEffect(() => {
-        if (startDate) {
-            const datetime = new Date(startDate)
-            const [hours, minutes] = startTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('start_datetime', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+        if (startDate && selectedSiteTimezone) {
+            const utc = convertToUTC(startDate, startTime, selectedSiteTimezone)
+            setValue('start_datetime', utc, { shouldValidate: true })
         }
-    }, [startDate, startTime, setValue])
+    }, [startDate, startTime, selectedSiteTimezone, setValue])
 
+    // Update end_datetime in UTC
     useEffect(() => {
-        if (endDate) {
-            const datetime = new Date(endDate)
-            const [hours, minutes] = endTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('end_datetime', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+        if (endDate && selectedSiteTimezone) {
+            const utc = convertToUTC(endDate, endTime, selectedSiteTimezone)
+            setValue('end_datetime', utc, { shouldValidate: true })
         }
-    }, [endDate, endTime, setValue])
+    }, [endDate, endTime, selectedSiteTimezone, setValue])
 
+    // Update mandatory_check_in_time in UTC
     useEffect(() => {
-        if (checkInDate) {
-            const datetime = new Date(checkInDate)
-            const [hours, minutes] = checkInTime.split(':').map(Number)
-            datetime.setHours(hours, minutes, 0, 0)
-            setValue('mandatory_check_in_time', format(datetime, 'yyyy-MM-dd HH:mm:ss'), { shouldValidate: true })
+        if (checkInDate && selectedSiteTimezone) {
+            const utc = convertToUTC(checkInDate, checkInTime, selectedSiteTimezone)
+            setValue('mandatory_check_in_time', utc, { shouldValidate: true })
         }
-    }, [checkInDate, checkInTime, setValue])
+    }, [checkInDate, checkInTime, selectedSiteTimezone, setValue])
 
     const formatDateDisplay = (date: Date | undefined) => {
         if (!date) return "Select date"
@@ -362,7 +400,6 @@ export function DutyEditForm({
 
         setIsLoading(true)
         try {
-            // Ensure service_mode has a value
             const serviceMode = data.service_mode || 'continuous_shift'
 
             const submitData: Partial<Duty> = {
@@ -370,6 +407,7 @@ export function DutyEditForm({
                 site_id: data.site_id,
                 site_location_id: data.site_location_id,
                 duty_time_type_id: data.duty_time_type_id,
+                // These are already UTC strings
                 start_datetime: data.start_datetime,
                 end_datetime: data.end_datetime,
                 guards_required: data.guards_required,
@@ -420,6 +458,9 @@ export function DutyEditForm({
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
             reset()
+            setStartDate(undefined)
+            setEndDate(undefined)
+            setCheckInDate(undefined)
             setSelectedSiteTimezone(undefined)
         }
         onOpenChange?.(open)
@@ -794,7 +835,7 @@ export function DutyEditForm({
                                                         "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !startDate && "text-muted-foreground"
                                                     )}
-                                                    disabled={isLoading || isFetching}
+                                                    disabled={isLoading || isFetching || !selectedSiteTimezone}
                                                 >
                                                     <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                                                     <span className="truncate">{formatDateDisplay(startDate)}</span>
@@ -819,7 +860,7 @@ export function DutyEditForm({
                                             value={startTime}
                                             onChange={setStartTime}
                                             placeholder="Select time"
-                                            disabled={isLoading || isFetching}
+                                            disabled={isLoading || isFetching || !selectedSiteTimezone}
                                             minuteInterval={30}
                                             format12h={true}
                                         />
@@ -845,7 +886,7 @@ export function DutyEditForm({
                                                         "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !endDate && "text-muted-foreground"
                                                     )}
-                                                    disabled={isLoading || isFetching}
+                                                    disabled={isLoading || isFetching || !selectedSiteTimezone}
                                                 >
                                                     <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                                                     <span className="truncate">{formatDateDisplay(endDate)}</span>
@@ -870,7 +911,7 @@ export function DutyEditForm({
                                             value={endTime}
                                             onChange={setEndTime}
                                             placeholder="Select time"
-                                            disabled={isLoading || isFetching}
+                                            disabled={isLoading || isFetching || !selectedSiteTimezone}
                                             minuteInterval={30}
                                             format12h={true}
                                         />
@@ -896,7 +937,7 @@ export function DutyEditForm({
                                                         "w-full justify-start text-left font-normal h-10 sm:h-11 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-xs sm:text-sm",
                                                         !checkInDate && "text-muted-foreground"
                                                     )}
-                                                    disabled={isLoading || isFetching}
+                                                    disabled={isLoading || isFetching || !selectedSiteTimezone}
                                                 >
                                                     <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                                                     <span className="truncate">{formatDateDisplay(checkInDate)}</span>
@@ -921,7 +962,7 @@ export function DutyEditForm({
                                             value={checkInTime}
                                             onChange={setCheckInTime}
                                             placeholder="Select time"
-                                            disabled={isLoading || isFetching}
+                                            disabled={isLoading || isFetching || !selectedSiteTimezone}
                                             minuteInterval={30}
                                             format12h={true}
                                         />

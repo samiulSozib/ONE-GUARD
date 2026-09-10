@@ -4,7 +4,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { format, formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { format } from 'date-fns';
 import {
   EllipsisVertical,
   Search,
@@ -90,32 +91,83 @@ const scheduleTypeLabels: Record<string, string> = {
   recurring: "Recurring",
 };
 
-// Status colors - matching duty page style
+// Status colors
 const statusColors: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700",
   inactive: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200 border-rose-200 dark:border-rose-700",
   draft: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-700",
 };
 
-// Schedule type colors - matching duty page style
+// Schedule type colors
 const scheduleTypeColors: Record<string, string> = {
   one_time: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-700",
   recurring: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700",
 };
 
+// -------------------------------------------------------------------------
+// WALL-CLOCK TIME HELPERS
+//
+// Schedules store start_time/end_time as plain HH:mm:ss strings that are
+// wall-clock values in the SITE's timezone. To display them:
+//   1. Treat the string as if it belongs to the site's timezone.
+//   2. Convert that instant to the target timezone.
+// -------------------------------------------------------------------------
+
+/**
+ * Build a Date that represents the given wall-clock date + time
+ * as an instant in `sourceTimezone`. The returned Date's UTC fields
+ * encode that instant.
+ *
+ * Example:
+ *   buildInstant('2026-09-09', '17:00:00', 'Asia/Dhaka')
+ *   -> Date whose UTC value is 2026-09-09T11:00:00Z
+ */
+const buildInstant = (
+  dateStr: string | null | undefined,
+  timeStr: string,
+  sourceTimezone: string
+): Date => {
+  const baseDate = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? dateStr
+    : '2000-01-01';
+
+  // Normalize HH:mm:ss -> HH:mm
+  const hhmm = timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
+  const isoLocal = `${baseDate}T${hhmm}:00`;
+
+  // fromZonedTime: interpret this wall-clock as belonging to `sourceTimezone`
+  // and return the equivalent UTC instant.
+  return fromZonedTime(isoLocal, sourceTimezone);
+};
+
+/**
+ * Format a wall-clock site time into another timezone.
+ * Returns 'hh:mm a' style by default.
+ */
+const convertWallClock = (
+  dateStr: string | null | undefined,
+  timeStr: string,
+  sourceTimezone: string,
+  targetTimezone: string,
+  fmt: string = 'hh:mm a'
+): string => {
+  try {
+    if (!timeStr) return '-';
+    const instant = buildInstant(dateStr, timeStr, sourceTimezone);
+    return formatInTimeZone(instant, targetTimezone, fmt);
+  } catch (err) {
+    console.error('convertWallClock error:', err);
+    return timeStr;
+  }
+};
+
 // Function to determine shift type based on time
 const getShiftType = (timeString: string): 'morning' | 'day' | 'night' => {
   try {
-    const date = new Date(`2000-01-01 ${timeString}`);
-    const hours = date.getHours();
-
-    if (hours >= 5 && hours < 12) {
-      return 'morning';
-    } else if (hours >= 12 && hours < 18) {
-      return 'day';
-    } else {
-      return 'night';
-    }
+    const [h] = timeString.split(':').map(Number);
+    if (h >= 5 && h < 12) return 'morning';
+    if (h >= 12 && h < 18) return 'day';
+    return 'night';
   } catch {
     return 'morning';
   }
@@ -149,7 +201,6 @@ const shiftConfig = {
   },
 };
 
-// Shift type display component
 const ShiftTypeDisplay = ({ shiftType }: { shiftType: 'morning' | 'day' | 'night' }) => {
   const config = shiftConfig[shiftType];
 
@@ -207,85 +258,59 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
   const [showDialogOpen, setShowDialogOpen] = useState(false);
   const [itemToShow, setItemToShow] = useState<number | null>(null);
 
-  // Get current user timezone
+  // Current user timezone
   const currentUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const [currentTime, setCurrentTime] = useState(format(new Date(), 'HH:mm:ss'));
+  const [currentTime, setCurrentTime] = useState(
+    formatInTimeZone(new Date(), currentUserTimezone, 'HH:mm:ss')
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(format(new Date(), 'HH:mm:ss'));
+      setCurrentTime(formatInTimeZone(new Date(), currentUserTimezone, 'HH:mm:ss'));
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentUserTimezone]);
 
-  // Get site timezone for a schedule
-  const getSiteTimezone = (siteId: number) => {
-    const site = sites.find(s => s.id === siteId);
+  // Resolve a schedule's site timezone (prefers schedule.site_timezone,
+  // then the loaded site, then 'UTC').
+  const resolveSiteTimezone = (item: DutySchedule): string => {
+    if (item.site_timezone) return item.site_timezone;
+    const site = sites.find(s => s.id === item.site_id);
     return site?.timezone || 'UTC';
   };
 
-  // Check if timezones are the same
-  const isSameTimezone = (siteTimezone: string): boolean => {
-    return siteTimezone === currentUserTimezone;
-  };
+  const isSameTimezone = (siteTimezone: string): boolean =>
+    siteTimezone === currentUserTimezone;
 
-  // Convert date to user timezone
-  const convertToUserTimezone = (timeStr: string, formatStr: string): string => {
-    try {
-      const date = new Date(`2000-01-01 ${timeStr}`);
-      return formatInTimeZone(date, currentUserTimezone, formatStr);
-    } catch (error) {
-      return timeStr;
-    }
-  };
-
-  // Convert date to site timezone
-  const convertToSiteTimezone = (timeStr: string, formatStr: string, timezone: string): string => {
-    try {
-      const date = new Date(`2000-01-01 ${timeStr}`);
-      return formatInTimeZone(date, timezone, formatStr);
-    } catch (error) {
-      return timeStr;
-    }
-  };
-
-  // Get time difference between site and user timezone
+  // Compute the numeric offset difference between site tz and user tz
   const getTimeDifference = (siteTimezone: string): string => {
     if (!siteTimezone) return 'N/A';
-
     try {
       const now = new Date();
 
-      const siteTimeStr = now.toLocaleString('en-US', {
-        timeZone: siteTimezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
-      const [siteHours, siteMinutes] = siteTimeStr.split(':').map(Number);
-      const siteTotalMinutes = siteHours * 60 + siteMinutes;
+      // Wall-clock minutes-since-midnight in each zone
+      const siteTimeStr = formatInTimeZone(now, siteTimezone, 'HH:mm');
+      const userTimeStr = formatInTimeZone(now, currentUserTimezone, 'HH:mm');
 
-      const userHours = now.getHours();
-      const userMinutes = now.getMinutes();
-      const userTotalMinutes = userHours * 60 + userMinutes;
+      const [siteH, siteM] = siteTimeStr.split(':').map(Number);
+      const [userH, userM] = userTimeStr.split(':').map(Number);
 
-      let diffMinutes = siteTotalMinutes - userTotalMinutes;
+      const siteTotal = siteH * 60 + siteM;
+      const userTotal = userH * 60 + userM;
 
+      let diffMinutes = siteTotal - userTotal;
       if (diffMinutes > 720) diffMinutes -= 1440;
       if (diffMinutes < -720) diffMinutes += 1440;
 
       if (diffMinutes === 0) return 'Same';
 
       const sign = diffMinutes > 0 ? '+' : '';
-      const absMinutes = Math.abs(diffMinutes);
-      const hours = Math.floor(absMinutes / 60);
-      const minutes = absMinutes % 60;
+      const abs = Math.abs(diffMinutes);
+      const h = Math.floor(abs / 60);
+      const m = abs % 60;
 
-      if (minutes === 0) {
-        return `${sign}${hours}h`;
-      }
-      return `${sign}${hours}h ${minutes}m`;
-    } catch (error) {
+      return m === 0 ? `${sign}${h}h` : `${sign}${h}h ${m}m`;
+    } catch (err) {
       return 'N/A';
     }
   };
@@ -390,19 +415,13 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
         SweetAlertService.success(
           'Schedule Deleted',
           `Schedule has been deleted successfully.`,
-          {
-            timer: 1500,
-            showConfirmButton: false,
-          }
+          { timer: 1500, showConfirmButton: false }
         );
 
         setDeleteDialogOpen(false);
         setItemToDelete(null);
 
-        const fetchParams = {
-          ...filters,
-          search: searchTerm || undefined,
-        };
+        const fetchParams = { ...filters, search: searchTerm || undefined };
         dispatch(fetchDutySchedules(fetchParams));
       } catch (error: any) {
         SweetAlertService.error(
@@ -426,10 +445,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
         `Schedule has been ${newStatus ? 'activated' : 'deactivated'}.`
       );
 
-      const fetchParams = {
-        ...filters,
-        search: searchTerm || undefined,
-      };
+      const fetchParams = { ...filters, search: searchTerm || undefined };
       dispatch(fetchDutySchedules(fetchParams));
     } catch (error) {
       SweetAlertService.error(
@@ -461,34 +477,36 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
     return `${displayHour}:${minutes} ${period}`;
   };
 
+  /**
+   * Format a date-only string without timezone shifting.
+   * Input is expected as 'YYYY-MM-DD'. Never do `new Date(dateString)`
+   * here because that parses as UTC midnight and shifts the day for
+   * negative-offset timezones.
+   */
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
+      const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateString);
+      if (!match) return dateString;
+      const [, y, m, d] = match;
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${monthNames[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
     } catch {
       return dateString;
     }
   };
 
-  const getScheduleTypeBadge = (type: string) => {
-    return (
-      <Badge variant="outline" className={`${scheduleTypeColors[type] || "bg-gray-100"} border-0 px-3 py-1 font-medium`}>
-        {scheduleTypeLabels[type] || type}
-      </Badge>
-    );
-  };
+  const getScheduleTypeBadge = (type: string) => (
+    <Badge variant="outline" className={`${scheduleTypeColors[type] || "bg-gray-100"} border-0 px-3 py-1 font-medium`}>
+      {scheduleTypeLabels[type] || type}
+    </Badge>
+  );
 
-  const getStatusBadge = (status: string) => {
-    return (
-      <Badge variant="outline" className={`${statusColors[status] || "bg-gray-100"} border px-3 py-1 font-medium`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
+  const getStatusBadge = (status: string) => (
+    <Badge variant="outline" className={`${statusColors[status] || "bg-gray-100"} border px-3 py-1 font-medium`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </Badge>
+  );
 
   const getServiceModeBadge = (item: DutySchedule) => {
     if (item.service_mode === 'patrol_visits') {
@@ -683,7 +701,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
             </div>
           </div>
 
-          {/* Table Section - Like duty page with full timezone info and service mode */}
+          {/* Table Section */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -726,40 +744,43 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                   </TableRow>
                 ) : (
                   items.map((item: DutySchedule, index: number) => {
-                    const siteTimezone = getSiteTimezone(item.site_id);
+                    const siteTimezone = resolveSiteTimezone(item);
                     const showUserTime = !isSameTimezone(siteTimezone);
                     const timeDiff = getTimeDifference(siteTimezone);
 
-                    // Get shift type based on start time
                     const shiftType = getShiftType(item.start_time);
 
-                    // Site timezone display
-                    const siteStartTime = convertToSiteTimezone(item.start_time, 'hh:mm a', siteTimezone);
-                    const siteEndTime = convertToSiteTimezone(item.end_time, 'hh:mm a', siteTimezone);
+                    // ---- SITE TIME ----
+                    // The stored start_time/end_time ARE the site's wall-clock
+                    // values, so just format them nicely. No conversion needed.
+                    const siteStartTime = formatTime(item.start_time);
+                    const siteEndTime = formatTime(item.end_time);
                     const siteCheckInTime = item.mandatory_check_in_time
-                      ? convertToSiteTimezone(item.mandatory_check_in_time, 'hh:mm a', siteTimezone)
+                      ? formatTime(item.mandatory_check_in_time)
                       : null;
 
-                    // User timezone display
-                    const userStartTime = convertToUserTimezone(item.start_time, 'hh:mm a');
-                    const userEndTime = convertToUserTimezone(item.end_time, 'hh:mm a');
+                    // ---- USER TIME ----
+                    // Convert the wall-clock site time to the user's timezone.
+                    const userStartTime = convertWallClock(
+                      item.start_date, item.start_time, siteTimezone, currentUserTimezone, 'hh:mm a'
+                    );
+                    const userEndTime = convertWallClock(
+                      item.start_date, item.end_time, siteTimezone, currentUserTimezone, 'hh:mm a'
+                    );
                     const userCheckInTime = item.mandatory_check_in_time
-                      ? convertToUserTimezone(item.mandatory_check_in_time, 'hh:mm a')
+                      ? convertWallClock(
+                          item.start_date, item.mandatory_check_in_time, siteTimezone, currentUserTimezone, 'hh:mm a'
+                        )
                       : null;
 
-                    let rowBgColor = '';
-                    const borderColor = '';
-
-                    if (index % 2 === 0) {
-                      rowBgColor = 'bg-white dark:bg-gray-900/50';
-                    } else {
-                      rowBgColor = 'bg-gray-50/50 dark:bg-gray-800/30';
-                    }
+                    const rowBgColor = index % 2 === 0
+                      ? 'bg-white dark:bg-gray-900/50'
+                      : 'bg-gray-50/50 dark:bg-gray-800/30';
 
                     return (
                       <TableRow
                         key={item.id}
-                        className={`${rowBgColor} ${borderColor} hover:bg-blue-50/80 dark:hover:bg-blue-900/30 cursor-pointer transition-colors`}
+                        className={`${rowBgColor} hover:bg-blue-50/80 dark:hover:bg-blue-900/30 cursor-pointer transition-colors`}
                         onClick={() => handleView(item.id)}
                       >
                         <TableCell onClick={(e) => e.stopPropagation()} className="py-2 sm:py-3 px-2 sm:px-3">
@@ -811,7 +832,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                           {getServiceModeBadge(item)}
                         </TableCell>
 
-                        {/* Schedule Time (Site Timezone) */}
+                        {/* Schedule Time (Site Timezone) — raw values */}
                         <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1 sm:gap-2">
@@ -839,7 +860,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
                           </div>
                         </TableCell>
 
-                        {/* Your Time (User Timezone) */}
+                        {/* Your Time (User Timezone) — converted */}
                         <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
                           {showUserTime ? (
                             <div className="flex flex-col">
@@ -1046,10 +1067,7 @@ export function DutyScheduleDataTable({ onAddClick }: DutyScheduleDataTableProps
           isOpen={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           onSuccess={() => {
-            const fetchParams = {
-              ...filters,
-              search: searchTerm || undefined,
-            };
+            const fetchParams = { ...filters, search: searchTerm || undefined };
             dispatch(fetchDutySchedules(fetchParams));
           }}
         />

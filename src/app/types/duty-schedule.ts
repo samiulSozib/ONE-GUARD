@@ -44,6 +44,7 @@ export interface DutySchedule {
   client_contract_service?: Partial<ClientContractService> | null;
   creator?: Partial<User>;
   updater?: Partial<User>;
+  site_timezone?: string | null;
 }
 
 export interface CreateDutyScheduleDto {
