@@ -511,7 +511,7 @@ export function GuardAssignmentCreateForm({
           </div>
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "single" | "bulk")} className="w-full">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "single" | "bulk")} className="w-full ">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="single" className="flex items-center gap-2">
                 <User className="h-4 w-4" />

@@ -70,18 +70,18 @@ export function SearchableDropdown({
   }, [])
 
   // debounced search
-useEffect(() => {
-  if (!onSearch) return
+  useEffect(() => {
+    if (!onSearch) return
 
-  // 🚫 empty / whitespace search ignore
-  if (!searchTerm.trim()) return
+    // 🚫 empty / whitespace search ignore
+    if (!searchTerm.trim()) return
 
-  const timer = setTimeout(() => {
-    onSearch(searchTerm)
-  }, 300)
+    const timer = setTimeout(() => {
+      onSearch(searchTerm)
+    }, 300)
 
-  return () => clearTimeout(timer)
-}, [searchTerm])
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   const handleSelect = (option: SearchableDropdownOption) => {
     onValueChange(option.value)
@@ -133,7 +133,8 @@ useEffect(() => {
           </div>
 
           {/* list */}
-          <ScrollArea className="max-h-60">
+          {/* list */}
+          <div className="max-h-60 overflow-y-auto">
             {isLoading ? (
               <div className="py-4 text-center text-sm">Loading...</div>
             ) : filteredOptions.length === 0 ? (
@@ -151,22 +152,16 @@ useEffect(() => {
                     value === option.value && "bg-gray-100 dark:bg-gray-800"
                   )}
                 >
-                  {renderOption ? (
-                    renderOption(option)
-                  ) : (
+                  {renderOption ? renderOption(option) : (
                     <>
-                      <span className="flex-1 truncate text-left">
-                        {option.label}
-                      </span>
-                      {value === option.value && (
-                        <Check className="h-4 w-4 text-blue-600" />
-                      )}
+                      <span className="flex-1 truncate text-left">{option.label}</span>
+                      {value === option.value && <Check className="h-4 w-4 text-blue-600" />}
                     </>
                   )}
                 </button>
               ))
             )}
-          </ScrollArea>
+          </div>
         </div>
       )}
     </div>
