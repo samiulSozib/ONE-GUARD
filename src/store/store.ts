@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
+import settingsReducer from './slices/settingsSlice';
 import authReducer from './slices/authSlice';
 import clientReducer from './slices/clientSlice';
 import guardReducer from './slices/guardSlice'
@@ -36,6 +37,7 @@ import clientContractServiceReducer from './slices/client-contract-service.slice
 import clientContractServiceComponentReducer from './slices/client-contract-service-component.slice';
 import dutyScheduleReducer from './slices/duty-schedule.slice';
 import schedulingReducer from './slices/schedulingSlice';
+
 
 
 
@@ -77,6 +79,7 @@ export const store = configureStore({
     clientContractService: clientContractServiceReducer,
     clientContractServiceComponent: clientContractServiceComponentReducer,
     dutySchedule: dutyScheduleReducer,
+    settings: settingsReducer,
     scheduling: schedulingReducer,
 
   },
