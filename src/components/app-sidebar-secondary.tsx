@@ -20,7 +20,8 @@ import {
   UserCheck,
   UserPlus,
   Users,
-  Wallet
+  Wallet,
+  Settings2
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -58,6 +59,8 @@ const navGroups = [
     label: "Main",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
+      { title: "Settings", url: "/settings", icon: Settings2 },
+
     ],
   },
   {

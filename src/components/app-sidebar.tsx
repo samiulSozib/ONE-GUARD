@@ -1,45 +1,44 @@
 "use client"
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard,
-  Shield,
-  Users,
-  UserCheck,
-  Wallet,
-  FolderKanban,
-  MessageSquareWarning,
-  Phone,
+  AlertTriangle,
+  AudioWaveform,
   BadgeCheck,
+  BarChart3,
+  Calendar,
+  CalendarCheck,
   ClipboardList,
   Clock,
-  UserPlus,
-  CalendarCheck,
-  BarChart3,
-  AlertTriangle,
+  FolderKanban,
+  LayoutDashboard,
   LocateIcon,
-  AudioWaveform,
-  Calendar,
+  MessageSquareWarning,
+  Phone,
   Settings,
+  Shield,
+  UserCheck,
+  UserPlus,
+  Users,
+  Wallet,
 } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import * as React from "react"
 
-import { cn } from "@/lib/utils"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
-import { NavUser } from "@/components/nav-user"
+import { cn } from "@/lib/utils"
 
 const data = {
   user: {
@@ -53,6 +52,8 @@ const navGroups = [
     label: "Overview",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
+      { title: "Settings", url: "/settings", icon: Settings },
+
     ],
   },
   {
@@ -70,7 +71,7 @@ const navGroups = [
       { title: "Time Off", url: "/leave", icon: CalendarCheck },
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
-          { title: "Assignment Plans", url: "/assignment-plans", icon: Calendar },
+      { title: "Assignment Plans", url: "/assignment-plans", icon: Calendar },
 
       { title: "Contacts", url: "/contacts", icon: Phone },
 
@@ -81,9 +82,9 @@ const navGroups = [
   {
     label: "Operations",
     items: [
-       { title: "Shift List", url: "/duty", icon: ClipboardList },
+      { title: "Shift List", url: "/duty", icon: ClipboardList },
       { title: "Shift Schedules", url: "/duty-schedules", icon: AudioWaveform },
-                { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
+      { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
 
 
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
@@ -192,7 +193,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroupContent>
               <SidebarMenu className="gap-px">
                 {group.items.map((item) => {
-                 const isActive = pathname === item.url
+                  const isActive = pathname === item.url
 
 
                   return (
