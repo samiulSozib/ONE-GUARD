@@ -1,15 +1,52 @@
-import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
-import { cn } from "@/lib/utils"
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+"use client";
 
-function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { cn } from "@/lib/utils";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+
+/* --------------------------------------------------------------
+   Radix-compatible wrapper on top of Base UI.
+
+   Usage in app code:
+     <Accordion type="single" collapsible defaultValue="x">
+     <Accordion type="multiple">
+
+   Base UI's Root takes `multiple` (boolean) and `defaultValue`
+   (array of open item values), so we translate.
+-------------------------------------------------------------- */
+
+interface AccordionRootProps
+  extends Omit<AccordionPrimitive.Root.Props, "multiple" | "defaultValue"> {
+  /** Radix-style prop — "single" | "multiple" */
+  type?: "single" | "multiple";
+  /** Radix-style prop — only applies when type="single" */
+  collapsible?: boolean;
+  /** Radix allows string; Base UI wants string[] — accept both */
+  defaultValue?: string | string[];
+}
+
+function Accordion({
+  className,
+  type = "single",
+  collapsible = false,
+  defaultValue,
+  ...props
+}: AccordionRootProps) {
+  const normalizedDefault = Array.isArray(defaultValue)
+    ? defaultValue
+    : defaultValue
+    ? [defaultValue]
+    : undefined;
+
   return (
     <AccordionPrimitive.Root
       data-slot="accordion"
+      multiple={type === "multiple"}
+      defaultValue={normalizedDefault}
       className={cn("flex w-full flex-col", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
@@ -19,7 +56,7 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
       className={cn("not-last:border-b", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AccordionTrigger({
@@ -48,7 +85,7 @@ function AccordionTrigger({
         />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
-  )
+  );
 }
 
 function AccordionContent({
@@ -71,7 +108,7 @@ function AccordionContent({
         {children}
       </div>
     </AccordionPrimitive.Panel>
-  )
+  );
 }
 
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };
