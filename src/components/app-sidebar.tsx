@@ -15,6 +15,7 @@ import {
   MessageSquareWarning,
   Phone,
   Settings,
+  Settings2,
   Shield,
   UserCheck,
   UserPlus,
@@ -53,6 +54,8 @@ const navGroups = [
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
       { title: "Settings", url: "/settings", icon: Settings },
+      { title: "Attendance Policy", url: "/attendance-policy", icon: Settings2 },
+
 
     ],
   },

@@ -60,6 +60,7 @@ const navGroups = [
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
       { title: "Settings", url: "/settings", icon: Settings2 },
+      { title: "Attendance Policy", url: "/attendance-policy", icon: Settings2 },
 
     ],
   },

@@ -1,33 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
-import {
-  CalendarIcon,
-  DownloadIcon,
-  EllipsisVertical,
-  File,
-  ListFilter,
-  Search,
-  Eye,
-  Pencil,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Clock,
-  User,
-  Shield,
-  MapPin,
-  Building,
-  AlertCircle
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
+  CardTitle
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -44,27 +23,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { format } from "date-fns";
+import {
+  Building,
+  CalendarIcon,
+  CheckCircle,
+  Clock,
+  DownloadIcon,
+  EllipsisVertical,
+  File,
+  ListFilter,
+  MapPin,
+  Pencil,
+  Search,
+  Shield,
+  Trash2,
+  User,
+  XCircle
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Calendar } from "../ui/calender";
 import { Checkbox } from "../ui/checkbox";
+import { FloatingLabelInput } from "../ui/floating-input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { FloatingLabelInput } from "../ui/floating-input";
-import { Calendar } from "../ui/calender";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Redux
+import { DutyAttendance, DutyAttendanceParams } from "@/app/types/dutyAttendance";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import {
-  fetchAttendances,
   deleteAttendance,
+  fetchAttendances,
   toggleAttendanceStatus,
 } from "@/store/slices/dutyAttendenceSlice";
-import { DutyAttendance, DutyAttendanceParams } from "@/app/types/dutyAttendance";
 
 // Components
-import { DeleteDialog } from "../shared/delete-dialog";
 import SweetAlertService from "@/lib/sweetAlert";
+import { DeleteDialog } from "../shared/delete-dialog";
 
 // Status colors mapping
 const attendanceStatusColors: Record<string, string> = {
@@ -87,10 +84,10 @@ interface DutyAttendanceDataTableProps {
 
 export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttendanceDataTableProps) {
   const dispatch = useAppDispatch();
-  
+
   // Redux state
   const { attendences, pagination, isLoading, error } = useAppSelector((state) => state.dutyAttendance);
-  
+
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [guardSearch, setGuardSearch] = useState("");
@@ -103,10 +100,10 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
   const [attendanceToDelete, setAttendanceToDelete] = useState<DutyAttendance | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAttendance, setSelectedAttendance] = useState<DutyAttendance | null>(null);
-  
+
   // Date filter state
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-  
+
   // Fetch attendances on mount and filter changes
   useEffect(() => {
     const fetchParams = {
@@ -117,49 +114,49 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       include_site: true,
       include_site_location: true,
     };
-    
+
     dispatch(fetchAttendances(fetchParams));
   }, [dispatch, filters, searchTerm]);
-  
+
   // Handle search
   const handleGuardSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGuardSearch(e.target.value);
   };
-  
+
   const handleGuardSearchSubmit = () => {
     setSearchTerm(guardSearch);
     setFilters(prev => ({ ...prev, page: 1 }));
   };
-  
+
   // Handle filter changes
   const handleStatusFilter = (status: DutyAttendanceParams['status']) => {
-    setFilters(prev => ({ 
-      ...prev, 
+    setFilters(prev => ({
+      ...prev,
       page: 1,
-      status: status === prev.status ? undefined : status 
+      status: status === prev.status ? undefined : status
     }));
   };
-  
+
   const handleGuardFilter = (guardId: number | undefined) => {
-    setFilters(prev => ({ 
-      ...prev, 
+    setFilters(prev => ({
+      ...prev,
       page: 1,
-      guard_id: guardId 
+      guard_id: guardId
     }));
   };
-  
+
   const handleDutyFilter = (dutyId: number | undefined) => {
-    setFilters(prev => ({ 
-      ...prev, 
+    setFilters(prev => ({
+      ...prev,
       page: 1,
-      duty_id: dutyId 
+      duty_id: dutyId
     }));
   };
-  
+
   // Handle date filter
   const handleDateChange = (date: Date | undefined) => {
     setDateFilter(date);
-    
+
     if (date) {
       const formattedDate = format(date, 'yyyy-MM-dd');
       setFilters(prev => ({
@@ -170,12 +167,12 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       }));
     } else {
       setFilters(prev => {
-        const {  ...rest } = prev;
+        const { ...rest } = prev;
         return { ...rest, page: 1 };
       });
     }
   };
-  
+
   // Clear all filters
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -187,7 +184,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
     });
     setSelectedAttendances([]);
   };
-  
+
   // Handle attendance selection
   const handleSelectAttendance = (attendanceId: number) => {
     setSelectedAttendances(prev =>
@@ -196,7 +193,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
         : [...prev, attendanceId]
     );
   };
-  
+
   const handleSelectAll = () => {
     if (selectedAttendances.length === attendences.length) {
       setSelectedAttendances([]);
@@ -204,18 +201,18 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       setSelectedAttendances(attendences.map((attendance: DutyAttendance) => attendance.id));
     }
   };
-  
+
   // Handle delete
   const handleDeleteClick = (attendance: DutyAttendance) => {
     setAttendanceToDelete(attendance);
     setDeleteDialogOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     if (attendanceToDelete) {
       try {
         await dispatch(deleteAttendance(attendanceToDelete.id)).unwrap();
-        
+
         SweetAlertService.success(
           'Attendance Deleted',
           `Attendance record has been deleted successfully.`,
@@ -224,10 +221,10 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
             showConfirmButton: false,
           }
         );
-        
+
         setDeleteDialogOpen(false);
         setAttendanceToDelete(null);
-        
+
         // Refresh list
         dispatch(fetchAttendances(filters));
       } catch (error) {
@@ -238,7 +235,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       }
     }
   };
-  
+
   // Handle status toggle
   const handleToggleStatus = async (attendance: DutyAttendance) => {
     try {
@@ -247,7 +244,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
         id: attendance.id,
         status: newStatus
       })).unwrap();
-      
+
       SweetAlertService.success(
         'Status Updated',
         `Attendance status has been updated to ${newStatus}.`
@@ -259,19 +256,19 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       );
     }
   };
-  
+
   // Handle view details
   const handleViewDetails = (attendance: DutyAttendance) => {
     setSelectedAttendance(attendance);
     if (onViewClick) onViewClick(attendance);
   };
-  
+
   // Handle edit
   const handleEdit = (attendance: DutyAttendance) => {
     setSelectedAttendance(attendance);
     setEditDialogOpen(true);
   };
-  
+
   // Format date and time
   const formatDateTime = (dateString: string) => {
     try {
@@ -280,7 +277,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       return dateString;
     }
   };
-  
+
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'MMM dd, yyyy');
@@ -288,7 +285,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       return dateString;
     }
   };
-  
+
   const formatTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'HH:mm');
@@ -296,7 +293,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       return dateString;
     }
   };
-  
+
   // Format minutes to hours and minutes
   const formatWorkingMinutes = (minutes?: number) => {
     if (!minutes) return "N/A";
@@ -304,7 +301,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
   };
-  
+
   // Get status display text
   const getStatusDisplay = (status: string = 'pending') => {
     const statusMap: Record<string, string> = {
@@ -321,12 +318,12 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
     };
     return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
   };
-  
+
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setFilters(prev => ({ ...prev, page }));
   };
-  
+
   // Export functionality
   const handleExport = () => {
     SweetAlertService.info(
@@ -334,7 +331,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       'Export functionality will be implemented soon.'
     );
   };
-  
+
   // Loading skeleton
   if (isLoading && attendences.length === 0) {
     return (
@@ -356,7 +353,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
       </Card>
     );
   }
-  
+
   return (
     <>
       <Card className="shadow-sm rounded-2xl">
@@ -367,7 +364,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
             Filters
           </CardTitle>
 
-          <CardTitle 
+          <CardTitle
             className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80"
             onClick={handleExport}
           >
@@ -376,8 +373,8 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
           </CardTitle>
 
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
-            <Checkbox 
-              id="select-all" 
+            <Checkbox
+              id="select-all"
               className="dark:bg-white dark:border-black"
               checked={selectedAttendances.length === attendences.length && attendences.length > 0}
               onCheckedChange={handleSelectAll}
@@ -392,8 +389,8 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
             {/* Guard Search Input */}
             <div className="sm:col-span-4">
               <InputGroup>
-                <InputGroupInput 
-                  placeholder="Search by officer name..." 
+                <InputGroupInput
+                  placeholder="Search by officer name..."
                   value={guardSearch}
                   onChange={handleGuardSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleGuardSearchSubmit()}
@@ -403,7 +400,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
                 </InputGroupAddon>
               </InputGroup>
             </div>
-            
+
             {/* Duty Filter */}
             <div className="sm:col-span-4">
               <InputGroup>
@@ -585,9 +582,9 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
                             inline-block
                             min-w-24
                             text-center
-                            px-2 py-1 
-                            rounded-full 
-                            text-xs 
+                            px-2 py-1
+                            rounded-full
+                            text-xs
                             font-medium
                             ${attendanceStatusColors[attendance.status || 'default'] || attendanceStatusColors.default}
                           `}
@@ -621,10 +618,10 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(attendance)}>
+                            {/* <DropdownMenuItem onClick={() => handleViewDetails(attendance)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View details
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                             <DropdownMenuItem onClick={() => handleEdit(attendance)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit attendance
@@ -699,7 +696,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
           )}
         </CardContent>
       </Card>
-      
+
       {/* Delete Dialog */}
       <DeleteDialog
         isOpen={deleteDialogOpen}

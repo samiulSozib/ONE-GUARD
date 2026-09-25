@@ -37,6 +37,7 @@ import clientContractServiceReducer from './slices/client-contract-service.slice
 import clientContractServiceComponentReducer from './slices/client-contract-service-component.slice';
 import dutyScheduleReducer from './slices/duty-schedule.slice';
 import schedulingReducer from './slices/schedulingSlice';
+import attendancePolicyReducer from './slices/attendancePolicy.slice';
 
 
 
@@ -77,6 +78,7 @@ export const store = configureStore({
     companyService: companyServiceReducer,
     companyServiceComponent: companyServiceComponentReducer,
     clientContractService: clientContractServiceReducer,
+    attendancePolicy: attendancePolicyReducer,
     clientContractServiceComponent: clientContractServiceComponentReducer,
     dutySchedule: dutyScheduleReducer,
     settings: settingsReducer,
