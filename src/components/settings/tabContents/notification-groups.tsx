@@ -1,7 +1,6 @@
-// app/settings/tabContents/notification-groups.tsx
 "use client";
 
-import { SettingGroup } from "@/app/types/settings.types";
+import { SettingGroup, SettingValue } from "@/app/types/settings.types";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +9,8 @@ import { cn } from "@/lib/utils";
 
 interface NotificationGroupsProps {
   groups: SettingGroup[];
-  values: Record<string, boolean | number | string | null>;
-  onChange: (
-    key: string,
-    value: boolean | number | string | null
-  ) => void;
+  values: Record<string, SettingValue>;
+  onChange: (key: string, value: SettingValue) => void;
   disabled?: boolean;
 }
 
@@ -46,6 +42,13 @@ export default function NotificationGroups({
           <ul className="divide-y">
             {group.items.map((item) => {
               const currentValue = values[item.key];
+
+              /* ---------- skip JSON types — rendered elsewhere ---------- */
+              const isJson =
+                item.type === "json" ||
+                (currentValue !== null &&
+                  typeof currentValue === "object");
+
               const isBool = item.type === "boolean";
               const isNumber =
                 item.type === "integer" || item.type === "float";
@@ -94,7 +97,12 @@ export default function NotificationGroups({
 
                   {/* Control */}
                   <div className="flex-shrink-0 self-start sm:self-auto">
-                    {isBool ? (
+                    {isJson ? (
+                      /* JSON items are edited by a dedicated editor; show a stub */
+                      <span className="text-[10px] text-gray-400 italic">
+                        advanced editor
+                      </span>
+                    ) : isBool ? (
                       <Switch
                         id={item.key}
                         checked={Boolean(currentValue)}

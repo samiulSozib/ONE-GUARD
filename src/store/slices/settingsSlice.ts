@@ -1,23 +1,15 @@
-// store/slices/settingsSlice.ts
-
 import {
   SettingGroup,
   SettingItem,
+  SettingValue,
   SettingsState,
   UpdateSettingsPayload,
 } from '@/app/types/settings.types';
 import { settingsService } from '@/service/settings.service';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Flatten groups -> { key: value } map */
-const flattenGroups = (
-  groups: SettingGroup[]
-): Record<string, boolean | number | string | null> => {
-  const map: Record<string, boolean | number | string | null> = {};
+const flattenGroups = (groups: SettingGroup[]): Record<string, SettingValue> => {
+  const map: Record<string, SettingValue> = {};
   groups.forEach((group) => {
     group.items.forEach((item) => {
       map[item.key] = item.value;
@@ -26,10 +18,9 @@ const flattenGroups = (
   return map;
 };
 
-/** Apply a flat key -> value map onto both the flat map and the groups. */
 const applyValuesToGroups = (
-  state: { values: Record<string, boolean | number | string | null>; groups: SettingGroup[] },
-  patch: Record<string, boolean | number | string | null>
+  state: { values: Record<string, SettingValue>; groups: SettingGroup[] },
+  patch: Record<string, SettingValue>
 ) => {
   Object.entries(patch).forEach(([key, value]) => {
     state.values[key] = value;
@@ -43,10 +34,6 @@ const applyValuesToGroups = (
   });
 };
 
-// ---------------------------------------------------------------------------
-// Initial state
-// ---------------------------------------------------------------------------
-
 const initialState: SettingsState = {
   groups: [],
   values: {},
@@ -58,16 +45,11 @@ const initialState: SettingsState = {
   lastSavedAt: null,
 };
 
-// ---------------------------------------------------------------------------
-// Async thunks
-// ---------------------------------------------------------------------------
-
 export const fetchSettings = createAsyncThunk(
   'settings/fetchSettings',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await settingsService.getSettings();
-      return response; // { groups, total_groups, total_settings }
+      return await settingsService.getSettings();
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to fetch settings';
@@ -81,12 +63,7 @@ export const updateSettings = createAsyncThunk(
   async (payload: UpdateSettingsPayload, { rejectWithValue }) => {
     try {
       const response = await settingsService.updateSettings(payload);
-      return {
-        // echo back what we sent so the reducer can apply it immediately
-        sent: payload.settings,
-        // server-side response body (may include the refreshed groups)
-        body: response,
-      };
+      return { sent: payload.settings, body: response };
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to update settings';
@@ -94,10 +71,6 @@ export const updateSettings = createAsyncThunk(
     }
   }
 );
-
-// ---------------------------------------------------------------------------
-// Slice
-// ---------------------------------------------------------------------------
 
 const settingsSlice = createSlice({
   name: 'settings',
@@ -107,7 +80,6 @@ const settingsSlice = createSlice({
       state.error = null;
     },
 
-    /** Replace the entire settings payload (e.g. after a fresh GET). */
     setSettings: (
       state,
       action: PayloadAction<{
@@ -122,27 +94,13 @@ const settingsSlice = createSlice({
       state.values = flattenGroups(action.payload.groups);
     },
 
-    /**
-     * Optimistically update a single setting value in both the flat map
-     * and the matching item inside `groups`. Useful for controlled Switch/
-     * Input components that update before hitting Save.
-     */
     setSettingValue: (
       state,
-      action: PayloadAction<{
-        key: string;
-        value: boolean | number | string | null;
-      }>
+      action: PayloadAction<{ key: string; value: SettingValue }>
     ) => {
       applyValuesToGroups(state, { [action.payload.key]: action.payload.value });
     },
 
-    /**
-     * Reset any unsaved local edits back to the last saved snapshot.
-     * Requires you to keep `groups` as the source of truth — call
-     * `setSettings` first with a fresh GET, or keep the last-known-good
-     * groups around.
-     */
     resetSettings: (state) => {
       state.error = null;
     },
@@ -150,7 +108,6 @@ const settingsSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-      // -------------------- Fetch --------------------
       .addCase(fetchSettings.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -167,7 +124,6 @@ const settingsSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // -------------------- Update --------------------
       .addCase(updateSettings.pending, (state) => {
         state.isSaving = true;
         state.error = null;
@@ -178,24 +134,18 @@ const settingsSlice = createSlice({
 
         const { sent, body } = action.payload;
 
-        // 1) Server returned fresh groups -> trust them.
         if (body?.groups && body.groups.length > 0) {
           const flat = flattenGroups(body.groups);
-
           state.groups = body.groups;
           state.totalGroups = body.total_groups ?? body.groups.length;
           state.totalSettings = body.total_settings ?? Object.keys(flat).length;
           state.values = flat;
           return;
         }
-
-        // 2) Server returned a flat settings map -> merge it.
         if (body?.settings) {
           applyValuesToGroups(state, body.settings);
           return;
         }
-
-        // 3) Server returned nothing useful -> apply what we sent.
         applyValuesToGroups(state, sent);
       })
       .addCase(updateSettings.rejected, (state, action) => {
@@ -204,10 +154,6 @@ const settingsSlice = createSlice({
       });
   },
 });
-
-// ---------------------------------------------------------------------------
-// Exports
-// ---------------------------------------------------------------------------
 
 export const {
   clearSettingsError,

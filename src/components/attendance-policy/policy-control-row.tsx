@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Lock, AlertCircle, Info } from "lucide-react";
+import { AlertTriangle, AlertCircle, Info } from "lucide-react";
 import type { PolicyItem } from "@/app/types/attendancePolicy";
 import { cn } from "@/lib/utils";
 import { pickLabel } from "./locale-utils";
@@ -51,15 +51,17 @@ export default function PolicyControlRow({
 
   const currentValue = hasDraft ? draftValue : item.effective_value;
   const isOverridden = item.has_override || overrideEnabled;
+  const engineIsOn = isEngineFlag && Boolean(currentValue);
 
   /* ---------- Controls ---------- */
   const renderToggle = () => (
     <Switch
-      checked={isEngineFlag ? false : Boolean(currentValue)}
-      onCheckedChange={(v) => !isEngineFlag && onChange(v)}
-      disabled={readOnly || isEngineFlag}
+      checked={Boolean(currentValue)}
+      onCheckedChange={(v) => onChange(v)}
+      disabled={readOnly}
     />
   );
+
   const renderNumber = () => (
     <Input
       type="number"
@@ -71,16 +73,21 @@ export default function PolicyControlRow({
       className="h-9 text-sm w-full sm:w-40"
     />
   );
+
   const renderSelect = () => (
     <Select
       value={currentValue == null ? "" : String(currentValue)}
       onValueChange={onChange}
       disabled={readOnly}
     >
-      <SelectTrigger className="h-9 text-sm w-full sm:w-56"><SelectValue placeholder="Select..." /></SelectTrigger>
+      <SelectTrigger className="h-9 text-sm w-full sm:w-56">
+        <SelectValue placeholder="Select..." />
+      </SelectTrigger>
       <SelectContent>
         {item.options?.map((opt) => (
-          <SelectItem key={String(opt.value)} value={String(opt.value)}>{pickLabel(opt.label)}</SelectItem>
+          <SelectItem key={String(opt.value)} value={String(opt.value)}>
+            {pickLabel(opt.label)}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -92,11 +99,32 @@ export default function PolicyControlRow({
       case "number": return renderNumber();
       case "select": return renderSelect();
       case "repeater":
-        return <ReasonCatalogEditor value={(currentValue ?? []) as any} definition={item} readOnly={readOnly} onChange={onChange} />;
+        return (
+          <ReasonCatalogEditor
+            value={(currentValue ?? []) as any}
+            definition={item}
+            readOnly={readOnly}
+            onChange={onChange}
+          />
+        );
       case "rule_builder":
-        return <RuleBuilderEditor value={(currentValue ?? []) as any} definition={item} readOnly={readOnly} onChange={onChange} />;
+        return (
+          <RuleBuilderEditor
+            value={(currentValue ?? []) as any}
+            definition={item}
+            readOnly={readOnly}
+            onChange={onChange}
+          />
+        );
       case "template_editor":
-        return <TemplateEditor value={(currentValue ?? {}) as any} definition={item} readOnly={readOnly} onChange={onChange} />;
+        return (
+          <TemplateEditor
+            value={(currentValue ?? {}) as any}
+            definition={item}
+            readOnly={readOnly}
+            onChange={onChange}
+          />
+        );
       default: return null;
     }
   };
@@ -106,7 +134,10 @@ export default function PolicyControlRow({
     if (isGlobal) return null;
     if (isOverridden) {
       return (
-        <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-900/30">
+        <Badge
+          variant="outline"
+          className="text-[10px] border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-900/30"
+        >
           Override at this level
         </Badge>
       );
@@ -120,20 +151,29 @@ export default function PolicyControlRow({
   };
 
   return (
-    <div className={cn(
-      "flex flex-col gap-3 py-4 px-3 sm:px-4 border-b border-gray-100 dark:border-gray-800 last:border-0",
-      hasDraft && "bg-amber-50/40 dark:bg-amber-900/10"
-    )}>
+    <div
+      className={cn(
+        "flex flex-col gap-3 py-4 px-3 sm:px-4 border-b border-gray-100 dark:border-gray-800 last:border-0",
+        hasDraft && "bg-amber-50/40 dark:bg-amber-900/10"
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <Label className="text-sm font-medium">{pickLabel(item.label)}</Label>
             {sourceBadge()}
-            {isEngineFlag && (
-              <Badge variant="outline" className="text-[10px] border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-900/30">
-                <Lock className="h-3 w-3 mr-1" /> Locked OFF
+
+            {/* Warning only when the engine flag is currently ON */}
+            {engineIsOn && (
+              <Badge
+                variant="outline"
+                className="text-[10px] border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-900/30"
+              >
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Engine live — approval workflow must be ready
               </Badge>
             )}
+
             {!item.is_editable && (
               <Badge variant="outline" className="text-[10px]">Read-only</Badge>
             )}
