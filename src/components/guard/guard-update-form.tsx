@@ -1928,7 +1928,7 @@ export function GuardUpdateForm({
     //                     // Set existing documents (from root level documents array)
     //                     if (guardData.documents && guardData.documents.length > 0) {
     //                         setExistingDocuments(guardData.documents)
-                            
+
     //                         // Auto-select document types based on existing documents
     //                         const existingDocTypes = guardData.documents.map((doc: ExistingDocument) => doc.document_type)
     //                         setSelectedDocumentTypes(existingDocTypes)
@@ -1951,121 +1951,121 @@ export function GuardUpdateForm({
     // }, [isOpen, guardId, dispatch, hasLoadedData])
 
     // Load guard data when dialog opens
-useEffect(() => {
-    const loadGuardData = async () => {
-        if (isOpen && guardId && !hasLoadedData) {
-            setIsLoading(true)
-            try {
-                const result = await dispatch(fetchGuard({ id: guardId }))
-                if (fetchGuard.fulfilled.match(result)) {
-                    const guardData = result.payload
+    useEffect(() => {
+        const loadGuardData = async () => {
+            if (isOpen && guardId && !hasLoadedData) {
+                setIsLoading(true)
+                try {
+                    const result = await dispatch(fetchGuard({ id: guardId }))
+                    if (fetchGuard.fulfilled.match(result)) {
+                        const guardData = result.payload
 
-                    // Populate form data
-                    setFormData({
-                        guard_code: guardData.guard_code || "",
-                        full_name: guardData.full_name || "",
-                        phone: guardData.phone || "",
-                        employee_company_card_number: guardData.employee_company_card_number || "",
-                        gender: guardData.gender || "male",
-                        country: guardData.country || "United States",
-                        city: guardData.city || "",
-                        state: guardData.state || "",
-                        address: guardData.address || "",
-                        zip_code: guardData.zip_code || "",
-                        joining_date: guardData.joining_date ? guardData.joining_date.split('T')[0] : "",
-                        email: guardData.email || "",
-                        password: "", // Password is never sent back from API
-                        driver_license: guardData.driver_license || "",
-                        date_of_birth: guardData.date_of_birth ? guardData.date_of_birth.split('T')[0] : "",
-                        license_expiry_date: guardData.license_expiry_date ? guardData.license_expiry_date.split('T')[0] : "",
-                        issuing_source: guardData.issuing_source || "",
-                        guard_type_id: guardData.guard_type_id || undefined,
-                        contract_id: guardData.contract_id || undefined,
-                        is_active: guardData.is_active ?? true,
-                        profile_data: {
-                            marital_status: guardData.profile_data?.marital_status || "single",
-                            has_work_permit: guardData.profile_data?.has_work_permit === true,
-                            has_security_training: guardData.profile_data?.has_security_training === true,
-                            languages: guardData.profile_data?.languages || [],
-                            place_of_birth: guardData.profile_data?.place_of_birth || "",
-                            country_of_origin: guardData.profile_data?.country_of_origin || "",
-                            current_country: guardData.profile_data?.current_country || "",
-                            current_city: guardData.profile_data?.current_city || "",
-                            current_address: guardData.profile_data?.current_address || "",
-                            current_state: guardData.profile_data?.current_state || "",
-                            current_zip_code: guardData.profile_data?.current_zip_code || "",
-                            citizenship: guardData.profile_data?.citizenship || "",
-                            visa_countries: guardData.profile_data?.visa_countries || [],
-                            visa_expiry_date: guardData.profile_data?.visa_expiry_date ? guardData.profile_data.visa_expiry_date.split('T')[0] : "",
-                            father_name: guardData.profile_data?.father_name || "",
-                            mother_name: guardData.profile_data?.mother_name || "",
-                            national_id_number: guardData.profile_data?.national_id_number || "",
-                            height: guardData.profile_data?.height || "",
-                            weight: guardData.profile_data?.weight || "",
-                            blood_group: guardData.profile_data?.blood_group || "",
-                            experience_years: guardData.profile_data?.experience_years || 0,
-                            skills: guardData.profile_data?.skills || "",
-                            highest_education_level: guardData.profile_data?.highest_education_level || "",
-                            education_field: guardData.profile_data?.education_field || "",
-                            institution_name: guardData.profile_data?.institution_name || "",
-                            graduation_year: guardData.profile_data?.graduation_year || undefined,
-                            emergency_contact_name: guardData.profile_data?.emergency_contact_name || "",
-                            emergency_contact_phone: guardData.profile_data?.emergency_contact_phone || "",
-                            emergency_contact_relation: guardData.profile_data?.emergency_contact_relation || "",
-                            notes: guardData.profile_data?.notes || "",
+                        // Populate form data
+                        setFormData({
+                            guard_code: guardData.guard_code || "",
+                            full_name: guardData.full_name || "",
+                            phone: guardData.phone || "",
+                            employee_company_card_number: guardData.employee_company_card_number || "",
+                            gender: guardData.gender || "male",
+                            country: guardData.country || "United States",
+                            city: guardData.city || "",
+                            state: guardData.state || "",
+                            address: guardData.address || "",
+                            zip_code: guardData.zip_code || "",
+                            joining_date: guardData.joining_date ? guardData.joining_date.split('T')[0] : "",
+                            email: guardData.email || "",
+                            password: "", // Password is never sent back from API
+                            driver_license: guardData.driver_license || "",
+                            date_of_birth: guardData.date_of_birth ? guardData.date_of_birth.split('T')[0] : "",
+                            license_expiry_date: guardData.license_expiry_date ? guardData.license_expiry_date.split('T')[0] : "",
+                            issuing_source: guardData.issuing_source || "",
+                            guard_type_id: guardData.guard_type_id || undefined,
+                            contract_id: guardData.contract_id || undefined,
+                            is_active: guardData.is_active ?? true,
+                            profile_data: {
+                                marital_status: guardData.profile_data?.marital_status || "single",
+                                has_work_permit: guardData.profile_data?.has_work_permit === true,
+                                has_security_training: guardData.profile_data?.has_security_training === true,
+                                languages: guardData.profile_data?.languages || [],
+                                place_of_birth: guardData.profile_data?.place_of_birth || "",
+                                country_of_origin: guardData.profile_data?.country_of_origin || "",
+                                current_country: guardData.profile_data?.current_country || "",
+                                current_city: guardData.profile_data?.current_city || "",
+                                current_address: guardData.profile_data?.current_address || "",
+                                current_state: guardData.profile_data?.current_state || "",
+                                current_zip_code: guardData.profile_data?.current_zip_code || "",
+                                citizenship: guardData.profile_data?.citizenship || "",
+                                visa_countries: guardData.profile_data?.visa_countries || [],
+                                visa_expiry_date: guardData.profile_data?.visa_expiry_date ? guardData.profile_data.visa_expiry_date.split('T')[0] : "",
+                                father_name: guardData.profile_data?.father_name || "",
+                                mother_name: guardData.profile_data?.mother_name || "",
+                                national_id_number: guardData.profile_data?.national_id_number || "",
+                                height: guardData.profile_data?.height || "",
+                                weight: guardData.profile_data?.weight || "",
+                                blood_group: guardData.profile_data?.blood_group || "",
+                                experience_years: guardData.profile_data?.experience_years || 0,
+                                skills: guardData.profile_data?.skills || "",
+                                highest_education_level: guardData.profile_data?.highest_education_level || "",
+                                education_field: guardData.profile_data?.education_field || "",
+                                institution_name: guardData.profile_data?.institution_name || "",
+                                graduation_year: guardData.profile_data?.graduation_year || undefined,
+                                emergency_contact_name: guardData.profile_data?.emergency_contact_name || "",
+                                emergency_contact_phone: guardData.profile_data?.emergency_contact_phone || "",
+                                emergency_contact_relation: guardData.profile_data?.emergency_contact_relation || "",
+                                notes: guardData.profile_data?.notes || "",
+                            }
+                        })
+
+                        // Set languages state
+                        if (guardData.profile_data?.languages && guardData.profile_data.languages.length > 0) {
+                            setLanguages(guardData.profile_data.languages)
                         }
-                    })
 
-                    // Set languages state
-                    if (guardData.profile_data?.languages && guardData.profile_data.languages.length > 0) {
-                        setLanguages(guardData.profile_data.languages)
+                        // Set visa countries state
+                        if (guardData.profile_data?.visa_countries && guardData.profile_data.visa_countries.length > 0) {
+                            setVisaCountries(guardData.profile_data.visa_countries)
+                        }
+
+                        // Set existing profile image (from root level)
+                        if (guardData.profile_image) {
+                            setExistingProfileImage(guardData.profile_image)
+                        }
+
+                        // Set existing documents (from root level documents array)
+                        if (guardData.documents && guardData.documents.length > 0) {
+                            // Map GuardDocument to ExistingDocument
+                            const mappedDocuments: ExistingDocument[] = guardData.documents.map((doc: any) => ({
+                                id: doc.id,
+                                document_type: doc.document_type,
+                                file_path: doc.file_path,
+                                file_name: doc.file_name,
+                                created_at: doc.created_at,
+                                updated_at: doc.updated_at
+                            }));
+                            setExistingDocuments(mappedDocuments);
+
+                            // Auto-select document types based on existing documents (filter out null/undefined)
+                            const existingDocTypes = guardData.documents
+                                .map((doc: any) => doc.document_type)
+                                .filter((type: string | null | undefined): type is string => !!type);
+                            setSelectedDocumentTypes(existingDocTypes);
+                        }
+
+                        setHasLoadedData(true)
+                    } else {
+                        SweetAlertService.error("Error", "Failed to load guard data")
                     }
-
-                    // Set visa countries state
-                    if (guardData.profile_data?.visa_countries && guardData.profile_data.visa_countries.length > 0) {
-                        setVisaCountries(guardData.profile_data.visa_countries)
-                    }
-
-                    // Set existing profile image (from root level)
-                    if (guardData.profile_image) {
-                        setExistingProfileImage(guardData.profile_image)
-                    }
-
-                    // Set existing documents (from root level documents array)
-                    if (guardData.documents && guardData.documents.length > 0) {
-                        // Map GuardDocument to ExistingDocument
-                        const mappedDocuments: ExistingDocument[] = guardData.documents.map((doc: any) => ({
-                            id: doc.id,
-                            document_type: doc.document_type,
-                            file_path: doc.file_path,
-                            file_name: doc.file_name,
-                            created_at: doc.created_at,
-                            updated_at: doc.updated_at
-                        }));
-                        setExistingDocuments(mappedDocuments);
-                        
-                        // Auto-select document types based on existing documents (filter out null/undefined)
-                        const existingDocTypes = guardData.documents
-                            .map((doc: any) => doc.document_type)
-                            .filter((type: string | null | undefined): type is string => !!type);
-                        setSelectedDocumentTypes(existingDocTypes);
-                    }
-
-                    setHasLoadedData(true)
-                } else {
+                } catch (error) {
+                    console.error("Error loading guard data:", error)
                     SweetAlertService.error("Error", "Failed to load guard data")
+                } finally {
+                    setIsLoading(false)
                 }
-            } catch (error) {
-                console.error("Error loading guard data:", error)
-                SweetAlertService.error("Error", "Failed to load guard data")
-            } finally {
-                setIsLoading(false)
             }
         }
-    }
 
-    loadGuardData()
-}, [isOpen, guardId, dispatch, hasLoadedData])
+        loadGuardData()
+    }, [isOpen, guardId, dispatch, hasLoadedData])
 
     // Reset form when dialog closes
     const handleDialogClose = useCallback((open: boolean) => {
@@ -2376,182 +2376,182 @@ useEffect(() => {
     // }
 
     // Submit handler - FIXED VERSION
-// Submit handler - FIXED FOR ARRAY FORMAT
-const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    // Submit handler - FIXED FOR ARRAY FORMAT
+    const onSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
 
-    // Validate file sizes before submitting
-    if (profileImage && profileImage.size > 2 * 1024 * 1024) {
-        await SweetAlertService.error(
-            'File Too Large',
-            'Profile image must be less than 2MB. Please compress your image and try again.'
-        )
-        return
-    }
-
-    const oversizedDocuments = documents.filter(doc => doc.size > 2 * 1024 * 1024)
-    if (oversizedDocuments.length > 0) {
-        const fileNames = oversizedDocuments.map(doc => doc.name).join(', ')
-        await SweetAlertService.error(
-            'Files Too Large',
-            `The following document(s) exceed the 2MB limit:\n${fileNames}\n\nPlease compress these files and try again.`
-        )
-        return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-        const submitFormData = new FormData()
-
-        // Add method override for Laravel
-        submitFormData.append('_method', 'POST')
-
-        // Required fields
-        const requiredFields: Record<string, string> = {
-            guard_code: formData.guard_code,
-            full_name: formData.full_name,
-            phone: formData.phone || '',
-            employee_company_card_number: formData.employee_company_card_number || '',
-            gender: formData.gender,
-            country: formData.country,
-            city: formData.city || '',
-            state: formData.state || '',
-            address: formData.address || '',
-            zip_code: formData.zip_code || '',
-            joining_date: formData.joining_date || '',
-            is_active: formData.is_active ? '1' : '0'
+        // Validate file sizes before submitting
+        if (profileImage && profileImage.size > 2 * 1024 * 1024) {
+            await SweetAlertService.error(
+                'File Too Large',
+                'Profile image must be less than 2MB. Please compress your image and try again.'
+            )
+            return
         }
 
-        Object.entries(requiredFields).forEach(([key, value]) => {
-            if (value) submitFormData.append(key, value)
-        })
-
-        // Optional fields
-        if (formData.email) submitFormData.append('email', formData.email)
-        if (formData.password && formData.password.trim() !== '') submitFormData.append('password', formData.password)
-        if (formData.driver_license) submitFormData.append('driver_license', formData.driver_license)
-        if (formData.date_of_birth) submitFormData.append('date_of_birth', formData.date_of_birth)
-        if (formData.license_expiry_date) submitFormData.append('license_expiry_date', formData.license_expiry_date)
-        if (formData.issuing_source) submitFormData.append('issuing_source', formData.issuing_source)
-
-        // Numeric fields
-        if (formData.guard_type_id) {
-            submitFormData.append('guard_type_id', formData.guard_type_id.toString())
-        }
-        if (formData.contract_id) {
-            submitFormData.append('contract_id', formData.contract_id.toString())
+        const oversizedDocuments = documents.filter(doc => doc.size > 2 * 1024 * 1024)
+        if (oversizedDocuments.length > 0) {
+            const fileNames = oversizedDocuments.map(doc => doc.name).join(', ')
+            await SweetAlertService.error(
+                'Files Too Large',
+                `The following document(s) exceed the 2MB limit:\n${fileNames}\n\nPlease compress these files and try again.`
+            )
+            return
         }
 
-        // Profile data
-        const profileData = prepareProfileData(formData.profile_data)
-        if (Object.keys(profileData).length > 0) {
-            submitFormData.append('profile_data', JSON.stringify(profileData))
-        }
+        setIsSubmitting(true)
 
-        // Documents to delete
-        if (documentsToDelete.length > 0) {
-            submitFormData.append('delete_documents', JSON.stringify(documentsToDelete))
-        }
+        try {
+            const submitFormData = new FormData()
 
-        // Profile image handling
-        if (profileImage) {
-            submitFormData.append('profile_image', profileImage)
-        } else if (!existingProfileImage && !profileImage) {
-            submitFormData.append('remove_profile_image', '1')
-        }
+            // Add method override for Laravel
+            submitFormData.append('_method', 'POST')
 
-        // 🔥 FIX: Send documents as arrays with indices matching Postman format
-        // Create an array of documents with their types
-        const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
-        
-        // Process new documents
-        documents.forEach((doc) => {
-            // Extract document type from filename (format: "document_type-filename.ext")
-            const firstHyphenIndex = doc.name.indexOf('-')
-            let documentType = ''
-            let originalFileName = doc.name
-            
-            if (firstHyphenIndex > 0) {
-                documentType = doc.name.substring(0, firstHyphenIndex)
-                originalFileName = doc.name.substring(firstHyphenIndex + 1)
-            } else {
-                // Try to find matching document type from selected types
-                for (const docType of selectedDocumentTypes) {
-                    if (doc.name.toLowerCase().includes(docType.toLowerCase())) {
-                        documentType = docType
-                        originalFileName = doc.name
-                        break
+            // Required fields
+            const requiredFields: Record<string, string> = {
+                guard_code: formData.guard_code,
+                full_name: formData.full_name,
+                phone: formData.phone || '',
+                employee_company_card_number: formData.employee_company_card_number || '',
+                gender: formData.gender,
+                country: formData.country,
+                city: formData.city || '',
+                state: formData.state || '',
+                address: formData.address || '',
+                zip_code: formData.zip_code || '',
+                joining_date: formData.joining_date || '',
+                is_active: formData.is_active ? '1' : '0'
+            }
+
+            Object.entries(requiredFields).forEach(([key, value]) => {
+                if (value) submitFormData.append(key, value)
+            })
+
+            // Optional fields
+            if (formData.email) submitFormData.append('email', formData.email)
+            if (formData.password && formData.password.trim() !== '') submitFormData.append('password', formData.password)
+            if (formData.driver_license) submitFormData.append('driver_license', formData.driver_license)
+            if (formData.date_of_birth) submitFormData.append('date_of_birth', formData.date_of_birth)
+            if (formData.license_expiry_date) submitFormData.append('license_expiry_date', formData.license_expiry_date)
+            if (formData.issuing_source) submitFormData.append('issuing_source', formData.issuing_source)
+
+            // Numeric fields
+            if (formData.guard_type_id) {
+                submitFormData.append('guard_type_id', formData.guard_type_id.toString())
+            }
+            if (formData.contract_id) {
+                submitFormData.append('contract_id', formData.contract_id.toString())
+            }
+
+            // Profile data
+            const profileData = prepareProfileData(formData.profile_data)
+            if (Object.keys(profileData).length > 0) {
+                submitFormData.append('profile_data', JSON.stringify(profileData))
+            }
+
+            // Documents to delete
+            if (documentsToDelete.length > 0) {
+                submitFormData.append('delete_documents', JSON.stringify(documentsToDelete))
+            }
+
+            // Profile image handling
+            if (profileImage) {
+                submitFormData.append('profile_image', profileImage)
+            } else if (!existingProfileImage && !profileImage) {
+                submitFormData.append('remove_profile_image', '1')
+            }
+
+            // 🔥 FIX: Send documents as arrays with indices matching Postman format
+            // Create an array of documents with their types
+            const documentsToSend: Array<{ type: string; file: File; originalName: string }> = []
+
+            // Process new documents
+            documents.forEach((doc) => {
+                // Extract document type from filename (format: "document_type-filename.ext")
+                const firstHyphenIndex = doc.name.indexOf('-')
+                let documentType = ''
+                let originalFileName = doc.name
+
+                if (firstHyphenIndex > 0) {
+                    documentType = doc.name.substring(0, firstHyphenIndex)
+                    originalFileName = doc.name.substring(firstHyphenIndex + 1)
+                } else {
+                    // Try to find matching document type from selected types
+                    for (const docType of selectedDocumentTypes) {
+                        if (doc.name.toLowerCase().includes(docType.toLowerCase())) {
+                            documentType = docType
+                            originalFileName = doc.name
+                            break
+                        }
                     }
                 }
+
+                if (documentType) {
+                    // Create a clean file without the type prefix
+                    const cleanFile = new File([doc], originalFileName, { type: doc.type })
+                    documentsToSend.push({ type: documentType, file: cleanFile, originalName: originalFileName })
+                }
+            })
+
+            // Also include existing documents that are being kept? 
+            // Usually only new documents are sent, existing ones remain on server
+
+            // Send documents as arrays with indices (matching Postman format)
+            documentsToSend.forEach((doc, index) => {
+                // Add document type for this index
+                submitFormData.append(`document_types[${index}]`, doc.type)
+                // Add document file for this index
+                submitFormData.append(`documents[${index}]`, doc.file)
+            })
+
+            // If you need to also send document_types as a JSON array (as in your previous code)
+            if (selectedDocumentTypes.length > 0) {
+                // Send as JSON string for other processing if needed
+                submitFormData.append('document_types_json', JSON.stringify(selectedDocumentTypes))
             }
-            
-            if (documentType) {
-                // Create a clean file without the type prefix
-                const cleanFile = new File([doc], originalFileName, { type: doc.type })
-                documentsToSend.push({ type: documentType, file: cleanFile, originalName: originalFileName })
+
+            // Debug log
+            console.log('Sending documents:', documentsToSend.map((d, i) => ({
+                index: i,
+                type: d.type,
+                fileName: d.file.name,
+                fileSize: d.file.size
+            })))
+
+            // Dispatch update action
+            const result = await dispatch(updateGuard({ id: guardId, data: submitFormData }))
+
+            if (updateGuard.fulfilled.match(result)) {
+                await SweetAlertService.success(
+                    'Guard Updated Successfully',
+                    `${formData.full_name} has been updated.`,
+                    { timer: 2000, showConfirmButton: false }
+                )
+
+                resetForm()
+                onSuccess?.()
+                handleDialogClose(false)
+
+                await dispatch(fetchGuards({
+                    page: 1,
+                    per_page: 10,
+                    sort_by: 'updated_at',
+                    sort_order: 'desc'
+                }))
+            } else {
+                const errorMessage = (result.payload as string) || 'Failed to update guard'
+                throw new Error(errorMessage)
             }
-        })
-        
-        // Also include existing documents that are being kept? 
-        // Usually only new documents are sent, existing ones remain on server
-        
-        // Send documents as arrays with indices (matching Postman format)
-        documentsToSend.forEach((doc, index) => {
-            // Add document type for this index
-            submitFormData.append(`document_types[${index}]`, doc.type)
-            // Add document file for this index
-            submitFormData.append(`documents[${index}]`, doc.file)
-        })
-        
-        // If you need to also send document_types as a JSON array (as in your previous code)
-        if (selectedDocumentTypes.length > 0) {
-            // Send as JSON string for other processing if needed
-            submitFormData.append('document_types_json', JSON.stringify(selectedDocumentTypes))
-        }
-
-        // Debug log
-        console.log('Sending documents:', documentsToSend.map((d, i) => ({
-            index: i,
-            type: d.type,
-            fileName: d.file.name,
-            fileSize: d.file.size
-        })))
-
-        // Dispatch update action
-        const result = await dispatch(updateGuard({ id: guardId, data: submitFormData }))
-
-        if (updateGuard.fulfilled.match(result)) {
-            await SweetAlertService.success(
-                'Guard Updated Successfully',
-                `${formData.full_name} has been updated.`,
-                { timer: 2000, showConfirmButton: false }
+        } catch (error) {
+            await SweetAlertService.error(
+                'Update Failed',
+                error instanceof Error ? error.message : 'There was an error updating the guard. Please try again.'
             )
-
-            resetForm()
-            onSuccess?.()
-            handleDialogClose(false)
-
-            await dispatch(fetchGuards({
-                page: 1,
-                per_page: 10,
-                sort_by: 'updated_at',
-                sort_order: 'desc'
-            }))
-        } else {
-            const errorMessage = (result.payload as string) || 'Failed to update guard'
-            throw new Error(errorMessage)
+            console.error('Error updating guard:', error)
+        } finally {
+            setIsSubmitting(false)
         }
-    } catch (error) {
-        await SweetAlertService.error(
-            'Update Failed',
-            error instanceof Error ? error.message : 'There was an error updating the guard. Please try again.'
-        )
-        console.error('Error updating guard:', error)
-    } finally {
-        setIsSubmitting(false)
     }
-}
 
     const nextStep = useCallback(() => {
         setStep(step + 1)
@@ -2613,21 +2613,18 @@ const onSubmit = async (e: React.FormEvent) => {
                 {/* Progress Steps */}
                 <div className="flex items-center justify-center mb-6">
                     <div className="flex items-center space-x-2">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                            step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                        }`}>
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                            }`}>
                             <User size={20} />
                         </div>
                         <div className={`w-16 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`} />
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                            step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                        }`}>
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                            }`}>
                             <Briefcase size={20} />
                         </div>
                         <div className={`w-16 h-1 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`} />
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                            step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                        }`}>
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                            }`}>
                             <FileText size={20} />
                         </div>
                     </div>
