@@ -38,8 +38,7 @@ import clientContractServiceComponentReducer from './slices/client-contract-serv
 import dutyScheduleReducer from './slices/duty-schedule.slice';
 import schedulingReducer from './slices/schedulingSlice';
 import attendancePolicyReducer from './slices/attendancePolicy.slice';
-
-
+import telegramReducer from './slices/telegramSlice';
 
 
 export const store = configureStore({
@@ -47,25 +46,25 @@ export const store = configureStore({
     auth: authReducer,
     client: clientReducer,
     guard: guardReducer,
-    contact:contactReducer,
-    site:siteReducer,
-    siteLocation:siteLocationReducer,
-    dutyTimeTypes:dutyTimeTypesReducer,
-    duty:dutyReducer,
-    guardAssignment:guardAssignmentReducer,
-    dutyStatusReport:dutyStatusReportReducer,
-    dutyAttendance:dutyAttendanceReducer,
-    guardTypes:guardTypesReducer,
-    expenseCategory:expenseCategoryReducer,
-    complaint:complaintReducer,
-    expense:expenseReducer,
-    leave:leaveReducer,
-    incident:incidentReducer,
-    expenseReview:expenseReviewReducer,
-    clientContract:clientContractReducer,
-    shiftInstruction:shiftInstructionReducer,
-    dashboard:dashboardReducer,
-    liveTracking:liveTrackingReducer,
+    contact: contactReducer,
+    site: siteReducer,
+    siteLocation: siteLocationReducer,
+    dutyTimeTypes: dutyTimeTypesReducer,
+    duty: dutyReducer,
+    guardAssignment: guardAssignmentReducer,
+    dutyStatusReport: dutyStatusReportReducer,
+    dutyAttendance: dutyAttendanceReducer,
+    guardTypes: guardTypesReducer,
+    expenseCategory: expenseCategoryReducer,
+    complaint: complaintReducer,
+    expense: expenseReducer,
+    leave: leaveReducer,
+    incident: incidentReducer,
+    expenseReview: expenseReviewReducer,
+    clientContract: clientContractReducer,
+    shiftInstruction: shiftInstructionReducer,
+    dashboard: dashboardReducer,
+    liveTracking: liveTrackingReducer,
     jobCategories: jobCategoriesReducer,
     jobs: jobReducer,
     jobApplications: jobApplicationReducer,
@@ -83,8 +82,9 @@ export const store = configureStore({
     dutySchedule: dutyScheduleReducer,
     settings: settingsReducer,
     scheduling: schedulingReducer,
-
+    telegram: telegramReducer,
   },
+
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

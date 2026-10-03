@@ -15,13 +15,14 @@ import {
   LocateIcon,
   MessageSquareWarning,
   Phone,
+  Send,
   Settings,
   Shield,
   UserCheck,
   UserPlus,
   Users,
   Wallet,
-  Settings2
+  Settings2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -46,11 +47,9 @@ import { TeamSwitcher } from "./team-switcher"
 const data = {
   user: {
     name: "OGS",
-
   },
   teams: [
     { name: "OGS Security", logo: GalleryVerticalEnd, plan: "Enterprise" },
-
   ],
 }
 
@@ -61,7 +60,6 @@ const navGroups = [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
       { title: "Settings", url: "/settings", icon: Settings2 },
       { title: "Attendance Policy", url: "/attendance-policy", icon: Settings2 },
-
     ],
   },
   {
@@ -72,13 +70,10 @@ const navGroups = [
       { title: "Client Contracts", url: "/client-contracts", icon: MessageSquareWarning },
       { title: "Client Contract Services", url: "/client-contract-services", icon: MessageSquareWarning },
       { title: "Contract Services Components", url: "/client-contract-service-components", icon: MessageSquareWarning },
-
-
       { title: "Time Off", url: "/leave", icon: CalendarCheck },
       { title: "Officers Classification", url: "/guard-type", icon: BadgeCheck },
       { title: "Officers Assignment", url: "/guard-assignment", icon: UserPlus },
       { title: "Assignment Plans", url: "/assignment-plans", icon: Calendar },
-
       { title: "Contacts", url: "/contacts", icon: Phone },
       { title: "Location Tracking", url: "/location-tracking", icon: LocateIcon },
     ],
@@ -89,12 +84,11 @@ const navGroups = [
       { title: "Shift List", url: "/duty", icon: ClipboardList },
       { title: "Shift Schedules", url: "/duty-schedules", icon: AudioWaveform },
       { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
-
-
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
       { title: "Time & Attendance", url: "/duty-attendance", icon: UserCheck },
       { title: "Shift Status Reports", url: "/duty-status-report", icon: BarChart3 },
       { title: "Shift Logs", url: "/shift-logs", icon: BarChart3 },
+      { title: "Telegram Management", url: "/telegram", icon: Send },
     ],
   },
   {
@@ -108,7 +102,6 @@ const navGroups = [
   {
     label: "Issues",
     items: [
-
       { title: "Client Concerns", url: "/complaint", icon: MessageSquareWarning },
       { title: "Incidents", url: "/incident", icon: AlertTriangle },
       { title: "Shift Instruction", url: "/shift-instruction", icon: AlertTriangle },
@@ -117,7 +110,6 @@ const navGroups = [
   {
     label: "Jobs",
     items: [
-
       { title: "Job Categories", url: "/job-categories", icon: MessageSquareWarning },
       { title: "Jobs", url: "/jobs", icon: AlertTriangle },
       { title: "Job Applications", url: "/job-applications", icon: AlertTriangle },
@@ -126,15 +118,13 @@ const navGroups = [
   {
     label: "Email Templates",
     items: [
-
       { title: "Email Templates", url: "/email-template-settings", icon: MessageSquareWarning },
-      { title: "Email Logs", url: "/email-logs", icon: MessageSquareWarning }
+      { title: "Email Logs", url: "/email-logs", icon: MessageSquareWarning },
     ],
   },
   {
     label: "Company Service",
     items: [
-
       { title: "Service Category", url: "/company-service-categories", icon: MessageSquareWarning },
       { title: "Service Unit Types", url: "/company-service-unit-types", icon: MessageSquareWarning },
       { title: "Billing Methods", url: "/company-service-billing-method", icon: MessageSquareWarning },
@@ -188,7 +178,6 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                 {group.items.map((item) => {
                   const isActive = pathname === item.url
 
-
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
@@ -205,7 +194,9 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                           <item.icon
                             className={cn(
                               "h-[14px] w-[14px] shrink-0",
-                              isActive ? "text-white" : "text-zinc-400 group-hover/btn:text-zinc-600",
+                              isActive
+                                ? "text-white"
+                                : "text-zinc-400 group-hover/btn:text-zinc-600",
                             )}
                             strokeWidth={isActive ? 2.2 : 1.8}
                           />
