@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import TelegramBots from "@/components/telegram/telegram-bots";
+import TelegramGroups from "@/components/telegram/telegram-groups";
 
 import {
   Activity,
@@ -50,7 +51,8 @@ type TelegramTab =
   | "events";
 
 const TelegramManagement = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch =
+    useDispatch<AppDispatch>();
 
   const {
     overview,
@@ -403,17 +405,9 @@ const TelegramManagement = () => {
           Groups
           ================================================= */}
 
-      {activeTab ===
-        "groups" && (
-          <PlaceholderSection
-            title="Telegram Groups"
-            description="Group registration, verification, scopes and event rules will be managed here."
-            count={chats.length}
-            icon={
-              <MessageSquare className="h-6 w-6" />
-            }
-          />
-        )}
+      {activeTab === "groups" && (
+        <TelegramGroups />
+      )}
 
       {/* =================================================
           Deliveries
