@@ -35,16 +35,9 @@ import {
 } from "lucide-react";
 
 import TelegramGroupForm from "./telegram-group-form";
+import TelegramGroupDetails from "./telegram-group-details";
 
-interface TelegramGroupsProps {
-  onView?: (
-    chat: TelegramChat
-  ) => void;
-}
-
-const TelegramGroups = ({
-  onView,
-}: TelegramGroupsProps) => {
+const TelegramGroups = () => {
   const dispatch =
     useDispatch<AppDispatch>();
 
@@ -67,6 +60,11 @@ const TelegramGroups = ({
   const [
     formOpen,
     setFormOpen,
+  ] = useState(false);
+
+  const [
+    detailsOpen,
+    setDetailsOpen,
   ] = useState(false);
 
   const activeGroups =
@@ -104,6 +102,7 @@ const TelegramGroups = ({
 
   const handleCreate = () => {
     setSelectedChat(null);
+    setDetailsOpen(false);
     setFormOpen(true);
   };
 
@@ -111,6 +110,7 @@ const TelegramGroups = ({
     chat: TelegramChat
   ) => {
     setSelectedChat(chat);
+    setDetailsOpen(false);
     setFormOpen(true);
   };
 
@@ -118,16 +118,24 @@ const TelegramGroups = ({
     chat: TelegramChat
   ) => {
     setSelectedChat(chat);
-
-    if (onView) {
-      onView(chat);
-    }
+    setFormOpen(false);
+    setDetailsOpen(true);
   };
 
   const handleFormOpenChange = (
     open: boolean
   ) => {
     setFormOpen(open);
+
+    if (!open) {
+      setSelectedChat(null);
+    }
+  };
+
+  const handleDetailsOpenChange = (
+    open: boolean
+  ) => {
+    setDetailsOpen(open);
 
     if (!open) {
       setSelectedChat(null);
@@ -171,8 +179,8 @@ const TelegramGroups = ({
               >
                 <RefreshCw
                   className={`mr-2 h-4 w-4 ${isLoading
-                    ? "animate-spin"
-                    : ""
+                      ? "animate-spin"
+                      : ""
                     }`}
                 />
 
@@ -294,129 +302,131 @@ const TelegramGroups = ({
           ) : (
             <div className="divide-y">
               {chats.map(
-                (chat) => {
-                  const isSelected =
-                    selectedChat?.id ===
-                    chat.id;
+                (chat) => (
+                  <div
+                    key={chat.id}
+                    className="flex flex-col gap-4 p-4 transition-colors lg:flex-row lg:items-center lg:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">
+                          {
+                            chat.title
+                          }
+                        </p>
 
-                  return (
-                    <div
-                      key={chat.id}
-                      className={`flex flex-col gap-4 p-4 transition-colors lg:flex-row lg:items-center lg:justify-between ${isSelected
-                        ? "bg-muted/40"
-                        : ""
-                        }`}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">
-                            {
-                              chat.title
-                            }
-                          </p>
+                        <StatusBadge
+                          active={
+                            chat.is_active
+                          }
+                          activeLabel="Active"
+                          inactiveLabel="Inactive"
+                        />
 
-                          <StatusBadge
-                            active={
-                              chat.is_active
-                            }
-                            activeLabel="Active"
-                            inactiveLabel="Inactive"
-                          />
+                        <StatusBadge
+                          active={
+                            chat.is_verified ===
+                            true
+                          }
+                          activeLabel="Verified"
+                          inactiveLabel="Unverified"
+                        />
+                      </div>
 
-                          <StatusBadge
-                            active={
-                              chat.is_verified ===
-                              true
-                            }
-                            activeLabel="Verified"
-                            inactiveLabel="Unverified"
-                          />
-                        </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>
+                          ID:{" "}
+                          {
+                            chat.id
+                          }
+                        </span>
 
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>
+                          Telegram Chat:{" "}
+                          {
+                            chat.chat_id
+                          }
+                        </span>
+
+                        {chat.type && (
                           <span>
-                            ID:{" "}
+                            Type:{" "}
                             {
-                              chat.id
+                              chat.type
                             }
                           </span>
+                        )}
 
+                        {chat.audience && (
                           <span>
-                            Telegram
-                            Chat:{" "}
+                            Audience:{" "}
                             {
-                              chat.chat_id
+                              chat.audience
                             }
                           </span>
-
-                          {chat.type && (
-                            <span>
-                              Type:{" "}
-                              {
-                                chat.type
-                              }
-                            </span>
-                          )}
-
-                          {chat.audience && (
-                            <span>
-                              Audience:{" "}
-                              {
-                                chat.audience
-                              }
-                            </span>
-                          )}
-                        </div>
-
-                        {chat.description && (
-                          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                            {
-                              chat.description
-                            }
-                          </p>
                         )}
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleView(
-                              chat
-                            )
+                      {chat.description && (
+                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                          {
+                            chat.description
                           }
-                        >
-                          Details
-                        </Button>
-
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleEdit(
-                              chat
-                            )
-                          }
-                        >
-                          Edit
-                        </Button>
-                      </div>
+                        </p>
+                      )}
                     </div>
-                  );
-                }
+
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          handleView(
+                            chat
+                          )
+                        }
+                      >
+                        Details
+                      </Button>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          handleEdit(
+                            chat
+                          )
+                        }
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           )}
         </Card>
       </div>
 
+      {/* Create / Edit */}
+
       <TelegramGroupForm
         open={formOpen}
         onOpenChange={
           handleFormOpenChange
+        }
+        chat={selectedChat}
+      />
+
+      {/* Details / Verify */}
+
+      <TelegramGroupDetails
+        open={detailsOpen}
+        onOpenChange={
+          handleDetailsOpenChange
         }
         chat={selectedChat}
       />
@@ -470,8 +480,8 @@ const StatusBadge = ({
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${active
-        ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
-        : "bg-muted text-muted-foreground"
+          ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+          : "bg-muted text-muted-foreground"
         }`}
     >
       {active
