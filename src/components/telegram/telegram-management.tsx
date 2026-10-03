@@ -29,6 +29,8 @@ import { Button } from "@/components/ui/button";
 
 import TelegramBots from "@/components/telegram/telegram-bots";
 import TelegramGroups from "@/components/telegram/telegram-groups";
+import TelegramDeliveries from "@/components/telegram/telegram-deliveries";
+import TelegramEvents from "@/components/telegram/telegram-events";
 
 import {
   Activity,
@@ -415,33 +417,16 @@ const TelegramManagement = () => {
 
       {activeTab ===
         "deliveries" && (
-          <PlaceholderSection
-            title="Delivery History"
-            description="Telegram notification delivery monitoring will be available here."
-            count={
-              deliveries.length
-            }
-            icon={
-              <Send className="h-6 w-6" />
-            }
-          />
+          <TelegramDeliveries />
         )}
 
       {/* =================================================
           Events
           ================================================= */}
 
-      {activeTab ===
-        "events" && (
-          <PlaceholderSection
-            title="Telegram Events"
-            description="Canonical Telegram event types available for group rules."
-            count={events.length}
-            icon={
-              <Settings2 className="h-6 w-6" />
-            }
-          />
-        )}
+      {activeTab === "events" && (
+        <TelegramEvents />
+      )}
     </div>
   );
 };
@@ -519,56 +504,6 @@ const StatusItem = ({
         {label}
       </p>
     </div>
-  );
-};
-
-/* =========================================================
-   Placeholder for remaining modules
-   ========================================================= */
-
-interface PlaceholderSectionProps {
-  title: string;
-  description: string;
-  count: number;
-  icon: React.ReactNode;
-}
-
-const PlaceholderSection = ({
-  title,
-  description,
-  count,
-  icon,
-}: PlaceholderSectionProps) => {
-  return (
-    <Card className="p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted">
-            {icon}
-          </div>
-
-          <div>
-            <h2 className="font-semibold">
-              {title}
-            </h2>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              {description}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border px-4 py-2 text-center">
-          <p className="text-xl font-bold">
-            {count}
-          </p>
-
-          <p className="text-xs text-muted-foreground">
-            Records
-          </p>
-        </div>
-      </div>
-    </Card>
   );
 };
 
