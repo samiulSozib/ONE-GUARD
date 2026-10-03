@@ -1,16 +1,13 @@
 export interface TelegramBot {
   id: number;
 
+  /**
+   * Bot list responses currently expose only the bot name,
+   * active state and timestamps in addition to the ID.
+   */
   name: string;
-  code: string;
-  token_env_key: string;
-
-  username?: string | null;
-  bot_username?: string | null;
-  bot_name?: string | null;
 
   is_active: boolean;
-  is_verified?: boolean;
 
   created_at?: string | null;
   updated_at?: string | null;
@@ -23,7 +20,7 @@ export interface TelegramChat {
 
   /**
    * Raw Telegram chat/group ID.
-   * Example: -1001234567890
+   * Example: -5318019188
    */
   chat_id: string;
 
@@ -35,15 +32,12 @@ export interface TelegramChat {
 
   is_active: boolean;
   is_verified?: boolean;
-  verified_at?: string | null;
-
-  bot?: TelegramBot | null;
-
-  scopes?: TelegramScope[];
-  rules?: TelegramRule[];
 
   created_at?: string | null;
   updated_at?: string | null;
+
+  scopes?: TelegramScope[];
+  rules?: TelegramRule[];
 }
 
 export interface TelegramScope {
@@ -52,9 +46,7 @@ export interface TelegramScope {
   telegram_chat_id?: number;
 
   /**
-   * Current Admin API supports:
-   * - client
-   * - site
+   * Current Admin API supports client and site.
    */
   scope_type: "client" | "site" | string;
 
@@ -75,62 +67,65 @@ export interface TelegramRule {
   event_type: string;
 
   is_enabled?: boolean;
-  is_active?: boolean;
 
   created_at?: string | null;
   updated_at?: string | null;
 }
 
-export interface TelegramEvent {
-  event_type: string;
-
-  name?: string;
-  label?: string;
-
-  description?: string | null;
-  category?: string | null;
-}
+/**
+ * GET /admin/telegram/events currently returns:
+ *
+ * {
+ *   "items": [
+ *     "assignment.created",
+ *     "shift.checked_in",
+ *     ...
+ *   ]
+ * }
+ */
+export type TelegramEvent = string;
 
 export interface TelegramDelivery {
   id: number;
 
-  telegram_bot_id?: number | null;
+  /**
+   * Database ID of the Telegram chat record.
+   */
   telegram_chat_id?: number | null;
 
   event_type?: string | null;
+  event_key?: string | null;
+
+  subject_type?: string | null;
+  subject_id?: number | null;
 
   status?: string | null;
 
-  message?: string | null;
+  attempts?: number | null;
 
   telegram_message_id?: string | number | null;
 
-  error_message?: string | null;
-
-  attempts?: number | null;
+  /**
+   * Backend delivery list currently exposes last_error.
+   */
+  last_error?: string | null;
 
   sent_at?: string | null;
-  failed_at?: string | null;
 
   created_at?: string | null;
   updated_at?: string | null;
 
-  bot?: TelegramBot | null;
-  chat?: TelegramChat | null;
-
   /**
-   * Delivery detail responses may contain additional
-   * media-related information.
+   * Delivery details may expose additional fields,
+   * including media information.
    */
   [key: string]: unknown;
 }
 
-/**
- * GET /admin/telegram/settings
- *
- * The backend uses this endpoint as the Telegram
- * management overview/settings snapshot.
- */
+/* =========================================================
+   Overview
+   ========================================================= */
+
 export interface TelegramOverview {
   bots?: {
     total?: number;
@@ -144,13 +139,7 @@ export interface TelegramOverview {
 
   rules?: {
     total?: number;
-
-    /**
-     * Backend documentation currently calls this "enabled".
-     * Keep active optional for compatibility with older responses.
-     */
     enabled?: number;
-    active?: number;
   };
 
   deliveries?: {
@@ -159,22 +148,11 @@ export interface TelegramOverview {
     failed?: number;
     pending?: number;
   };
-
-  enabled?: boolean;
-
-  [key: string]: unknown;
 }
 
-/**
- * Kept separately because the frontend may expose
- * the global Telegram enabled state when returned
- * by the backend.
- */
-export interface TelegramSettings {
-  enabled?: boolean;
-
-  [key: string]: unknown;
-}
+/* =========================================================
+   Pagination
+   ========================================================= */
 
 export interface TelegramPagination {
   current_page: number;
@@ -208,8 +186,8 @@ export interface TelegramDeliveryParams {
   event_type?: string;
 
   /**
-   * Database ID of the registered Telegram chat/group,
-   * NOT Telegram's raw -100... chat ID.
+   * Database ID of the registered Telegram chat/group.
+   * This is NOT the raw Telegram -100... chat ID.
    */
   telegram_chat_id?: number;
 }
@@ -222,17 +200,20 @@ export interface CreateTelegramBotDto {
   name: string;
 
   /**
-   * Unique internal code.
-   * Example: operations_staging
+   * Unique internal bot code.
+   * Example:
+   * operations_staging
    */
   code: string;
 
   /**
-   * Laravel/config environment key containing the bot token.
-   * Never send/store the actual Telegram bot token here.
+   * Laravel/config environment key containing the token.
    *
    * Example:
    * TELEGRAM_OPERATIONS_BOT_TOKEN
+   *
+   * The actual Telegram bot token must not be submitted
+   * through the admin UI.
    */
   token_env_key: string;
 }
@@ -245,15 +226,14 @@ export interface UpdateTelegramBotDto {
 }
 
 /* =========================================================
-   Chat / Group DTOs
+   Chat DTOs
    ========================================================= */
 
 export interface CreateTelegramChatDto {
   telegram_bot_id: number;
 
   /**
-   * Raw Telegram group/supergroup ID.
-   * Usually looks like -100...
+   * Raw Telegram group/chat ID.
    */
   chat_id: string;
 
@@ -305,12 +285,4 @@ export interface TelegramRuleInput {
 
 export interface ReplaceTelegramRulesDto {
   rules: TelegramRuleInput[];
-}
-
-/* =========================================================
-   Settings DTO
-   ========================================================= */
-
-export interface UpdateTelegramSettingsDto {
-  enabled: boolean;
 }
