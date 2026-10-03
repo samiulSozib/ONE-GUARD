@@ -7,6 +7,7 @@ import {
   ReplaceTelegramScopesDto,
   TelegramBot,
   TelegramBotParams,
+  TelegramBotVerificationResult,
   TelegramChat,
   TelegramChatParams,
   TelegramDelivery,
@@ -86,15 +87,15 @@ export const telegramService = {
     ),
 
   /**
-   * Verify the configured Telegram bot by asking
-   * the backend to call Telegram getMe.
+   * Verify the configured Telegram bot.
+   *
+   * Backend calls Telegram getMe and returns the
+   * verified Telegram identity rather than a bot item.
    */
   verifyBot: (id: number) =>
     handleApiResponse(
       api.post<
-        ApiResponse<{
-          item: TelegramBot;
-        }>
+        ApiResponse<TelegramBotVerificationResult>
       >(`/admin/telegram/bots/${id}/verify`)
     ),
 

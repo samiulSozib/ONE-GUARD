@@ -189,6 +189,20 @@ export const updateTelegramBot = createAsyncThunk(
   }
 );
 
+/**
+ * POST /admin/telegram/bots/{id}/verify
+ *
+ * Important:
+ * This endpoint does NOT return { item: TelegramBot }.
+ *
+ * It returns:
+ * {
+ *   bot_id,
+ *   telegram_id,
+ *   username,
+ *   message
+ * }
+ */
 export const verifyTelegramBot = createAsyncThunk(
   "telegram/verifyBot",
   async (
@@ -196,10 +210,7 @@ export const verifyTelegramBot = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response =
-        await telegramService.verifyBot(id);
-
-      return response.item;
+      return await telegramService.verifyBot(id);
     } catch (error: unknown) {
       return rejectWithValue(
         getErrorMessage(
@@ -636,6 +647,17 @@ const telegramSlice = createSlice({
         }
       )
 
+      /*
+       * Bot verification is different from bot update.
+       *
+       * The verify endpoint returns Telegram identity
+       * information, not a TelegramBot model. Therefore
+       * we intentionally do not replace anything in
+       * state.bots here.
+       *
+       * telegram-bots.tsx refreshes the bot list and
+       * overview after successful verification.
+       */
       .addCase(
         verifyTelegramBot.pending,
         (state) => {
@@ -646,26 +668,9 @@ const telegramSlice = createSlice({
 
       .addCase(
         verifyTelegramBot.fulfilled,
-        (state, action) => {
+        (state) => {
           state.isLoading = false;
-
-          const index = state.bots.findIndex(
-            (bot) =>
-              bot.id === action.payload.id
-          );
-
-          if (index !== -1) {
-            state.bots[index] =
-              action.payload;
-          }
-
-          if (
-            state.currentBot?.id ===
-            action.payload.id
-          ) {
-            state.currentBot =
-              action.payload;
-          }
+          state.error = null;
         }
       )
 

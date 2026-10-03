@@ -13,6 +13,26 @@ export interface TelegramBot {
   updated_at?: string | null;
 }
 
+/**
+ * Successful response body returned by:
+ *
+ * POST /admin/telegram/bots/{id}/verify
+ *
+ * Example:
+ * {
+ *   "bot_id": 3,
+ *   "telegram_id": 8668857411,
+ *   "username": "OneGuardSecurityBot",
+ *   "message": "Telegram bot verified."
+ * }
+ */
+export interface TelegramBotVerificationResult {
+  bot_id: number;
+  telegram_id: number | string;
+  username: string;
+  message: string;
+}
+
 export interface TelegramChat {
   id: number;
 
