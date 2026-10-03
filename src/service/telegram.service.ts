@@ -85,6 +85,19 @@ export const telegramService = {
       >(`/admin/telegram/bots/${id}`, data)
     ),
 
+  /**
+   * Verify the configured Telegram bot by asking
+   * the backend to call Telegram getMe.
+   */
+  verifyBot: (id: number) =>
+    handleApiResponse(
+      api.post<
+        ApiResponse<{
+          item: TelegramBot;
+        }>
+      >(`/admin/telegram/bots/${id}/verify`)
+    ),
+
   /* =======================================================
      Telegram Groups / Chats
      ======================================================= */

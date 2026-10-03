@@ -16,6 +16,7 @@ import type {
 import {
   fetchTelegramBots,
   fetchTelegramOverview,
+  verifyTelegramBot,
 } from "@/store/slices/telegramSlice";
 
 import { Card } from "@/components/ui/card";
@@ -23,8 +24,10 @@ import { Button } from "@/components/ui/button";
 
 import {
   Bot,
+  CheckCircle2,
   Plus,
   RefreshCw,
+  XCircle,
 } from "lucide-react";
 
 import TelegramBotDataTable from "./telegram-bot-data-table";
@@ -45,6 +48,15 @@ const TelegramBots = () => {
 
   const [selectedBot, setSelectedBot] =
     useState<TelegramBot | null>(null);
+
+  const [verifyingBotId, setVerifyingBotId] =
+    useState<number | null>(null);
+
+  const [verifySuccess, setVerifySuccess] =
+    useState<string | null>(null);
+
+  const [verifyError, setVerifyError] =
+    useState<string | null>(null);
 
   const activeBots = bots.filter(
     (bot) => bot.is_active
@@ -75,7 +87,7 @@ const TelegramBots = () => {
     }
   };
 
-  const handleRefresh = async () => {
+  const refreshBots = async () => {
     await Promise.all([
       dispatch(
         fetchTelegramBots({
@@ -85,6 +97,50 @@ const TelegramBots = () => {
       ),
       dispatch(fetchTelegramOverview()),
     ]);
+  };
+
+  const handleRefresh = async () => {
+    setVerifyError(null);
+    setVerifySuccess(null);
+
+    await refreshBots();
+  };
+
+  const handleVerify = async (
+    bot: TelegramBot
+  ) => {
+    if (verifyingBotId !== null) {
+      return;
+    }
+
+    setVerifyingBotId(bot.id);
+    setVerifyError(null);
+    setVerifySuccess(null);
+
+    try {
+      await dispatch(
+        verifyTelegramBot(bot.id)
+      ).unwrap();
+
+      await refreshBots();
+
+      setVerifySuccess(
+        `${bot.name || "Telegram bot"} verified successfully.`
+      );
+    } catch (error: unknown) {
+      if (typeof error === "string") {
+        setVerifyError(error);
+      } else if (error instanceof Error) {
+        setVerifyError(error.message);
+      } else {
+        setVerifyError(
+          `Failed to verify ${bot.name || "Telegram bot"
+          }.`
+        );
+      }
+    } finally {
+      setVerifyingBotId(null);
+    }
   };
 
   return (
@@ -119,7 +175,10 @@ const TelegramBots = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isLoading}
+                disabled={
+                  isLoading ||
+                  verifyingBotId !== null
+                }
                 onClick={() =>
                   void handleRefresh()
                 }
@@ -137,6 +196,9 @@ const TelegramBots = () => {
               <Button
                 type="button"
                 size="sm"
+                disabled={
+                  verifyingBotId !== null
+                }
                 onClick={handleCreate}
                 className="bg-[#5F0015] text-white hover:bg-[#75001a]"
               >
@@ -147,6 +209,52 @@ const TelegramBots = () => {
             </div>
           </div>
         </Card>
+
+        {/* =================================================
+            Verification feedback
+            ================================================= */}
+
+        {verifySuccess && (
+          <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-400">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+
+            <div className="flex-1">
+              {verifySuccess}
+            </div>
+
+            <button
+              type="button"
+              aria-label="Dismiss success message"
+              className="shrink-0 opacity-70 transition-opacity hover:opacity-100"
+              onClick={() =>
+                setVerifySuccess(null)
+              }
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {verifyError && (
+          <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
+            <div className="flex-1">
+              {verifyError}
+            </div>
+
+            <button
+              type="button"
+              aria-label="Dismiss error message"
+              className="shrink-0 opacity-70 transition-opacity hover:opacity-100"
+              onClick={() =>
+                setVerifyError(null)
+              }
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* =================================================
             Summary
@@ -193,7 +301,9 @@ const TelegramBots = () => {
           <TelegramBotDataTable
             bots={bots}
             isLoading={isLoading}
+            verifyingBotId={verifyingBotId}
             onEdit={handleEdit}
+            onVerify={handleVerify}
           />
         </div>
       </div>

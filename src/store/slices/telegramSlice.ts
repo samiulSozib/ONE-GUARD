@@ -189,6 +189,28 @@ export const updateTelegramBot = createAsyncThunk(
   }
 );
 
+export const verifyTelegramBot = createAsyncThunk(
+  "telegram/verifyBot",
+  async (
+    id: number,
+    { rejectWithValue }
+  ) => {
+    try {
+      const response =
+        await telegramService.verifyBot(id);
+
+      return response.item;
+    } catch (error: unknown) {
+      return rejectWithValue(
+        getErrorMessage(
+          error,
+          "Failed to verify Telegram bot"
+        )
+      );
+    }
+  }
+);
+
 /* =========================================================
    Chats / Groups
    ========================================================= */
@@ -607,6 +629,48 @@ const telegramSlice = createSlice({
 
       .addCase(
         updateTelegramBot.rejected,
+        (state, action) => {
+          state.isLoading = false;
+          state.error =
+            action.payload as string;
+        }
+      )
+
+      .addCase(
+        verifyTelegramBot.pending,
+        (state) => {
+          state.isLoading = true;
+          state.error = null;
+        }
+      )
+
+      .addCase(
+        verifyTelegramBot.fulfilled,
+        (state, action) => {
+          state.isLoading = false;
+
+          const index = state.bots.findIndex(
+            (bot) =>
+              bot.id === action.payload.id
+          );
+
+          if (index !== -1) {
+            state.bots[index] =
+              action.payload;
+          }
+
+          if (
+            state.currentBot?.id ===
+            action.payload.id
+          ) {
+            state.currentBot =
+              action.payload;
+          }
+        }
+      )
+
+      .addCase(
+        verifyTelegramBot.rejected,
         (state, action) => {
           state.isLoading = false;
           state.error =
