@@ -44,9 +44,14 @@ import {
   Loader2,
   MessageSquare,
   RefreshCw,
+  Settings2,
+  Shield,
   ShieldCheck,
   ShieldX,
 } from "lucide-react";
+
+import TelegramGroupScopes from "./telegram-group-scopes";
+import TelegramGroupRules from "./telegram-group-rules";
 
 interface TelegramGroupDetailsProps {
   open: boolean;
@@ -84,6 +89,16 @@ const TelegramGroupDetails = ({
   ] = useState(false);
 
   const [
+    scopesOpen,
+    setScopesOpen,
+  ] = useState(false);
+
+  const [
+    rulesOpen,
+    setRulesOpen,
+  ] = useState(false);
+
+  const [
     error,
     setError,
   ] =
@@ -116,7 +131,7 @@ const TelegramGroupDetails = ({
           fetchTelegramChat(id)
         ).unwrap();
       } catch (
-        fetchError: unknown
+      fetchError: unknown
       ) {
         if (
           fetchError instanceof
@@ -221,7 +236,7 @@ const TelegramGroupDetails = ({
           "Telegram group verified successfully."
         );
       } catch (
-        verifyError: unknown
+      verifyError: unknown
       ) {
         if (
           verifyError instanceof
@@ -250,7 +265,11 @@ const TelegramGroupDetails = ({
   const handleOpenChange = (
     nextOpen: boolean
   ) => {
-    if (isVerifying) {
+    if (
+      isVerifying ||
+      scopesOpen ||
+      rulesOpen
+    ) {
       return;
     }
 
@@ -259,407 +278,567 @@ const TelegramGroupDetails = ({
     );
   };
 
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={
-        handleOpenChange
+  const handleScopesOpenChange =
+    (
+      nextOpen: boolean
+    ) => {
+      setScopesOpen(
+        nextOpen
+      );
+
+      if (
+        !nextOpen &&
+        group?.id
+      ) {
+        void refreshAll(
+          group.id
+        );
       }
-    >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[760px]">
-        <DialogHeader>
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#5F0015]/10 text-[#5F0015]">
-              <MessageSquare className="h-5 w-5" />
+    };
+
+  const handleRulesOpenChange =
+    (
+      nextOpen: boolean
+    ) => {
+      setRulesOpen(
+        nextOpen
+      );
+
+      if (
+        !nextOpen &&
+        group?.id
+      ) {
+        void refreshAll(
+          group.id
+        );
+      }
+    };
+
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={
+          handleOpenChange
+        }
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[760px]">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#5F0015]/10 text-[#5F0015]">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0">
+                <DialogTitle>
+                  Telegram Group
+                  Details
+                </DialogTitle>
+
+                <DialogDescription className="mt-1">
+                  Inspect the Telegram
+                  group, verification
+                  state, scopes and
+                  subscribed event
+                  rules.
+                </DialogDescription>
+              </div>
             </div>
+          </DialogHeader>
 
-            <div className="min-w-0">
-              <DialogTitle>
-                Telegram Group
-                Details
-              </DialogTitle>
+          {!group &&
+            isFetching ? (
+            <div className="flex min-h-[300px] items-center justify-center">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
 
-              <DialogDescription className="mt-1">
-                Inspect the Telegram
-                group, verification
-                state, scopes and
-                subscribed event
-                rules.
-              </DialogDescription>
+                Loading group
+                details...
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          ) : group ? (
+            <div className="space-y-5 py-5">
+              {/* Main status */}
 
-        {!group &&
-        isFetching ? (
-          <div className="flex min-h-[300px] items-center justify-center">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Card className="p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-semibold">
+                        {
+                          group.title
+                        }
+                      </h3>
 
-              Loading group
-              details...
-            </div>
-          </div>
-        ) : group ? (
-          <div className="space-y-5 py-5">
-            {/* Main status */}
+                      <StatusBadge
+                        active={
+                          group.is_active
+                        }
+                        activeLabel="Active"
+                        inactiveLabel="Inactive"
+                      />
 
-            <Card className="p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold">
-                      {
-                        group.title
-                      }
-                    </h3>
+                      <StatusBadge
+                        active={
+                          group.is_verified ===
+                          true
+                        }
+                        activeLabel="Verified"
+                        inactiveLabel="Unverified"
+                      />
+                    </div>
 
-                    <StatusBadge
-                      active={
-                        group.is_active
-                      }
-                      activeLabel="Active"
-                      inactiveLabel="Inactive"
-                    />
-
-                    <StatusBadge
-                      active={
-                        group.is_verified ===
-                        true
-                      }
-                      activeLabel="Verified"
-                      inactiveLabel="Unverified"
-                    />
+                    {group.description && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {
+                          group.description
+                        }
+                      </p>
+                    )}
                   </div>
 
-                  {group.description && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {
-                        group.description
-                      }
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      isFetching ||
-                      isVerifying
-                    }
-                    onClick={() =>
-                      void handleRefresh()
-                    }
-                  >
-                    <RefreshCw
-                      className={`mr-2 h-4 w-4 ${
-                        isFetching
-                          ? "animate-spin"
-                          : ""
-                      }`}
-                    />
-
-                    Refresh
-                  </Button>
-
-                  {!group.is_verified && (
+                  <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
                       disabled={
+                        isFetching ||
                         isVerifying
                       }
                       onClick={() =>
-                        void handleVerify()
+                        void handleRefresh()
                       }
-                      className="bg-[#5F0015] text-white hover:bg-[#75001a]"
                     >
-                      {isVerifying ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${isFetching
+                            ? "animate-spin"
+                            : ""
+                          }`}
+                      />
 
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck className="mr-2 h-4 w-4" />
-
-                          Verify Group
-                        </>
-                      )}
+                      Refresh
                     </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
 
-            {/* General information */}
-
-            <div>
-              <h4 className="mb-3 text-sm font-semibold">
-                Group Information
-              </h4>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <InfoCard
-                  label="Database ID"
-                  value={String(
-                    group.id
-                  )}
-                />
-
-                <InfoCard
-                  label="Telegram Chat ID"
-                  value={
-                    group.chat_id
-                  }
-                />
-
-                <InfoCard
-                  label="Telegram Bot ID"
-                  value={String(
-                    group.telegram_bot_id
-                  )}
-                  icon={
-                    <Bot className="h-4 w-4" />
-                  }
-                />
-
-                <InfoCard
-                  label="Group Type"
-                  value={
-                    group.type ??
-                    "—"
-                  }
-                />
-
-                <InfoCard
-                  label="Audience"
-                  value={
-                    group.audience ??
-                    "—"
-                  }
-                />
-
-                <InfoCard
-                  label="Verification"
-                  value={
-                    group.is_verified
-                      ? "Verified"
-                      : "Not Verified"
-                  }
-                  icon={
-                    group.is_verified ? (
-                      <ShieldCheck className="h-4 w-4" />
-                    ) : (
-                      <ShieldX className="h-4 w-4" />
-                    )
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Scope summary */}
-
-            <div>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-semibold">
-                    Notification
-                    Scopes
-                  </h4>
-
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Controls which
-                    ONE GUARD records
-                    can route
-                    notifications to
-                    this group.
-                  </p>
-                </div>
-
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                  {
-                    scopes.length
-                  }{" "}
-                  {scopes.length ===
-                  1
-                    ? "scope"
-                    : "scopes"}
-                </span>
-              </div>
-
-              {scopes.length ===
-              0 ? (
-                <EmptyConfiguration
-                  title="No scopes configured"
-                  description="This group does not currently have any notification scopes."
-                />
-              ) : (
-                <div className="space-y-2">
-                  {scopes.map(
-                    (scope) => (
-                      <Card
-                        key={
-                          scope.id
+                    {!group.is_verified && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={
+                          isVerifying
                         }
-                        className="p-3"
+                        onClick={() =>
+                          void handleVerify()
+                        }
+                        className="bg-[#5F0015] text-white hover:bg-[#75001a]"
                       >
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-sm font-medium capitalize">
-                              {
-                                scope.scope_type
-                              }{" "}
-                              Scope
-                            </p>
+                        {isVerifying ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
 
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Scope ID:{" "}
-                              {scope.scope_id ??
-                                "—"}
-                            </p>
+                            Verifying...
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+
+                            Verify Group
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Configuration actions */}
+
+              <Card className="p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold">
+                      Notification
+                      Configuration
+                    </h4>
+
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Configure the
+                      records and events
+                      routed to this
+                      Telegram group.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        group.is_active
+                      }
+                      onClick={() =>
+                        setScopesOpen(
+                          true
+                        )
+                      }
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+
+                      Manage Scopes
+                    </Button>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        group.is_active
+                      }
+                      onClick={() =>
+                        setRulesOpen(
+                          true
+                        )
+                      }
+                    >
+                      <Settings2 className="mr-2 h-4 w-4" />
+
+                      Manage Rules
+                    </Button>
+                  </div>
+                </div>
+
+                {group.is_active && (
+                  <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-400">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
+                    <span>
+                      Deactivate this
+                      group before
+                      changing scopes
+                      or event rules.
+                    </span>
+                  </div>
+                )}
+              </Card>
+
+              {/* General information */}
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold">
+                  Group Information
+                </h4>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <InfoCard
+                    label="Database ID"
+                    value={String(
+                      group.id
+                    )}
+                  />
+
+                  <InfoCard
+                    label="Telegram Chat ID"
+                    value={
+                      group.chat_id
+                    }
+                  />
+
+                  <InfoCard
+                    label="Telegram Bot ID"
+                    value={String(
+                      group.telegram_bot_id
+                    )}
+                    icon={
+                      <Bot className="h-4 w-4" />
+                    }
+                  />
+
+                  <InfoCard
+                    label="Group Type"
+                    value={
+                      group.type ??
+                      "—"
+                    }
+                  />
+
+                  <InfoCard
+                    label="Audience"
+                    value={
+                      group.audience ??
+                      "—"
+                    }
+                  />
+
+                  <InfoCard
+                    label="Verification"
+                    value={
+                      group.is_verified
+                        ? "Verified"
+                        : "Not Verified"
+                    }
+                    icon={
+                      group.is_verified ? (
+                        <ShieldCheck className="h-4 w-4" />
+                      ) : (
+                        <ShieldX className="h-4 w-4" />
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Scope summary */}
+
+              <div>
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold">
+                      Notification
+                      Scopes
+                    </h4>
+
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Controls which
+                      ONE GUARD records
+                      can route
+                      notifications to
+                      this group.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                      {
+                        scopes.length
+                      }{" "}
+                      {scopes.length ===
+                        1
+                        ? "scope"
+                        : "scopes"}
+                    </span>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        group.is_active
+                      }
+                      onClick={() =>
+                        setScopesOpen(
+                          true
+                        )
+                      }
+                    >
+                      Manage
+                    </Button>
+                  </div>
+                </div>
+
+                {scopes.length ===
+                  0 ? (
+                  <EmptyConfiguration
+                    title="No scopes configured"
+                    description="This group does not currently have any notification scopes."
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {scopes.map(
+                      (scope) => (
+                        <Card
+                          key={
+                            scope.id
+                          }
+                          className="p-3"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-sm font-medium capitalize">
+                                {
+                                  scope.scope_type
+                                }{" "}
+                                Scope
+                              </p>
+
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Scope ID:{" "}
+                                {scope.scope_id ??
+                                  "—"}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {scope.include_children && (
+                                <span className="rounded-full bg-muted px-2 py-1 text-xs">
+                                  Includes
+                                  children
+                                </span>
+                              )}
+
+                              <StatusBadge
+                                active={
+                                  scope.is_active !==
+                                  false
+                                }
+                                activeLabel="Active"
+                                inactiveLabel="Inactive"
+                              />
+                            </div>
                           </div>
+                        </Card>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
 
-                          <div className="flex flex-wrap gap-2">
-                            {scope.include_children && (
-                              <span className="rounded-full bg-muted px-2 py-1 text-xs">
-                                Includes
-                                children
-                              </span>
-                            )}
+              {/* Rules summary */}
+
+              <div>
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold">
+                      Event Rules
+                    </h4>
+
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Events subscribed
+                      for delivery to
+                      this Telegram
+                      group.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                      {
+                        rules.length
+                      }{" "}
+                      {rules.length ===
+                        1
+                        ? "rule"
+                        : "rules"}
+                    </span>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        group.is_active
+                      }
+                      onClick={() =>
+                        setRulesOpen(
+                          true
+                        )
+                      }
+                    >
+                      Manage
+                    </Button>
+                  </div>
+                </div>
+
+                {rules.length ===
+                  0 ? (
+                  <EmptyConfiguration
+                    title="No event rules configured"
+                    description="This group does not currently subscribe to any Telegram notification events."
+                  />
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {rules.map(
+                      (rule) => (
+                        <Card
+                          key={
+                            rule.id
+                          }
+                          className="p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="break-all text-sm font-medium">
+                                {
+                                  rule.event_type
+                                }
+                              </p>
+                            </div>
 
                             <StatusBadge
                               active={
-                                scope.is_active !==
+                                rule.is_enabled !==
                                 false
                               }
-                              activeLabel="Active"
-                              inactiveLabel="Inactive"
+                              activeLabel="Enabled"
+                              inactiveLabel="Disabled"
                             />
                           </div>
-                        </div>
-                      </Card>
-                    )
-                  )}
+                        </Card>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Feedback */}
+
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
+                  <span>
+                    {error}
+                  </span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-400">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+
+                  <span>
+                    {
+                      successMessage
+                    }
+                  </span>
                 </div>
               )}
             </div>
+          ) : (
+            <div className="flex min-h-[260px] flex-col items-center justify-center p-6 text-center">
+              <AlertCircle className="mb-3 h-8 w-8 text-muted-foreground" />
 
-            {/* Rules summary */}
-
-            <div>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-sm font-semibold">
-                    Event Rules
-                  </h4>
-
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Events subscribed
-                    for delivery to
-                    this Telegram
-                    group.
-                  </p>
-                </div>
-
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                  {
-                    rules.length
-                  }{" "}
-                  {rules.length ===
-                  1
-                    ? "rule"
-                    : "rules"}
-                </span>
-              </div>
-
-              {rules.length ===
-              0 ? (
-                <EmptyConfiguration
-                  title="No event rules configured"
-                  description="This group does not currently subscribe to any Telegram notification events."
-                />
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {rules.map(
-                    (rule) => (
-                      <Card
-                        key={
-                          rule.id
-                        }
-                        className="p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="break-all text-sm font-medium">
-                              {
-                                rule.event_type
-                              }
-                            </p>
-                          </div>
-
-                          <StatusBadge
-                            active={
-                              rule.is_enabled !==
-                              false
-                            }
-                            activeLabel="Enabled"
-                            inactiveLabel="Disabled"
-                          />
-                        </div>
-                      </Card>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Feedback */}
-
-            {error && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
-                <span>
-                  {error}
-                </span>
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-400">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-
-                <span>
-                  {
-                    successMessage
-                  }
-                </span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex min-h-[260px] flex-col items-center justify-center p-6 text-center">
-            <AlertCircle className="mb-3 h-8 w-8 text-muted-foreground" />
-
-            <p className="font-medium">
-              Group details are
-              unavailable.
-            </p>
-
-            {error && (
-              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                {error}
+              <p className="font-medium">
+                Group details are
+                unavailable.
               </p>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+              {error && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <TelegramGroupScopes
+        open={scopesOpen}
+        onOpenChange={
+          handleScopesOpenChange
+        }
+        chat={group}
+      />
+
+      <TelegramGroupRules
+        open={rulesOpen}
+        onOpenChange={
+          handleRulesOpenChange
+        }
+        chat={group}
+      />
+    </>
   );
 };
 
@@ -710,11 +889,10 @@ const StatusBadge = ({
 }: StatusBadgeProps) => {
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-        active
+      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${active
           ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
           : "bg-muted text-muted-foreground"
-      }`}
+        }`}
     >
       {active
         ? activeLabel
