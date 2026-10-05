@@ -1,27 +1,28 @@
 import { configureStore } from '@reduxjs/toolkit';
+
 import settingsReducer from './slices/settingsSlice';
 import authReducer from './slices/authSlice';
 import clientReducer from './slices/clientSlice';
-import guardReducer from './slices/guardSlice'
-import contactReducer from './slices/contactSlice'
-import siteReducer from './slices/siteSlice'
-import siteLocationReducer from './slices/siteLocationSlice'
-import dutyTimeTypesReducer from './slices/dutyTimeTypesSlice'
-import dutyReducer from './slices/dutySlice'
-import guardAssignmentReducer from './slices/guardAssignmentSlice'
-import dutyStatusReportReducer from './slices/dutyStatusReportSlice'
-import dutyAttendanceReducer from './slices/dutyAttendenceSlice'
-import guardTypesReducer from './slices/guardTypeSlice'
-import expenseCategoryReducer from './slices/expenseCategorySlice'
-import complaintReducer from './slices/complaintSlice'
-import expenseReducer from './slices/expenseSlice'
-import leaveReducer from './slices/leaveSlice'
-import incidentReducer from './slices/incidentSlice'
-import expenseReviewReducer from './slices/expenseReviewSlice'
-import clientContractReducer from './slices/clientContractSlice'
-import shiftInstructionReducer from './slices/shiftInstruction'
-import dashboardReducer from './slices/dashboardSlice'
-import liveTrackingReducer from './slices/liveTrackingSlice'
+import guardReducer from './slices/guardSlice';
+import contactReducer from './slices/contactSlice';
+import siteReducer from './slices/siteSlice';
+import siteLocationReducer from './slices/siteLocationSlice';
+import dutyTimeTypesReducer from './slices/dutyTimeTypesSlice';
+import dutyReducer from './slices/dutySlice';
+import guardAssignmentReducer from './slices/guardAssignmentSlice';
+import dutyStatusReportReducer from './slices/dutyStatusReportSlice';
+import dutyAttendanceReducer from './slices/dutyAttendenceSlice';
+import guardTypesReducer from './slices/guardTypeSlice';
+import expenseCategoryReducer from './slices/expenseCategorySlice';
+import complaintReducer from './slices/complaintSlice';
+import expenseReducer from './slices/expenseSlice';
+import leaveReducer from './slices/leaveSlice';
+import incidentReducer from './slices/incidentSlice';
+import expenseReviewReducer from './slices/expenseReviewSlice';
+import clientContractReducer from './slices/clientContractSlice';
+import shiftInstructionReducer from './slices/shiftInstruction';
+import dashboardReducer from './slices/dashboardSlice';
+import liveTrackingReducer from './slices/liveTrackingSlice';
 import jobCategoriesReducer from './slices/jobCategoriesSlice';
 import jobReducer from './slices/jobSlice';
 import jobApplicationReducer from './slices/jobApplicationSlice';
@@ -39,7 +40,7 @@ import dutyScheduleReducer from './slices/duty-schedule.slice';
 import schedulingReducer from './slices/schedulingSlice';
 import attendancePolicyReducer from './slices/attendancePolicy.slice';
 import telegramReducer from './slices/telegramSlice';
-
+import patrolVisitReducer from './slices/patrolVisitSlice';
 
 export const store = configureStore({
   reducer: {
@@ -83,6 +84,7 @@ export const store = configureStore({
     settings: settingsReducer,
     scheduling: schedulingReducer,
     telegram: telegramReducer,
+    patrolVisits: patrolVisitReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

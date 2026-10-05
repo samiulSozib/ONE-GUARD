@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Clock,
   FolderKanban,
+  Footprints,
   LayoutDashboard,
   LocateIcon,
   MessageSquareWarning,
@@ -81,6 +82,7 @@ const navGroups = [
       { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
       { title: "Time & Attendance", url: "/duty-attendance", icon: UserCheck },
+      { title: "Patrol Visits", url: "/patrol-visits", icon: Footprints },
       { title: "Shift Status Reports", url: "/duty-status-report", icon: BarChart3 },
       { title: "Shift Logs", url: "/shift-logs", icon: BarChart3 },
       { title: "Telegram Management", url: "/telegram", icon: Send },
@@ -156,10 +158,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white">
             <Shield className="h-3.5 w-3.5 text-black" strokeWidth={2.5} />
           </div>
+
           <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="truncate text-[13px] font-semibold text-black">
               OGS Security
             </span>
+
             <span className="truncate text-[10px] text-zinc-500">
               Enterprise Plan
             </span>
@@ -202,6 +206,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             )}
                             strokeWidth={isActive ? 2.5 : 1.8}
                           />
+
                           <span className="truncate group-data-[collapsible=icon]:hidden">
                             {item.title}
                           </span>

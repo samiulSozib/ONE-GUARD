@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Clock,
   FolderKanban,
+  Footprints,
   GalleryVerticalEnd,
   LayoutDashboard,
   LocateIcon,
@@ -17,12 +18,12 @@ import {
   Phone,
   Send,
   Settings,
+  Settings2,
   Shield,
   UserCheck,
   UserPlus,
   Users,
   Wallet,
-  Settings2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -49,7 +50,11 @@ const data = {
     name: "OGS",
   },
   teams: [
-    { name: "OGS Security", logo: GalleryVerticalEnd, plan: "Enterprise" },
+    {
+      name: "OGS Security",
+      logo: GalleryVerticalEnd,
+      plan: "Enterprise",
+    },
   ],
 }
 
@@ -86,6 +91,7 @@ const navGroups = [
       { title: "Scheduling Settings", url: "/scheduling-settings", icon: Settings },
       { title: "Shift Type", url: "/duty-time-type", icon: Clock },
       { title: "Time & Attendance", url: "/duty-attendance", icon: UserCheck },
+      { title: "Patrol Visits", url: "/patrol-visits", icon: Footprints },
       { title: "Shift Status Reports", url: "/duty-status-report", icon: BarChart3 },
       { title: "Shift Logs", url: "/shift-logs", icon: BarChart3 },
       { title: "Telegram Management", url: "/telegram", icon: Send },
@@ -134,7 +140,9 @@ const navGroups = [
   },
 ]
 
-export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebarSecondary({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
 
   return (
@@ -163,13 +171,17 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
       {/* ── Nav ── */}
       <SidebarContent className="px-2 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navGroups.map((group, gi) => (
-          <SidebarGroup key={group.label} className={cn("px-0", gi > 0 && "mt-4")}>
-            {/* Group label with left rule */}
+          <SidebarGroup
+            key={group.label}
+            className={cn("px-0", gi > 0 && "mt-4")}
+          >
             <div className="mb-1 flex items-center gap-2 px-2 group-data-[collapsible=icon]:hidden">
               <span className="h-px flex-1 bg-zinc-100" />
+
               <SidebarGroupLabel className="px-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
                 {group.label}
               </SidebarGroupLabel>
+
               <span className="h-px flex-1 bg-zinc-100" />
             </div>
 
@@ -187,7 +199,8 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                         className={cn(
                           "group/btn relative h-8 rounded-md px-2.5 text-[13px] font-medium transition-all duration-100",
                           !isActive && "text-black hover:bg-zinc-50 hover:text-zinc-800",
-                          isActive && "bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white",
+                          isActive &&
+                          "bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white",
                         )}
                       >
                         <Link href={item.url} className="flex items-center gap-2.5">
@@ -200,6 +213,7 @@ export function AppSidebarSecondary({ ...props }: React.ComponentProps<typeof Si
                             )}
                             strokeWidth={isActive ? 2.2 : 1.8}
                           />
+
                           <span className="truncate group-data-[collapsible=icon]:hidden">
                             {item.title}
                           </span>
