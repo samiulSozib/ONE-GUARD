@@ -37,8 +37,7 @@ const getErrorMessage = (
       };
 
     return (
-      maybeAxiosError.response?.data
-        ?.message ||
+      maybeAxiosError.response?.data?.message ||
       maybeAxiosError.message ||
       "Something went wrong."
     );
@@ -95,7 +94,7 @@ export const fetchPatrolVisitOverview =
         const response =
           await patrolVisitService.getOverview();
 
-        return response.data;
+        return response;
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -128,7 +127,7 @@ export const fetchPatrolAssignments =
             params
           );
 
-        return response.data;
+        return response;
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -146,7 +145,7 @@ export const fetchPatrolVisitsByAssignment =
     {
       assignmentId: number;
       visits: PatrolVisit[];
-      assignment: PatrolAssignmentSummary;
+      assignment: PatrolAssignmentSummary | null;
     },
     {
       assignmentId: number;
@@ -173,7 +172,7 @@ export const fetchPatrolVisitsByAssignment =
           );
 
         const visits =
-          response.data ?? [];
+          response ?? [];
 
         const assignment =
           patrolVisitService.buildAssignmentSummary(
@@ -218,7 +217,7 @@ export const fetchPatrolVisit =
             id
           );
 
-        return response.data;
+        return response;
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -340,8 +339,9 @@ const patrolVisitSlice =
               false;
 
             state.error =
-              action.payload ??
-              "Unable to load patrol overview.";
+              typeof action.payload === "string"
+                ? action.payload
+                : "Unable to load patrol overview.";
           }
         )
 
@@ -364,8 +364,7 @@ const patrolVisitSlice =
             state.isLoading = false;
 
             state.assignments =
-              action.payload.items ??
-              [];
+              action.payload.items ?? [];
 
             const pagination =
               action.payload.data;
@@ -382,8 +381,7 @@ const patrolVisitSlice =
 
                 total:
                   pagination.total ??
-                  state.assignments
-                    .length,
+                  state.assignments.length,
 
                 per_page:
                   pagination.per_page ??
@@ -394,11 +392,10 @@ const patrolVisitSlice =
                 current_page: 1,
                 last_page: 1,
                 total:
-                  state.assignments
-                    .length,
+                  state.assignments.length,
                 per_page:
-                  state.assignments
-                    .length || 10,
+                  state.assignments.length ||
+                  10,
               };
             }
           }
@@ -410,8 +407,9 @@ const patrolVisitSlice =
             state.isLoading = false;
 
             state.error =
-              action.payload ??
-              "Unable to load patrol visits.";
+              typeof action.payload === "string"
+                ? action.payload
+                : "Unable to load patrol visits.";
           }
         )
 
@@ -445,28 +443,24 @@ const patrolVisitSlice =
               action.payload.assignment;
 
             /*
-             * Keep the corresponding
-             * assignment in the list
-             * synchronized with the
-             * latest visit progress.
+             * An assignment summary can legitimately be null
+             * when the API returns no patrol visits.
              */
+            if (!action.payload.assignment) {
+              return;
+            }
+
             const index =
               state.assignments.findIndex(
                 (assignment) =>
                   assignment.assignment_id ===
-                  action.payload
-                    .assignmentId
+                  action.payload.assignmentId
               );
 
             if (index !== -1) {
-              state.assignments[
-                index
-              ] = {
-                ...state.assignments[
-                  index
-                ],
-                ...action.payload
-                  .assignment,
+              state.assignments[index] = {
+                ...state.assignments[index],
+                ...action.payload.assignment,
               };
             }
           }
@@ -479,8 +473,9 @@ const patrolVisitSlice =
               false;
 
             state.error =
-              action.payload ??
-              "Unable to load patrol visit details.";
+              typeof action.payload === "string"
+                ? action.payload
+                : "Unable to load patrol visit details.";
           }
         )
 
@@ -528,8 +523,9 @@ const patrolVisitSlice =
               false;
 
             state.error =
-              action.payload ??
-              "Unable to load patrol visit.";
+              typeof action.payload === "string"
+                ? action.payload
+                : "Unable to load patrol visit.";
           }
         );
     },
