@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+
 import { format } from "date-fns";
 
 import {
@@ -31,8 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface PatrolVisitDetailsProps {
   assignment:
-    | PatrolAssignmentSummary
-    | null;
+  | PatrolAssignmentSummary
+  | null;
 
   visits?: PatrolVisit[];
 
@@ -40,8 +41,20 @@ interface PatrolVisitDetailsProps {
 }
 
 /* =========================================================
-   Helpers
+   Date Helpers
    ========================================================= */
+
+/*
+ * API timestamps such as:
+ *
+ * 2026-10-05T18:59:52.000000Z
+ *
+ * contain Z, therefore they represent UTC.
+ *
+ * JavaScript Date converts that instant to the
+ * browser/admin device timezone before date-fns
+ * formats it.
+ */
 
 const formatDate = (
   value?: string | null
@@ -51,8 +64,18 @@ const formatDate = (
   }
 
   try {
+    const date = new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
+
     return format(
-      new Date(value),
+      date,
       "MMM dd, yyyy"
     );
   } catch {
@@ -68,9 +91,19 @@ const formatDateTime = (
   }
 
   try {
+    const date = new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
+
     return format(
-      new Date(value),
-      "MMM dd, yyyy • hh:mm a"
+      date,
+      "MMM dd, yyyy • hh:mm:ss a"
     );
   } catch {
     return value;
@@ -105,8 +138,15 @@ const formatDuration = (
   return `${hours}h ${remainingMinutes}m`;
 };
 
+/* =========================================================
+   Coordinate Helpers
+   ========================================================= */
+
 const formatCoordinate = (
-  value?: number | string | null
+  value?:
+    | number
+    | string
+    | null
 ) => {
   if (
     value === undefined ||
@@ -120,13 +160,47 @@ const formatCoordinate = (
     Number(value);
 
   if (
-    Number.isNaN(numericValue)
+    Number.isNaN(
+      numericValue
+    )
   ) {
     return String(value);
   }
 
   return numericValue.toFixed(6);
 };
+
+const formatAccuracy = (
+  value?:
+    | number
+    | string
+    | null
+) => {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return "N/A";
+  }
+
+  const numericValue =
+    Number(value);
+
+  if (
+    Number.isNaN(
+      numericValue
+    )
+  ) {
+    return String(value);
+  }
+
+  return `${numericValue.toFixed(1)} m`;
+};
+
+/* =========================================================
+   Guard / Site Helpers
+   ========================================================= */
 
 const getGuardName = (
   assignment:
@@ -138,6 +212,10 @@ const getGuardName = (
 
   if (!guard) {
     return "Unknown Guard";
+  }
+
+  if (guard.name) {
+    return guard.name;
   }
 
   if (guard.full_name) {
@@ -162,6 +240,17 @@ const getGuardName = (
   return "Unknown Guard";
 };
 
+const getGuardCode = (
+  assignment:
+    | PatrolAssignmentSummary
+    | null
+) => {
+  return (
+    assignment?.guard?.guard_code ||
+    "N/A"
+  );
+};
+
 const getSiteName = (
   assignment:
     | PatrolAssignmentSummary
@@ -172,7 +261,8 @@ const getSiteName = (
     assignment?.site?.name ||
     assignment?.duty?.site
       ?.site_name ||
-    assignment?.duty?.site?.name ||
+    assignment?.duty?.site
+      ?.name ||
     "N/A"
   );
 };
@@ -183,17 +273,23 @@ const getLocationName = (
     | null
 ) => {
   return (
-    assignment?.site_location
-      ?.title ||
-    assignment?.site_location
-      ?.name ||
-    assignment?.duty
+    assignment
       ?.site_location?.title ||
-    assignment?.duty
+    assignment
+      ?.site_location?.name ||
+    assignment
+      ?.duty
+      ?.site_location?.title ||
+    assignment
+      ?.duty
       ?.site_location?.name ||
     "N/A"
   );
 };
+
+/* =========================================================
+   Status Helpers
+   ========================================================= */
 
 const getStatusLabel = (
   status?: string | null
@@ -204,8 +300,10 @@ const getStatusLabel = (
 
   return status
     .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) =>
-      letter.toUpperCase()
+    .replace(
+      /\b\w/g,
+      (letter) =>
+        letter.toUpperCase()
     );
 };
 
@@ -223,6 +321,9 @@ const getStatusClassName = (
     case "missed":
       return "border-red-200 bg-red-100 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400";
 
+    case "partially_completed":
+      return "border-orange-200 bg-orange-100 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-400";
+
     case "cancelled":
       return "border-gray-200 bg-gray-100 text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300";
 
@@ -232,7 +333,7 @@ const getStatusClassName = (
 };
 
 /* =========================================================
-   Patrol Visit Details
+   Main Component
    ========================================================= */
 
 const PatrolVisitDetails = ({
@@ -240,44 +341,43 @@ const PatrolVisitDetails = ({
   visits = [],
   isLoading = false,
 }: PatrolVisitDetailsProps) => {
-  if (isLoading) {
+  if (
+    isLoading &&
+    !assignment
+  ) {
     return (
       <div className="space-y-4">
         <Card className="p-5">
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-52" />
+          <Skeleton className="h-6 w-48" />
 
-            <Skeleton className="h-4 w-72" />
+          <Skeleton className="mt-3 h-4 w-72" />
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {[1, 2, 3, 4].map(
-                (item) => (
-                  <Skeleton
-                    key={item}
-                    className="h-20 w-full rounded-xl"
-                  />
-                )
-              )}
-            </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map(
+              (item) => (
+                <Skeleton
+                  key={item}
+                  className="h-24"
+                />
+              )
+            )}
           </div>
         </Card>
 
-        {[1, 2, 3].map(
-          (item) => (
-            <Card
-              key={item}
-              className="p-5"
-            >
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-32" />
+        <Card className="p-5">
+          <Skeleton className="h-6 w-52" />
 
-                <Skeleton className="h-4 w-full" />
-
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            </Card>
-          )
-        )}
+          <div className="mt-5 space-y-4">
+            {[1, 2, 3].map(
+              (item) => (
+                <Skeleton
+                  key={item}
+                  className="h-40"
+                />
+              )
+            )}
+          </div>
+        </Card>
       </div>
     );
   }
@@ -285,61 +385,68 @@ const PatrolVisitDetails = ({
   if (!assignment) {
     return (
       <Card className="p-8">
-        <div className="flex flex-col items-center justify-center text-center">
+        <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
           <Footprints className="mb-3 h-10 w-10 text-muted-foreground" />
 
-          <h3 className="font-semibold">
-            No patrol selected
-          </h3>
+          <p className="font-medium">
+            Patrol assignment not found
+          </p>
 
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Select a patrol assignment
-            to view its visit history
-            and execution details.
+            The selected patrol
+            assignment could not be
+            loaded.
           </p>
         </div>
       </Card>
     );
   }
 
+  const sortedVisits =
+    [...visits].sort(
+      (a, b) =>
+        Number(
+          a.visit_number ?? 0
+        ) -
+        Number(
+          b.visit_number ?? 0
+        )
+    );
+
   const requiredVisits =
     assignment.required_visits ??
-    visits.length;
+    0;
 
   const completedVisits =
     assignment.completed_visits ??
-    visits.filter(
-      (visit) =>
-        visit.status ===
-        "completed"
-    ).length;
+    0;
 
   const remainingVisits =
     assignment.remaining_visits ??
     Math.max(
       requiredVisits -
-        completedVisits,
+      completedVisits,
       0
     );
 
   const progressPercentage =
-    requiredVisits > 0
+    assignment.progress_percentage ??
+    (requiredVisits > 0
       ? Math.min(
-          Math.round(
-            (completedVisits /
-              requiredVisits) *
-              100
-          ),
+        100,
+        Math.round(
+          (completedVisits /
+            requiredVisits) *
           100
         )
-      : 0;
+      )
+      : 0);
 
-  const sortedVisits =
-    [...visits].sort(
-      (a, b) =>
-        a.visit_number -
-        b.visit_number
-    );
+  const assignmentStatus =
+    assignment.operational_status ||
+    assignment.status ||
+    assignment.assignment_status ||
+    "pending";
 
   return (
     <div className="space-y-4">
@@ -348,94 +455,81 @@ const PatrolVisitDetails = ({
           =================================================== */}
 
       <Card className="overflow-hidden">
-        <div className="border-b bg-muted/30 p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold">
-                  {assignment.duty
-                    ?.title ||
-                    `Patrol Assignment #${assignment.assignment_id}`}
-                </h2>
+        <div className="flex flex-col gap-4 border-b p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">
+                Patrol Assignment #
+                {assignment.assignment_id}
+              </h2>
 
-                <Badge
-                  variant="outline"
-                  className={getStatusClassName(
-                    assignment.status
-                  )}
-                >
-                  {getStatusLabel(
-                    assignment.status
-                  )}
-                </Badge>
-              </div>
-
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <User className="h-4 w-4" />
-
-                  <span>
-                    {getGuardName(
-                      assignment
-                    )}
-                  </span>
-                </div>
-
-                {assignment.guard
-                  ?.guard_code && (
-                  <div className="flex items-center gap-1.5">
-                    <Shield className="h-4 w-4" />
-
-                    <span>
-                      {
-                        assignment
-                          .guard
-                          .guard_code
-                      }
-                    </span>
-                  </div>
+              <Badge
+                variant="outline"
+                className={getStatusClassName(
+                  assignmentStatus
                 )}
-
-                <div className="flex items-center gap-1.5">
-                  <CalendarDays className="h-4 w-4" />
-
-                  <span>
-                    {formatDate(
-                      assignment.duty_date ||
-                        assignment.duty
-                          ?.duty_date
-                    )}
-                  </span>
-                </div>
-              </div>
+              >
+                {getStatusLabel(
+                  assignmentStatus
+                )}
+              </Badge>
             </div>
 
-            <div className="min-w-[150px]">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <User className="h-4 w-4" />
+
                 <span>
-                  Patrol Progress
-                </span>
-
-                <span className="font-medium text-foreground">
-                  {completedVisits}/
-                  {requiredVisits}
+                  {getGuardName(
+                    assignment
+                  )}
                 </span>
               </div>
 
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-[#5F0015] transition-all"
-                  style={{
-                    width: `${progressPercentage}%`,
-                  }}
-                />
-              </div>
+              <span>
+                {getGuardCode(
+                  assignment
+                )}
+              </span>
 
-              <p className="mt-1 text-right text-xs text-muted-foreground">
-                {progressPercentage}%
-                completed
-              </p>
+              <div className="flex items-center gap-1.5">
+                <Footprints className="h-4 w-4" />
+
+                <span>
+                  Patrol Visits
+                </span>
+              </div>
             </div>
+          </div>
+
+          <div className="min-w-[220px]">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Overall Progress
+              </span>
+
+              <span className="font-semibold">
+                {completedVisits}/
+                {requiredVisits}
+              </span>
+            </div>
+
+            <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-[#5F0015]"
+                style={{
+                  width: `${Math.min(
+                    progressPercentage,
+                    100
+                  )}%`,
+                }}
+              />
+            </div>
+
+            <p className="mt-1 text-right text-xs text-muted-foreground">
+              {progressPercentage}%
+              completed
+            </p>
           </div>
         </div>
 
@@ -443,7 +537,7 @@ const PatrolVisitDetails = ({
             Summary
             ================================================= */}
 
-        <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
           <SummaryItem
             label="Required"
             value={requiredVisits}
@@ -482,7 +576,7 @@ const PatrolVisitDetails = ({
       </Card>
 
       {/* ===================================================
-          Service Information
+          Patrol Information
           =================================================== */}
 
       <Card className="p-5">
@@ -492,8 +586,8 @@ const PatrolVisitDetails = ({
           </h3>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Service location and
-            patrol duty information.
+            Service location and patrol
+            duty information.
           </p>
         </div>
 
@@ -506,7 +600,9 @@ const PatrolVisitDetails = ({
             value={
               assignment.duty
                 ?.title ||
-              `Duty #${assignment.duty_id ?? "N/A"}`
+              `Duty #${assignment.duty_id ??
+              "N/A"
+              }`
             }
           />
 
@@ -537,11 +633,40 @@ const PatrolVisitDetails = ({
             label="Duty Date"
             value={formatDate(
               assignment.duty_date ||
-                assignment.duty
-                  ?.duty_date
+              assignment.duty
+                ?.duty_date
             )}
           />
         </div>
+
+        {(assignment.duty
+          ?.start_datetime ||
+          assignment.duty
+            ?.end_datetime) && (
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <InformationItem
+                icon={
+                  <Clock3 className="h-4 w-4" />
+                }
+                label="Duty Start"
+                value={formatDateTime(
+                  assignment.duty
+                    ?.start_datetime
+                )}
+              />
+
+              <InformationItem
+                icon={
+                  <Clock3 className="h-4 w-4" />
+                }
+                label="Duty End"
+                value={formatDateTime(
+                  assignment.duty
+                    ?.end_datetime
+                )}
+              />
+            </div>
+          )}
       </Card>
 
       {/* ===================================================
@@ -568,14 +693,14 @@ const PatrolVisitDetails = ({
           >
             {sortedVisits.length}{" "}
             {sortedVisits.length ===
-            1
+              1
               ? "Visit"
               : "Visits"}
           </Badge>
         </div>
 
         {sortedVisits.length ===
-        0 ? (
+          0 ? (
           <div className="flex min-h-[180px] flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center">
             <Footprints className="mb-3 h-9 w-9 text-muted-foreground" />
 
@@ -612,9 +737,11 @@ const PatrolVisitDetails = ({
 
 interface SummaryItemProps {
   label: string;
+
   value:
-    | string
-    | number;
+  | string
+  | number;
+
   icon: React.ReactNode;
 }
 
@@ -644,7 +771,9 @@ const SummaryItem = ({
 
 interface InformationItemProps {
   icon: React.ReactNode;
+
   label: string;
+
   value: React.ReactNode;
 }
 
@@ -679,38 +808,87 @@ interface VisitCardProps {
 const VisitCard = ({
   visit,
 }: VisitCardProps) => {
-  const checkinLatitude =
+  /*
+   * Prefer the current backend nested response.
+   * Keep old flat fields as fallbacks.
+   */
+
+  const checkInAt =
+    visit.check_in?.at ??
+    visit.checked_in_at ??
+    null;
+
+  const checkOutAt =
+    visit.check_out?.at ??
+    visit.checked_out_at ??
+    null;
+
+  const checkInLatitude =
+    visit.check_in?.latitude ??
+    visit.checkin_latitude ??
+    null;
+
+  const checkInLongitude =
+    visit.check_in?.longitude ??
+    visit.checkin_longitude ??
+    null;
+
+  const checkInAccuracy =
+    visit.check_in?.accuracy ??
+    visit.checkin_accuracy ??
+    null;
+
+  const checkOutLatitude =
+    visit.check_out?.latitude ??
+    visit.checkout_latitude ??
+    null;
+
+  const checkOutLongitude =
+    visit.check_out?.longitude ??
+    visit.checkout_longitude ??
+    null;
+
+  const checkOutAccuracy =
+    visit.check_out?.accuracy ??
+    visit.checkout_accuracy ??
+    null;
+
+  const formattedCheckInLatitude =
     formatCoordinate(
-      visit.checkin_latitude
+      checkInLatitude
     );
 
-  const checkinLongitude =
+  const formattedCheckInLongitude =
     formatCoordinate(
-      visit.checkin_longitude
+      checkInLongitude
     );
 
-  const checkoutLatitude =
+  const formattedCheckOutLatitude =
     formatCoordinate(
-      visit.checkout_latitude
+      checkOutLatitude
     );
 
-  const checkoutLongitude =
+  const formattedCheckOutLongitude =
     formatCoordinate(
-      visit.checkout_longitude
+      checkOutLongitude
     );
 
-  const hasCheckinCoordinates =
-    checkinLatitude !== null &&
-    checkinLongitude !== null;
+  const hasCheckInCoordinates =
+    formattedCheckInLatitude !==
+    null &&
+    formattedCheckInLongitude !==
+    null;
 
-  const hasCheckoutCoordinates =
-    checkoutLatitude !== null &&
-    checkoutLongitude !== null;
+  const hasCheckOutCoordinates =
+    formattedCheckOutLatitude !==
+    null &&
+    formattedCheckOutLongitude !==
+    null;
 
   return (
     <div className="overflow-hidden rounded-xl border">
       {/* ===================================================
-          Visit Header
+          Header
           =================================================== */}
 
       <div className="flex flex-col gap-3 border-b bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -726,8 +904,7 @@ const VisitCard = ({
             </p>
 
             <p className="text-xs text-muted-foreground">
-              Patrol execution
-              record
+              Patrol execution record
             </p>
           </div>
         </div>
@@ -745,17 +922,17 @@ const VisitCard = ({
       </div>
 
       {/* ===================================================
-          Visit Timing
+          Timing
           =================================================== */}
 
-      <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-px bg-border md:grid-cols-3">
         <VisitMetric
           icon={
             <Clock3 className="h-4 w-4" />
           }
           label="Check In"
           value={formatDateTime(
-            visit.checked_in_at
+            checkInAt
           )}
         />
 
@@ -765,7 +942,7 @@ const VisitCard = ({
           }
           label="Check Out"
           value={formatDateTime(
-            visit.checked_out_at
+            checkOutAt
           )}
         />
 
@@ -781,43 +958,43 @@ const VisitCard = ({
       </div>
 
       {/* ===================================================
-          GPS
+          GPS Information
           =================================================== */}
 
-      {(hasCheckinCoordinates ||
-        hasCheckoutCoordinates) && (
-        <div className="grid grid-cols-1 gap-4 border-t p-4 lg:grid-cols-2">
-          {hasCheckinCoordinates && (
-            <LocationBlock
-              title="Check-In Location"
-              latitude={
-                checkinLatitude
-              }
-              longitude={
-                checkinLongitude
-              }
-              accuracy={
-                visit.checkin_accuracy
-              }
-            />
-          )}
+      {(hasCheckInCoordinates ||
+        hasCheckOutCoordinates) && (
+          <div className="grid grid-cols-1 gap-4 border-t p-4 lg:grid-cols-2">
+            {hasCheckInCoordinates && (
+              <LocationBlock
+                title="Check-In Location"
+                latitude={
+                  formattedCheckInLatitude
+                }
+                longitude={
+                  formattedCheckInLongitude
+                }
+                accuracy={
+                  checkInAccuracy
+                }
+              />
+            )}
 
-          {hasCheckoutCoordinates && (
-            <LocationBlock
-              title="Check-Out Location"
-              latitude={
-                checkoutLatitude
-              }
-              longitude={
-                checkoutLongitude
-              }
-              accuracy={
-                visit.checkout_accuracy
-              }
-            />
-          )}
-        </div>
-      )}
+            {hasCheckOutCoordinates && (
+              <LocationBlock
+                title="Check-Out Location"
+                latitude={
+                  formattedCheckOutLatitude
+                }
+                longitude={
+                  formattedCheckOutLongitude
+                }
+                accuracy={
+                  checkOutAccuracy
+                }
+              />
+            )}
+          </div>
+        )}
 
       {/* ===================================================
           Notes
@@ -844,7 +1021,9 @@ const VisitCard = ({
 
 interface VisitMetricProps {
   icon: React.ReactNode;
+
   label: string;
+
   value: React.ReactNode;
 }
 
@@ -874,12 +1053,15 @@ const VisitMetric = ({
 
 interface LocationBlockProps {
   title: string;
-  latitude: string;
-  longitude: string;
+
+  latitude: string | null;
+
+  longitude: string | null;
+
   accuracy?:
-    | number
-    | string
-    | null;
+  | number
+  | string
+  | null;
 }
 
 const LocationBlock = ({
@@ -888,8 +1070,17 @@ const LocationBlock = ({
   longitude,
   accuracy,
 }: LocationBlockProps) => {
+  const hasCoordinates =
+    latitude !== null &&
+    longitude !== null;
+
+  const googleMapsUrl =
+    hasCoordinates
+      ? `https://www.google.com/maps?q=${latitude},${longitude}`
+      : null;
+
   return (
-    <div className="rounded-lg bg-muted/40 p-3">
+    <div className="rounded-xl border bg-muted/20 p-4">
       <div className="flex items-center gap-2">
         <MapPin className="h-4 w-4 text-[#5F0015]" />
 
@@ -898,31 +1089,62 @@ const LocationBlock = ({
         </p>
       </div>
 
-      <div className="mt-2 space-y-1 pl-6 text-xs text-muted-foreground">
-        <p>
-          Lat:{" "}
-          <span className="font-medium text-foreground">
-            {latitude}
-          </span>
-        </p>
+      {hasCoordinates ? (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Latitude
+              </p>
 
-        <p>
-          Lng:{" "}
-          <span className="font-medium text-foreground">
-            {longitude}
-          </span>
-        </p>
+              <p className="mt-1 font-mono text-sm">
+                {latitude}
+              </p>
+            </div>
 
-        {accuracy !== undefined &&
-          accuracy !== null && (
-            <p>
-              Accuracy:{" "}
-              <span className="font-medium text-foreground">
-                {accuracy} m
-              </span>
-            </p>
-          )}
-      </div>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Longitude
+              </p>
+
+              <p className="mt-1 font-mono text-sm">
+                {longitude}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Accuracy
+              </p>
+
+              <p className="mt-1 text-sm font-medium">
+                {formatAccuracy(
+                  accuracy
+                )}
+              </p>
+            </div>
+
+            {googleMapsUrl && (
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#5F0015] hover:underline"
+              >
+                <Navigation className="h-4 w-4" />
+
+                Open in Maps
+              </a>
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Location unavailable
+        </p>
+      )}
     </div>
   );
 };
