@@ -5,6 +5,7 @@ import {
 } from "@reduxjs/toolkit";
 
 import {
+  PatrolAssignmentDetailsResponse,
   PatrolAssignmentListResponse,
   PatrolAssignmentSummary,
   PatrolVisit,
@@ -37,7 +38,8 @@ const getErrorMessage = (
       };
 
     return (
-      maybeAxiosError.response?.data?.message ||
+      maybeAxiosError.response?.data
+        ?.message ||
       maybeAxiosError.message ||
       "Something went wrong."
     );
@@ -91,10 +93,7 @@ export const fetchPatrolVisitOverview =
 
     async (_, { rejectWithValue }) => {
       try {
-        const response =
-          await patrolVisitService.getOverview();
-
-        return response;
+        return await patrolVisitService.getOverview();
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -122,12 +121,9 @@ export const fetchPatrolAssignments =
       { rejectWithValue }
     ) => {
       try {
-        const response =
-          await patrolVisitService.getAll(
-            params
-          );
-
-        return response;
+        return await patrolVisitService.getAll(
+          params
+        );
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -142,11 +138,7 @@ export const fetchPatrolAssignments =
 
 export const fetchPatrolVisitsByAssignment =
   createAsyncThunk<
-    {
-      assignmentId: number;
-      visits: PatrolVisit[];
-      assignment: PatrolAssignmentSummary | null;
-    },
+    PatrolAssignmentDetailsResponse,
     {
       assignmentId: number;
       params?: PatrolVisitParams;
@@ -165,26 +157,10 @@ export const fetchPatrolVisitsByAssignment =
       { rejectWithValue }
     ) => {
       try {
-        const response =
-          await patrolVisitService.getByAssignment(
-            assignmentId,
-            params
-          );
-
-        const visits =
-          response ?? [];
-
-        const assignment =
-          patrolVisitService.buildAssignmentSummary(
-            assignmentId,
-            visits
-          );
-
-        return {
+        return await patrolVisitService.getByAssignment(
           assignmentId,
-          visits,
-          assignment,
-        };
+          params
+        );
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -212,12 +188,9 @@ export const fetchPatrolVisit =
       { rejectWithValue }
     ) => {
       try {
-        const response =
-          await patrolVisitService.getById(
-            id
-          );
-
-        return response;
+        return await patrolVisitService.getById(
+          id
+        );
       } catch (error) {
         return rejectWithValue(
           getErrorMessage(error)
@@ -237,19 +210,11 @@ const patrolVisitSlice =
     initialState,
 
     reducers: {
-      /* ===================================================
-         Clear Error
-         =================================================== */
-
       clearPatrolVisitError(
         state
       ) {
         state.error = null;
       },
-
-      /* ===================================================
-         Clear Assignment
-         =================================================== */
 
       clearCurrentPatrolAssignment(
         state
@@ -262,19 +227,11 @@ const patrolVisitSlice =
         state.currentVisit = null;
       },
 
-      /* ===================================================
-         Clear Current Visit
-         =================================================== */
-
       clearCurrentPatrolVisit(
         state
       ) {
         state.currentVisit = null;
       },
-
-      /* ===================================================
-         Set Assignment
-         =================================================== */
 
       setCurrentPatrolAssignment(
         state,
@@ -288,10 +245,6 @@ const patrolVisitSlice =
         state.visits =
           action.payload?.visits ?? [];
       },
-
-      /* ===================================================
-         Set Current Visit
-         =================================================== */
 
       setCurrentPatrolVisit(
         state,
@@ -339,7 +292,8 @@ const patrolVisitSlice =
               false;
 
             state.error =
-              typeof action.payload === "string"
+              typeof action.payload ===
+                "string"
                 ? action.payload
                 : "Unable to load patrol overview.";
           }
@@ -391,8 +345,10 @@ const patrolVisitSlice =
               state.pagination = {
                 current_page: 1,
                 last_page: 1,
+
                 total:
                   state.assignments.length,
+
                 per_page:
                   state.assignments.length ||
                   10,
@@ -407,7 +363,8 @@ const patrolVisitSlice =
             state.isLoading = false;
 
             state.error =
-              typeof action.payload === "string"
+              typeof action.payload ===
+                "string"
                 ? action.payload
                 : "Unable to load patrol visits.";
           }
@@ -425,8 +382,7 @@ const patrolVisitSlice =
 
             state.error = null;
 
-            state.currentVisit =
-              null;
+            state.currentVisit = null;
           }
         )
 
@@ -436,25 +392,22 @@ const patrolVisitSlice =
             state.isDetailsLoading =
               false;
 
-            state.visits =
-              action.payload.visits;
-
             state.currentAssignment =
               action.payload.assignment;
 
-            /*
-             * An assignment summary can legitimately be null
-             * when the API returns no patrol visits.
-             */
-            if (!action.payload.assignment) {
-              return;
-            }
+            state.visits =
+              action.payload.visits ??
+              [];
+
+            const assignmentId =
+              action.payload.assignment
+                .assignment_id;
 
             const index =
               state.assignments.findIndex(
                 (assignment) =>
                   assignment.assignment_id ===
-                  action.payload.assignmentId
+                  assignmentId
               );
 
             if (index !== -1) {
@@ -473,7 +426,8 @@ const patrolVisitSlice =
               false;
 
             state.error =
-              typeof action.payload === "string"
+              typeof action.payload ===
+                "string"
                 ? action.payload
                 : "Unable to load patrol visit details.";
           }
@@ -523,7 +477,8 @@ const patrolVisitSlice =
               false;
 
             state.error =
-              typeof action.payload === "string"
+              typeof action.payload ===
+                "string"
                 ? action.payload
                 : "Unable to load patrol visit.";
           }

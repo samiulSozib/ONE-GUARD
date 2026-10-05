@@ -16,37 +16,55 @@ export type PatrolVisitStatus =
 
 export interface PatrolVisitGuard {
   id?: number;
+
   guard_code?: string | null;
+
+  name?: string | null;
   full_name?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+
   phone?: string | null;
   profile_photo?: string | null;
 }
 
 export interface PatrolVisitSite {
   id?: number;
+
   site_name?: string | null;
   name?: string | null;
+
   address?: string | null;
 }
 
 export interface PatrolVisitSiteLocation {
   id?: number;
+
   title?: string | null;
   name?: string | null;
   address?: string | null;
+
   latitude?: number | string | null;
   longitude?: number | string | null;
 }
 
 export interface PatrolVisitDuty {
   id?: number;
+
   title?: string | null;
+
   duty_date?: string | null;
+
   start_time?: string | null;
   end_time?: string | null;
+
+  start_datetime?: string | null;
+  end_datetime?: string | null;
+
+  status?: string | null;
+
   service_mode?: string | null;
+
   required_visits?: number | null;
 
   site?: PatrolVisitSite | null;
@@ -55,8 +73,10 @@ export interface PatrolVisitDuty {
 
 export interface PatrolVisitAssignment {
   id?: number;
+
   guard_id?: number | null;
   duty_id?: number | null;
+
   status?: string | null;
 
   guard?: PatrolVisitGuard | null;
@@ -121,6 +141,10 @@ export type PatrolAssignmentStatus =
 export interface PatrolAssignmentSummary {
   assignment_id: number;
 
+  assignment_status?: string | null;
+  operational_status?: string | null;
+  service_mode?: string | null;
+
   duty_id?: number | null;
   guard_id?: number | null;
 
@@ -133,6 +157,7 @@ export interface PatrolAssignmentSummary {
   remaining_visits: number;
 
   checked_in_visits?: number;
+  pending_visits?: number;
   missed_visits?: number;
   cancelled_visits?: number;
 
@@ -142,6 +167,7 @@ export interface PatrolAssignmentSummary {
 
   guard?: PatrolVisitGuard | null;
   duty?: PatrolVisitDuty | null;
+
   site?: PatrolVisitSite | null;
   site_location?: PatrolVisitSiteLocation | null;
 
@@ -149,34 +175,41 @@ export interface PatrolAssignmentSummary {
 }
 
 /* =========================================================
+   Assignment Details API Response
+   ========================================================= */
+
+export interface PatrolAssignmentDetailsResponse {
+  assignment: PatrolAssignmentSummary;
+
+  required_visits: number;
+  completed_visits: number;
+  remaining_visits: number;
+
+  progress_percentage: number;
+
+  visits: PatrolVisit[];
+}
+
+/* =========================================================
    Overview
    ========================================================= */
 
 export interface PatrolVisitOverview {
-  assignments?: {
-    total?: number;
-    completed?: number;
-    in_progress?: number;
-    pending?: number;
-    missed?: number;
-  };
+  assignments?: number;
 
-  visits?: {
-    required?: number;
-    total?: number;
-    completed?: number;
-    checked_in?: number;
-    pending?: number;
-    missed?: number;
-    cancelled?: number;
-  };
+  required_visits?: number;
+  completed_visits?: number;
+  remaining_visits?: number;
+
+  checked_in_visits?: number;
+  pending_visits?: number;
+  missed_visits?: number;
+
+  completion_percentage?: number;
 
   total_assignments?: number;
   total_required_visits?: number;
-  completed_visits?: number;
   in_progress_visits?: number;
-  pending_visits?: number;
-  missed_visits?: number;
 }
 
 /* =========================================================

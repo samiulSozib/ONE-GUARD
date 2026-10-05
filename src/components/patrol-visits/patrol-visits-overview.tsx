@@ -31,80 +31,74 @@ const PatrolVisitsOverview = ({
   overview,
   isLoading = false,
 }: PatrolVisitsOverviewProps) => {
-  /*
-   * Support both the nested overview response and
-   * the flat fallback fields defined in our types.
-   */
-
   const requiredVisits =
-    overview?.visits?.required ??
-    overview?.visits?.total ??
+    overview?.required_visits ??
     overview?.total_required_visits ??
     0;
 
   const completedVisits =
-    overview?.visits?.completed ??
     overview?.completed_visits ??
     0;
 
   const inProgressVisits =
-    overview?.visits?.checked_in ??
+    overview?.checked_in_visits ??
     overview?.in_progress_visits ??
     0;
 
   const missedVisits =
-    overview?.visits?.missed ??
     overview?.missed_visits ??
     0;
 
-  const completedPercentage =
-    requiredVisits > 0
-      ? Math.min(
-          Math.round(
-            (completedVisits /
-              requiredVisits) *
-              100
-          ),
-          100
-        )
-      : 0;
+  const remainingVisits =
+    overview?.remaining_visits ??
+    Math.max(
+      requiredVisits -
+      completedVisits,
+      0
+    );
 
-  const remainingVisits = Math.max(
-    requiredVisits - completedVisits,
-    0
-  );
+  const completedPercentage =
+    overview?.completion_percentage ??
+    (requiredVisits > 0
+      ? Math.min(
+        Math.round(
+          (completedVisits /
+            requiredVisits) *
+          100
+        ),
+        100
+      )
+      : 0);
 
   if (isLoading && !overview) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[1, 2, 3, 4].map((item) => (
-          <Card
-            key={item}
-            className="p-4"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-3">
-                <Skeleton className="h-4 w-28" />
+        {[1, 2, 3, 4].map(
+          (item) => (
+            <Card
+              key={item}
+              className="p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-4 w-28" />
 
-                <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-16" />
 
-                <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+
+                <Skeleton className="h-10 w-10 rounded-lg" />
               </div>
-
-              <Skeleton className="h-10 w-10 rounded-lg" />
-            </div>
-          </Card>
-        ))}
+            </Card>
+          )
+        )}
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {/* ===================================================
-          Required Visits
-          =================================================== */}
-
       <OverviewCard
         title="Required Visits"
         value={requiredVisits}
@@ -115,10 +109,6 @@ const PatrolVisitsOverview = ({
         iconClassName="bg-[#5F0015]/10 text-[#5F0015]"
       />
 
-      {/* ===================================================
-          Completed Visits
-          =================================================== */}
-
       <OverviewCard
         title="Completed"
         value={completedVisits}
@@ -128,10 +118,6 @@ const PatrolVisitsOverview = ({
         }
         iconClassName="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
       />
-
-      {/* ===================================================
-          In Progress
-          =================================================== */}
 
       <OverviewCard
         title="In Progress"
@@ -146,10 +132,6 @@ const PatrolVisitsOverview = ({
         }
         iconClassName="bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
       />
-
-      {/* ===================================================
-          Missed
-          =================================================== */}
 
       <OverviewCard
         title="Missed"
