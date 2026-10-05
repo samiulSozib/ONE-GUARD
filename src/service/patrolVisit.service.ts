@@ -8,174 +8,163 @@ import {
   PatrolVisitParams,
 } from "@/app/types/patrolVisit";
 
-import api from "@/lib/axios";
+import api, { handleApiResponse } from "./api.service";
 
 /* =========================================================
    Patrol Visit Service
    ========================================================= */
 
-class PatrolVisitService {
-  private readonly baseUrl = "/admin/patrol-visits";
-
+export const patrolVisitService = {
   /* =======================================================
-     Get Patrol Assignment List
+     Overview
      ======================================================= */
 
-  async getAll(
-    params?: PatrolVisitParams
-  ): Promise<ApiResponse<PatrolAssignmentListResponse>> {
-    const response = await api.get<
-      ApiResponse<PatrolAssignmentListResponse>
-    >(
-      this.baseUrl,
-      {
-        params,
-      }
-    );
-
-    return response.data;
-  }
+  getOverview: () =>
+    handleApiResponse(
+      api.get<ApiResponse<PatrolVisitOverview>>(
+        "/admin/patrol-visits/overview"
+      )
+    ),
 
   /* =======================================================
-     Get Patrol Overview
+     Patrol Assignment List
      ======================================================= */
 
-  async getOverview(): Promise<
-    ApiResponse<PatrolVisitOverview>
-  > {
-    const response = await api.get<
-      ApiResponse<PatrolVisitOverview>
-    >(
-      `${this.baseUrl}/overview`
-    );
-
-    return response.data;
-  }
+  getAll: (params: PatrolVisitParams = {}) =>
+    handleApiResponse(
+      api.get<ApiResponse<PatrolAssignmentListResponse>>(
+        "/admin/patrol-visits",
+        {
+          params,
+        }
+      )
+    ),
 
   /* =======================================================
-     Get Visits By Assignment
+     Visits By Assignment
      ======================================================= */
 
-  async getByAssignment(
+  getByAssignment: (
     assignmentId: number,
-    params?: PatrolVisitParams
-  ): Promise<ApiResponse<PatrolVisit[]>> {
-    const response = await api.get<
-      ApiResponse<PatrolVisit[]>
-    >(
-      `${this.baseUrl}/assignment/${assignmentId}`,
-      {
-        params,
-      }
-    );
-
-    return response.data;
-  }
+    params: PatrolVisitParams = {}
+  ) =>
+    handleApiResponse(
+      api.get<ApiResponse<PatrolVisit[]>>(
+        `/admin/patrol-visits/assignment/${assignmentId}`,
+        {
+          params,
+        }
+      )
+    ),
 
   /* =======================================================
-     Get Individual Patrol Visit
+     Single Patrol Visit
      ======================================================= */
 
-  async getById(
-    id: number
-  ): Promise<ApiResponse<PatrolVisit>> {
-    const response = await api.get<
-      ApiResponse<PatrolVisit>
-    >(
-      `${this.baseUrl}/${id}`
-    );
-
-    return response.data;
-  }
+  getById: (id: number) =>
+    handleApiResponse(
+      api.get<ApiResponse<PatrolVisit>>(
+        `/admin/patrol-visits/${id}`
+      )
+    ),
 
   /* =======================================================
-     Build Assignment Summary From Visits
-
-     Useful when assignment endpoint returns visit records
-     and the UI needs a single assignment-level object.
+     Build Assignment Summary
      ======================================================= */
 
-  buildAssignmentSummary(
+  buildAssignmentSummary: (
     assignmentId: number,
     visits: PatrolVisit[]
-  ): PatrolAssignmentSummary {
-    const firstVisit =
-      visits.length > 0
-        ? visits[0]
-        : null;
+  ): PatrolAssignmentSummary | null => {
+    if (!visits.length) {
+      return null;
+    }
 
-    const completedVisits =
-      visits.filter(
-        (visit) =>
-          visit.status === "completed"
-      ).length;
+    const sortedVisits = [...visits].sort(
+      (a, b) =>
+        Number(a.visit_number ?? 0) -
+        Number(b.visit_number ?? 0)
+    );
 
-    const checkedInVisits =
-      visits.filter(
-        (visit) =>
-          visit.status === "checked_in"
-      ).length;
+    const firstVisit = sortedVisits[0];
 
-    const missedVisits =
-      visits.filter(
-        (visit) =>
-          visit.status === "missed"
-      ).length;
+    const completedVisits = sortedVisits.filter(
+      (visit) => visit.status === "completed"
+    ).length;
 
-    const cancelledVisits =
-      visits.filter(
-        (visit) =>
-          visit.status === "cancelled"
-      ).length;
+    const checkedInVisits = sortedVisits.filter(
+      (visit) => visit.status === "checked_in"
+    ).length;
 
-    const requiredVisits =
-      firstVisit?.duty?.required_visits ??
-      visits.length;
+    const missedVisits = sortedVisits.filter(
+      (visit) => visit.status === "missed"
+    ).length;
+
+    const cancelledVisits = sortedVisits.filter(
+      (visit) => visit.status === "cancelled"
+    ).length;
+
+    const requiredVisits = Math.max(
+      Number(firstVisit?.duty?.required_visits ?? 0),
+      sortedVisits.length
+    );
 
     const remainingVisits = Math.max(
       requiredVisits - completedVisits,
       0
     );
 
-    let status: string = "pending";
+    let status: PatrolAssignmentSummary["status"] = "pending";
 
     if (
       requiredVisits > 0 &&
       completedVisits >= requiredVisits
     ) {
       status = "completed";
-    } else if (
-      checkedInVisits > 0 ||
-      completedVisits > 0
-    ) {
+    } else if (checkedInVisits > 0) {
       status = "in_progress";
-    } else if (
-      missedVisits > 0 &&
-      completedVisits === 0
-    ) {
+    } else if (completedVisits > 0) {
+      status = "partially_completed";
+    } else if (missedVisits > 0) {
       status = "missed";
+    } else if (
+      cancelledVisits > 0 &&
+      cancelledVisits === sortedVisits.length
+    ) {
+      status = "cancelled";
     }
+
+    const latestVisit = [...sortedVisits].sort(
+      (a, b) => {
+        const aTime = new Date(
+          a.checked_out_at ??
+          a.checked_in_at ??
+          a.updated_at ??
+          a.created_at ??
+          0
+        ).getTime();
+
+        const bTime = new Date(
+          b.checked_out_at ??
+          b.checked_in_at ??
+          b.updated_at ??
+          b.created_at ??
+          0
+        ).getTime();
+
+        return bTime - aTime;
+      }
+    )[0];
 
     const progressPercentage =
       requiredVisits > 0
         ? Math.min(
-            Math.round(
-              (completedVisits /
-                requiredVisits) *
-                100
-            ),
-            100
+          100,
+          Math.round(
+            (completedVisits / requiredVisits) * 100
           )
+        )
         : 0;
-
-    const latestVisit =
-      visits.length > 0
-        ? [...visits].sort(
-            (a, b) =>
-              (b.visit_number ?? 0) -
-              (a.visit_number ?? 0)
-          )[0]
-        : null;
 
     return {
       assignment_id: assignmentId,
@@ -183,77 +172,47 @@ class PatrolVisitService {
       duty_id:
         firstVisit?.duty_id ??
         firstVisit?.duty?.id ??
-        null,
+        0,
 
       guard_id:
         firstVisit?.guard_id ??
         firstVisit?.guard?.id ??
-        null,
+        0,
 
-      duty_date:
-        firstVisit?.duty?.duty_date ??
-        null,
+      required_visits: requiredVisits,
+      completed_visits: completedVisits,
+      checked_in_visits: checkedInVisits,
+      missed_visits: missedVisits,
+      cancelled_visits: cancelledVisits,
+      remaining_visits: remainingVisits,
+
+      progress_percentage: progressPercentage,
 
       status,
 
-      required_visits: requiredVisits,
-
-      completed_visits:
-        completedVisits,
-
-      remaining_visits:
-        remainingVisits,
-
-      checked_in_visits:
-        checkedInVisits,
-
-      missed_visits:
-        missedVisits,
-
-      cancelled_visits:
-        cancelledVisits,
-
-      progress_percentage:
-        progressPercentage,
-
-      latest_visit:
-        latestVisit,
+      latest_visit: latestVisit ?? null,
 
       guard:
         firstVisit?.guard ??
-        firstVisit?.guard_assignment
-          ?.guard ??
+        firstVisit?.guard_assignment?.guard ??
         null,
 
       duty:
-        firstVisit?.duty ??
-        firstVisit?.guard_assignment
-          ?.duty ??
-        null,
+        firstVisit?.duty ?? null,
 
       site:
         firstVisit?.duty?.site ??
-        firstVisit?.guard_assignment
-          ?.duty?.site ??
+        firstVisit?.guard_assignment?.duty?.site ??
         null,
 
       site_location:
-        firstVisit?.duty
-          ?.site_location ??
-        firstVisit?.guard_assignment
-          ?.duty?.site_location ??
+        firstVisit?.duty?.site_location ??
+        firstVisit?.guard_assignment?.duty?.site_location ??
         null,
 
-      visits,
+      visits: sortedVisits,
     };
-  }
-}
-
-/* =========================================================
-   Export
-   ========================================================= */
-
-const patrolVisitService =
-  new PatrolVisitService();
+  },
+};
 
 export default patrolVisitService;
