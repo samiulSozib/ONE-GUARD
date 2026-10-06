@@ -380,11 +380,11 @@ export default function GuardCommandMapPage() {
           case "outside":
             return (
               guard.current_assignment !==
-                null &&
+              null &&
               guard.location !== null &&
               guard.location
                 .duty_location_match ===
-                false
+              false
             )
 
           case "moving":
@@ -527,7 +527,7 @@ export default function GuardCommandMapPage() {
                   selected
                     ? 1000
                     : guard.online_status ===
-                        "online"
+                      "online"
                       ? 500
                       : 100,
               }
@@ -612,7 +612,7 @@ export default function GuardCommandMapPage() {
             selected
               ? 1000
               : guard.online_status ===
-                  "online"
+                "online"
                 ? 500
                 : 100
           )
@@ -918,43 +918,43 @@ export default function GuardCommandMapPage() {
     label: string
     count: number
   }> = [
-    {
-      key: "all",
-      label: "All Guards",
-      count: totalGuards,
-    },
+      {
+        key: "all",
+        label: "All Guards",
+        count: totalGuards,
+      },
 
-    {
-      key: "online",
-      label: "Online",
-      count: totalOnline,
-    },
+      {
+        key: "online",
+        label: "Online",
+        count: totalOnline,
+      },
 
-    {
-      key: "offline",
-      label: "Offline",
-      count: totalOffline,
-    },
+      {
+        key: "offline",
+        label: "Offline",
+        count: totalOffline,
+      },
 
-    {
-      key: "on_duty",
-      label: "On Duty",
-      count: totalOnDuty,
-    },
+      {
+        key: "on_duty",
+        label: "On Duty",
+        count: totalOnDuty,
+      },
 
-    {
-      key: "outside",
-      label: "Outside Geofence",
-      count:
-        totalOutsideGeofence,
-    },
+      {
+        key: "outside",
+        label: "Outside Geofence",
+        count:
+          totalOutsideGeofence,
+      },
 
-    {
-      key: "moving",
-      label: "Moving",
-      count: totalMoving,
-    },
-  ]
+      {
+        key: "moving",
+        label: "Moving",
+        count: totalMoving,
+      },
+    ]
 
   /* ------------------------------------------------------------------------ */
   /* UI                                                                       */
@@ -993,10 +993,9 @@ export default function GuardCommandMapPage() {
             >
               <span
                 className={
-                  `mr-2 h-2 w-2 rounded-full ${
-                    isConnected
-                      ? "bg-emerald-500"
-                      : "bg-zinc-400"
+                  `mr-2 h-2 w-2 rounded-full ${isConnected
+                    ? "bg-emerald-500"
+                    : "bg-zinc-400"
                   }`
                 }
               />
@@ -1014,10 +1013,9 @@ export default function GuardCommandMapPage() {
             >
               <RefreshCw
                 className={
-                  `mr-2 h-4 w-4 ${
-                    isLoading
-                      ? "animate-spin"
-                      : ""
+                  `mr-2 h-4 w-4 ${isLoading
+                    ? "animate-spin"
+                    : ""
                   }`
                 }
               />
@@ -1080,7 +1078,7 @@ export default function GuardCommandMapPage() {
                       size="sm"
                       variant={
                         filter ===
-                        item.key
+                          item.key
                           ? "default"
                           : "outline"
                       }
@@ -1187,7 +1185,7 @@ export default function GuardCommandMapPage() {
 
             {mapLoaded &&
               mappableGuards.length ===
-                0 && (
+              0 && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
                   <div className="rounded-lg border bg-white px-4 py-2 text-sm text-zinc-600 shadow-sm">
                     No guards with GPS coordinates match this filter.
@@ -1237,8 +1235,8 @@ export default function GuardCommandMapPage() {
             Last API update:{" "}
             {lastUpdated
               ? new Date(
-                  lastUpdated
-                ).toLocaleString()
+                lastUpdated
+              ).toLocaleString()
               : "Not available"}
           </span>
         </div>
@@ -1337,7 +1335,7 @@ function GuardPanel({
           <Badge
             className={
               guard.online_status ===
-              "online"
+                "online"
                 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
                 : "bg-zinc-100 text-zinc-700 hover:bg-zinc-100"
             }
@@ -1370,7 +1368,7 @@ function GuardPanel({
                 value={
                   location.accuracy !==
                     null &&
-                  location.accuracy !==
+                    location.accuracy !==
                     undefined
                     ? `${location.accuracy} m`
                     : "N/A"
@@ -1424,8 +1422,8 @@ function GuardPanel({
               assignment
                 ?.allowed_radius_meters
                 ? formatDistance(
-                    assignment.allowed_radius_meters
-                  )
+                  assignment.allowed_radius_meters
+                )
                 : "N/A"
             }
           />
@@ -1445,7 +1443,7 @@ function GuardPanel({
             </span>
 
             {assignment &&
-            location ? (
+              location ? (
               <Badge
                 className={
                   inside
@@ -1499,7 +1497,7 @@ function GuardPanel({
             }
             icon={
               device?.network_type ===
-              "wifi" ? (
+                "wifi" ? (
                 <Wifi />
               ) : (
                 <Signal />
