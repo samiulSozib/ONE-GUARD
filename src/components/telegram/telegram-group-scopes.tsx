@@ -291,12 +291,6 @@ const TelegramGroupScopes = ({
         );
         return;
       }
-      if (chat.is_active) {
-        setError(
-          "Deactivate this Telegram group before replacing its scopes."
-        );
-        return;
-      }
       const validationError =
         validateScopes();
       if (validationError) {
@@ -430,10 +424,9 @@ const TelegramGroupScopes = ({
             </div>
           </div>
           {chat?.is_active && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
-              This group is active.
-              Deactivate it before
-              changing its scopes.
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-400">
+              This group is active. Scope changes can be saved live without
+              deactivating Telegram delivery.
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
@@ -452,8 +445,7 @@ const TelegramGroupScopes = ({
               size="sm"
               variant="outline"
               disabled={
-                isSaving ||
-                chat?.is_active
+                isSaving
               }
               onClick={addScope}
             >
@@ -475,20 +467,18 @@ const TelegramGroupScopes = ({
                 you intend to
                 remove all scopes.
               </p>
-              {!chat?.is_active && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="mt-4"
-                  onClick={
-                    addScope
-                  }
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Scope
-                </Button>
-              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                onClick={
+                  addScope
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Scope
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -514,8 +504,7 @@ const TelegramGroupScopes = ({
                         size="sm"
                         variant="ghost"
                         disabled={
-                          isSaving ||
-                          chat?.is_active
+                          isSaving
                         }
                         onClick={() =>
                           removeScope(
@@ -538,8 +527,7 @@ const TelegramGroupScopes = ({
                             row.scope_type
                           }
                           disabled={
-                            isSaving ||
-                            chat?.is_active
+                            isSaving
                           }
                           onChange={(
                             event
@@ -605,7 +593,6 @@ const TelegramGroupScopes = ({
                             placeholder="Select site"
                             disabled={
                               isSaving ||
-                              Boolean(chat?.is_active) ||
                               sitesLoading
                             }
                             isLoading={sitesLoading}
@@ -654,7 +641,6 @@ const TelegramGroupScopes = ({
                             placeholder="Select client"
                             disabled={
                               isSaving ||
-                              Boolean(chat?.is_active) ||
                               clientsLoading
                             }
                             isLoading={clientsLoading}
@@ -694,10 +680,7 @@ const TelegramGroupScopes = ({
                           row.include_children
                         }
                         disabled={
-                          isSaving ||
-                          Boolean(
-                            chat?.is_active
-                          )
+                          isSaving
                         }
                         onChange={(
                           value
@@ -716,10 +699,7 @@ const TelegramGroupScopes = ({
                           row.is_active
                         }
                         disabled={
-                          isSaving ||
-                          Boolean(
-                            chat?.is_active
-                          )
+                          isSaving
                         }
                         onChange={(
                           value
@@ -775,8 +755,7 @@ const TelegramGroupScopes = ({
             type="button"
             disabled={
               isSaving ||
-              !chat ||
-              chat.is_active
+              !chat
             }
             onClick={() =>
               void handleSave()
