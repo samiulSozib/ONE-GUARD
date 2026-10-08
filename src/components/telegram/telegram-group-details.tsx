@@ -1,31 +1,25 @@
 "use client";
-
 import React, {
   useEffect,
   useState,
 } from "react";
-
 import {
   useDispatch,
   useSelector,
 } from "react-redux";
-
 import type {
   AppDispatch,
   RootState,
 } from "@/store/store";
-
 import type {
   TelegramChat,
 } from "@/app/types/telegram";
-
 import {
   fetchTelegramChat,
   fetchTelegramChats,
   fetchTelegramOverview,
   verifyTelegramChat,
 } from "@/store/slices/telegramSlice";
-
 import {
   Dialog,
   DialogContent,
@@ -33,10 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-
 import {
   AlertCircle,
   Bot,
@@ -49,10 +41,8 @@ import {
   ShieldCheck,
   ShieldX,
 } from "lucide-react";
-
 import TelegramGroupScopes from "./telegram-group-scopes";
 import TelegramGroupRules from "./telegram-group-rules";
-
 interface TelegramGroupDetailsProps {
   open: boolean;
   onOpenChange: (
@@ -60,7 +50,6 @@ interface TelegramGroupDetailsProps {
   ) => void;
   chat: TelegramChat | null;
 }
-
 const TelegramGroupDetails = ({
   open,
   onOpenChange,
@@ -68,7 +57,6 @@ const TelegramGroupDetails = ({
 }: TelegramGroupDetailsProps) => {
   const dispatch =
     useDispatch<AppDispatch>();
-
   const {
     currentChat,
     scopes,
@@ -77,27 +65,22 @@ const TelegramGroupDetails = ({
     (state: RootState) =>
       state.telegram
   );
-
   const [
     isFetching,
     setIsFetching,
   ] = useState(false);
-
   const [
     isVerifying,
     setIsVerifying,
   ] = useState(false);
-
   const [
     scopesOpen,
     setScopesOpen,
   ] = useState(false);
-
   const [
     rulesOpen,
     setRulesOpen,
   ] = useState(false);
-
   const [
     error,
     setError,
@@ -105,7 +88,6 @@ const TelegramGroupDetails = ({
     useState<string | null>(
       null
     );
-
   const [
     successMessage,
     setSuccessMessage,
@@ -113,19 +95,16 @@ const TelegramGroupDetails = ({
     useState<string | null>(
       null
     );
-
   const group =
     currentChat?.id === chat?.id
       ? currentChat
       : chat;
-
   const loadGroupDetails =
     async (
       id: number
     ) => {
       setIsFetching(true);
       setError(null);
-
       try {
         await dispatch(
           fetchTelegramChat(id)
@@ -156,7 +135,6 @@ const TelegramGroupDetails = ({
         setIsFetching(false);
       }
     };
-
   useEffect(() => {
     if (
       !open ||
@@ -164,10 +142,8 @@ const TelegramGroupDetails = ({
     ) {
       return;
     }
-
     setError(null);
     setSuccessMessage(null);
-
     void loadGroupDetails(
       chat.id
     );
@@ -175,7 +151,6 @@ const TelegramGroupDetails = ({
     open,
     chat?.id,
   ]);
-
   const refreshAll =
     async (
       id: number
@@ -186,52 +161,43 @@ const TelegramGroupDetails = ({
             id
           )
         ),
-
         dispatch(
           fetchTelegramChats({
             page: 1,
             per_page: 20,
           })
         ),
-
         dispatch(
           fetchTelegramOverview()
         ),
       ]);
     };
-
   const handleRefresh =
     async () => {
       if (!chat?.id) {
         return;
       }
-
       await loadGroupDetails(
         chat.id
       );
     };
-
   const handleVerify =
     async () => {
       if (!group?.id) {
         return;
       }
-
       setIsVerifying(true);
       setError(null);
       setSuccessMessage(null);
-
       try {
         await dispatch(
           verifyTelegramChat(
             group.id
           )
         ).unwrap();
-
         await refreshAll(
           group.id
         );
-
         setSuccessMessage(
           "Telegram group verified successfully."
         );
@@ -261,7 +227,6 @@ const TelegramGroupDetails = ({
         setIsVerifying(false);
       }
     };
-
   const handleOpenChange = (
     nextOpen: boolean
   ) => {
@@ -272,12 +237,10 @@ const TelegramGroupDetails = ({
     ) {
       return;
     }
-
     onOpenChange(
       nextOpen
     );
   };
-
   const handleScopesOpenChange =
     (
       nextOpen: boolean
@@ -285,7 +248,6 @@ const TelegramGroupDetails = ({
       setScopesOpen(
         nextOpen
       );
-
       if (
         !nextOpen &&
         group?.id
@@ -295,7 +257,6 @@ const TelegramGroupDetails = ({
         );
       }
     };
-
   const handleRulesOpenChange =
     (
       nextOpen: boolean
@@ -303,7 +264,6 @@ const TelegramGroupDetails = ({
       setRulesOpen(
         nextOpen
       );
-
       if (
         !nextOpen &&
         group?.id
@@ -313,7 +273,6 @@ const TelegramGroupDetails = ({
         );
       }
     };
-
   return (
     <>
       <Dialog
@@ -328,13 +287,11 @@ const TelegramGroupDetails = ({
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#5F0015]/10 text-[#5F0015]">
                 <MessageSquare className="h-5 w-5" />
               </div>
-
               <div className="min-w-0">
                 <DialogTitle>
                   Telegram Group
                   Details
                 </DialogTitle>
-
                 <DialogDescription className="mt-1">
                   Inspect the Telegram
                   group, verification
@@ -345,13 +302,11 @@ const TelegramGroupDetails = ({
               </div>
             </div>
           </DialogHeader>
-
           {!group &&
             isFetching ? (
             <div className="flex min-h-[300px] items-center justify-center">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-
                 Loading group
                 details...
               </div>
@@ -359,7 +314,6 @@ const TelegramGroupDetails = ({
           ) : group ? (
             <div className="space-y-5 py-5">
               {/* Main status */}
-
               <Card className="p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
@@ -369,7 +323,6 @@ const TelegramGroupDetails = ({
                           group.title
                         }
                       </h3>
-
                       <StatusBadge
                         active={
                           group.is_active
@@ -377,7 +330,6 @@ const TelegramGroupDetails = ({
                         activeLabel="Active"
                         inactiveLabel="Inactive"
                       />
-
                       <StatusBadge
                         active={
                           group.is_verified ===
@@ -387,7 +339,6 @@ const TelegramGroupDetails = ({
                         inactiveLabel="Unverified"
                       />
                     </div>
-
                     {group.description && (
                       <p className="mt-2 text-sm text-muted-foreground">
                         {
@@ -396,7 +347,6 @@ const TelegramGroupDetails = ({
                       </p>
                     )}
                   </div>
-
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
                       type="button"
@@ -412,14 +362,12 @@ const TelegramGroupDetails = ({
                     >
                       <RefreshCw
                         className={`mr-2 h-4 w-4 ${isFetching
-                            ? "animate-spin"
-                            : ""
+                          ? "animate-spin"
+                          : ""
                           }`}
                       />
-
                       Refresh
                     </Button>
-
                     {!group.is_verified && (
                       <Button
                         type="button"
@@ -435,13 +383,11 @@ const TelegramGroupDetails = ({
                         {isVerifying ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-
                             Verifying...
                           </>
                         ) : (
                           <>
                             <ShieldCheck className="mr-2 h-4 w-4" />
-
                             Verify Group
                           </>
                         )}
@@ -450,9 +396,7 @@ const TelegramGroupDetails = ({
                   </div>
                 </div>
               </Card>
-
               {/* Configuration actions */}
-
               <Card className="p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
@@ -460,7 +404,6 @@ const TelegramGroupDetails = ({
                       Notification
                       Configuration
                     </h4>
-
                     <p className="mt-1 text-xs text-muted-foreground">
                       Configure the
                       records and events
@@ -468,15 +411,12 @@ const TelegramGroupDetails = ({
                       Telegram group.
                     </p>
                   </div>
-
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={
-                        group.is_active
-                      }
+
                       onClick={() =>
                         setScopesOpen(
                           true
@@ -484,10 +424,8 @@ const TelegramGroupDetails = ({
                       }
                     >
                       <Shield className="mr-2 h-4 w-4" />
-
                       Manage Scopes
                     </Button>
-
                     <Button
                       type="button"
                       size="sm"
@@ -502,33 +440,25 @@ const TelegramGroupDetails = ({
                       }
                     >
                       <Settings2 className="mr-2 h-4 w-4" />
-
                       Manage Rules
                     </Button>
                   </div>
                 </div>
-
                 {group.is_active && (
-                  <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-400">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
+                  <div className="mt-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-xs text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-400">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>
-                      Deactivate this
-                      group before
-                      changing scopes
-                      or event rules.
+                      Scopes can be updated while this group stays active.
+                      Event rules still require deactivation before editing.
                     </span>
                   </div>
                 )}
               </Card>
-
               {/* General information */}
-
               <div>
                 <h4 className="mb-3 text-sm font-semibold">
                   Group Information
                 </h4>
-
                 <div className="grid gap-3 sm:grid-cols-2">
                   <InfoCard
                     label="Database ID"
@@ -536,14 +466,12 @@ const TelegramGroupDetails = ({
                       group.id
                     )}
                   />
-
                   <InfoCard
                     label="Telegram Chat ID"
                     value={
                       group.chat_id
                     }
                   />
-
                   <InfoCard
                     label="Telegram Bot ID"
                     value={String(
@@ -553,7 +481,6 @@ const TelegramGroupDetails = ({
                       <Bot className="h-4 w-4" />
                     }
                   />
-
                   <InfoCard
                     label="Group Type"
                     value={
@@ -561,7 +488,6 @@ const TelegramGroupDetails = ({
                       "—"
                     }
                   />
-
                   <InfoCard
                     label="Audience"
                     value={
@@ -569,7 +495,6 @@ const TelegramGroupDetails = ({
                       "—"
                     }
                   />
-
                   <InfoCard
                     label="Verification"
                     value={
@@ -587,9 +512,7 @@ const TelegramGroupDetails = ({
                   />
                 </div>
               </div>
-
               {/* Scope summary */}
-
               <div>
                 <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -597,7 +520,6 @@ const TelegramGroupDetails = ({
                       Notification
                       Scopes
                     </h4>
-
                     <p className="mt-1 text-xs text-muted-foreground">
                       Controls which
                       ONE GUARD records
@@ -606,7 +528,6 @@ const TelegramGroupDetails = ({
                       this group.
                     </p>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
                       {
@@ -617,14 +538,10 @@ const TelegramGroupDetails = ({
                         ? "scope"
                         : "scopes"}
                     </span>
-
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={
-                        group.is_active
-                      }
                       onClick={() =>
                         setScopesOpen(
                           true
@@ -635,7 +552,6 @@ const TelegramGroupDetails = ({
                     </Button>
                   </div>
                 </div>
-
                 {scopes.length ===
                   0 ? (
                   <EmptyConfiguration
@@ -660,14 +576,12 @@ const TelegramGroupDetails = ({
                                 }{" "}
                                 Scope
                               </p>
-
                               <p className="mt-1 text-xs text-muted-foreground">
                                 Scope ID:{" "}
                                 {scope.scope_id ??
                                   "—"}
                               </p>
                             </div>
-
                             <div className="flex flex-wrap gap-2">
                               {scope.include_children && (
                                 <span className="rounded-full bg-muted px-2 py-1 text-xs">
@@ -675,7 +589,6 @@ const TelegramGroupDetails = ({
                                   children
                                 </span>
                               )}
-
                               <StatusBadge
                                 active={
                                   scope.is_active !==
@@ -692,16 +605,13 @@ const TelegramGroupDetails = ({
                   </div>
                 )}
               </div>
-
               {/* Rules summary */}
-
               <div>
                 <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-sm font-semibold">
                       Event Rules
                     </h4>
-
                     <p className="mt-1 text-xs text-muted-foreground">
                       Events subscribed
                       for delivery to
@@ -709,7 +619,6 @@ const TelegramGroupDetails = ({
                       group.
                     </p>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
                       {
@@ -720,7 +629,6 @@ const TelegramGroupDetails = ({
                         ? "rule"
                         : "rules"}
                     </span>
-
                     <Button
                       type="button"
                       size="sm"
@@ -738,7 +646,6 @@ const TelegramGroupDetails = ({
                     </Button>
                   </div>
                 </div>
-
                 {rules.length ===
                   0 ? (
                   <EmptyConfiguration
@@ -763,7 +670,6 @@ const TelegramGroupDetails = ({
                                 }
                               </p>
                             </div>
-
                             <StatusBadge
                               active={
                                 rule.is_enabled !==
@@ -779,23 +685,18 @@ const TelegramGroupDetails = ({
                   </div>
                 )}
               </div>
-
               {/* Feedback */}
-
               {error && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
                   <span>
                     {error}
                   </span>
                 </div>
               )}
-
               {successMessage && (
                 <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-400">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-
                   <span>
                     {
                       successMessage
@@ -807,12 +708,10 @@ const TelegramGroupDetails = ({
           ) : (
             <div className="flex min-h-[260px] flex-col items-center justify-center p-6 text-center">
               <AlertCircle className="mb-3 h-8 w-8 text-muted-foreground" />
-
               <p className="font-medium">
                 Group details are
                 unavailable.
               </p>
-
               {error && (
                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">
                   {error}
@@ -822,7 +721,6 @@ const TelegramGroupDetails = ({
           )}
         </DialogContent>
       </Dialog>
-
       <TelegramGroupScopes
         open={scopesOpen}
         onOpenChange={
@@ -830,7 +728,6 @@ const TelegramGroupDetails = ({
         }
         chat={group}
       />
-
       <TelegramGroupRules
         open={rulesOpen}
         onOpenChange={
@@ -841,13 +738,11 @@ const TelegramGroupDetails = ({
     </>
   );
 };
-
 interface InfoCardProps {
   label: string;
   value: string;
   icon?: React.ReactNode;
 }
-
 const InfoCard = ({
   label,
   value,
@@ -861,12 +756,10 @@ const InfoCard = ({
             {icon}
           </div>
         )}
-
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">
             {label}
           </p>
-
           <p className="mt-1 break-all text-sm font-medium">
             {value}
           </p>
@@ -875,13 +768,11 @@ const InfoCard = ({
     </Card>
   );
 };
-
 interface StatusBadgeProps {
   active: boolean;
   activeLabel: string;
   inactiveLabel: string;
 }
-
 const StatusBadge = ({
   active,
   activeLabel,
@@ -890,8 +781,8 @@ const StatusBadge = ({
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${active
-          ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
-          : "bg-muted text-muted-foreground"
+        ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+        : "bg-muted text-muted-foreground"
         }`}
     >
       {active
@@ -900,12 +791,10 @@ const StatusBadge = ({
     </span>
   );
 };
-
 interface EmptyConfigurationProps {
   title: string;
   description: string;
 }
-
 const EmptyConfiguration = ({
   title,
   description,
@@ -915,12 +804,10 @@ const EmptyConfiguration = ({
       <p className="text-sm font-medium">
         {title}
       </p>
-
       <p className="mt-1 text-xs text-muted-foreground">
         {description}
       </p>
     </div>
   );
 };
-
 export default TelegramGroupDetails;
