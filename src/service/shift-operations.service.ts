@@ -25,7 +25,9 @@ export const shiftOperationsService = {
   async list(filters: ShiftFilters) {
     const response = await api.get<ApiEnvelope<ShiftListBody>>(
       route,
-      { params: paramsOf(filters) }
+      {
+        params: paramsOf(filters),
+      }
     );
 
     return response.data.body;
@@ -65,28 +67,58 @@ export const shiftOperationsService = {
       }
     );
 
-    const contentType =
-      response.headers?.["content-type"] || "";
+    // Fix: Axios header values can have different types.
+    // Convert the content type to a string before using includes().
+    const contentType = String(
+      response.headers?.["content-type"] ?? ""
+    );
 
-    if (contentType.includes("application/json")) {
-      const message = await response.data.text();
-      throw new Error(message);
+    // Handle API errors that arrive as JSON blobs.
+    if (
+      contentType.includes("application/json") ||
+      contentType.includes("application/problem+json")
+    ) {
+      const errorText = await response.data.text();
+
+      try {
+        const errorData = JSON.parse(errorText);
+
+        throw new Error(
+          errorData.message ||
+          errorData.error ||
+          "Failed to export Shift Operations."
+        );
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          throw new Error(errorText);
+        }
+
+        throw error;
+      }
     }
 
-    const extension = format === "excel" ? "xlsx" : format;
+    const extension =
+      format === "excel" ? "xlsx" : format;
+
+    const filename =
+      `one-guard-shift-operations.${extension}`;
 
     const url = URL.createObjectURL(response.data);
 
     const anchor = document.createElement("a");
 
     anchor.href = url;
-    anchor.download = `one-guard-shift-operations.${extension}`;
+    anchor.download = filename;
 
     document.body.appendChild(anchor);
 
     anchor.click();
+
     anchor.remove();
 
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    // Release the temporary download URL.
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 10000);
   },
 };
