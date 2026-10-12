@@ -1,7 +1,8 @@
 "use client"
 
 import {
-  AlertTriangle,
+  
+  MonitorCheck,AlertTriangle,
   AudioWaveform,
   BadgeCheck,
   BarChart3,
@@ -142,6 +143,11 @@ const navGroups = [
         title: "Guard Live Map",
         url: "/guard-live-map",
         icon: MapPin,
+      },
+      {
+        title: "Shift Operations",
+        url: "/shift-operations",
+        icon: MonitorCheck,
       },
       {
         title: "Shift List",
