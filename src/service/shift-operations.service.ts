@@ -1,100 +1,101 @@
 
-import api from "./api.service";
+import api, { handleApiResponse } from "./api.service";
+
+import type { ApiResponse } from "@/app/types/api.types";
 
 import type {
-  ApiEnvelope,
   ShiftDetails,
+  ShiftExportFormat,
   ShiftFilters,
   ShiftListBody,
-  ShiftSummary,
+  ShiftOverviewBody,
 } from "@/app/types/shift-operations";
 
-const route = "/admin/shift-operations";
+const BASE_ROUTE = "/admin/shift-operations";
 
-const paramsOf = (filters: ShiftFilters) =>
+const cleanParams = (filters: ShiftFilters) =>
   Object.fromEntries(
     Object.entries(filters).filter(
       ([, value]) =>
         value !== undefined &&
         value !== null &&
-        value !== ""
+        value !== "" &&
+        value !== "all"
     )
   );
 
+async function getExportError(blob: Blob): Promise<string> {
+  try {
+    const text = await blob.text();
+    const parsed = JSON.parse(text);
+
+    return (
+      parsed.message ||
+      parsed.error ||
+      "Failed to export Shift Operations."
+    );
+  } catch {
+    return "Failed to export Shift Operations.";
+  }
+}
+
 export const shiftOperationsService = {
-  async list(filters: ShiftFilters) {
-    const response = await api.get<ApiEnvelope<ShiftListBody>>(
-      route,
-      {
-        params: paramsOf(filters),
-      }
-    );
+  getOperations: (
+    filters: ShiftFilters = {}
+  ): Promise<ShiftListBody> =>
+    handleApiResponse(
+      api.get<ApiResponse<ShiftListBody>>(
+        BASE_ROUTE,
+        {
+          params: cleanParams(filters),
+        }
+      )
+    ),
 
-    return response.data.body;
-  },
+  getOverview: (
+    filters: ShiftFilters = {}
+  ): Promise<ShiftOverviewBody> =>
+    handleApiResponse(
+      api.get<ApiResponse<ShiftOverviewBody>>(
+        `${BASE_ROUTE}/overview`,
+        {
+          params: cleanParams(filters),
+        }
+      )
+    ),
 
-  async overview(filters: ShiftFilters) {
-    const response = await api.get<
-      ApiEnvelope<{
-        summary: ShiftSummary;
-        filters: ShiftFilters;
-        generated_at: string;
-      }>
-    >(`${route}/overview`, {
-      params: paramsOf(filters),
-    });
+  getAssignmentDetails: (
+    assignmentId: number
+  ): Promise<ShiftDetails> =>
+    handleApiResponse(
+      api.get<ApiResponse<ShiftDetails>>(
+        `${BASE_ROUTE}/assignments/${assignmentId}`
+      )
+    ),
 
-    return response.data.body;
-  },
-
-  async details(id: number) {
-    const response = await api.get<ApiEnvelope<ShiftDetails>>(
-      `${route}/assignments/${id}`
-    );
-
-    return response.data.body;
-  },
-
-  async exportFile(
-    format: "csv" | "excel" | "pdf",
-    filters: ShiftFilters
-  ) {
+  async exportOperations(
+    format: ShiftExportFormat,
+    filters: ShiftFilters = {}
+  ): Promise<void> {
     const response = await api.get<Blob>(
-      `${route}/export/${format}`,
+      `${BASE_ROUTE}/export/${format}`,
       {
-        params: paramsOf(filters),
+        params: cleanParams(filters),
         responseType: "blob",
       }
     );
 
-    // Fix: Axios header values can have different types.
-    // Convert the content type to a string before using includes().
     const contentType = String(
       response.headers?.["content-type"] ?? ""
-    );
+    ).toLowerCase();
 
-    // Handle API errors that arrive as JSON blobs.
     if (
       contentType.includes("application/json") ||
       contentType.includes("application/problem+json")
     ) {
-      const errorText = await response.data.text();
-
-      try {
-        const errorData = JSON.parse(errorText);
-
-        throw new Error(
-          errorData.message ||
-          errorData.error ||
-          "Failed to export Shift Operations."
-        );
-      } catch (error) {
-        if (error instanceof SyntaxError) {
-          throw new Error(errorText);
-        }
-
-        throw error;
-      }
+      throw new Error(
+        await getExportError(response.data)
+      );
     }
 
     const extension =
@@ -104,21 +105,47 @@ export const shiftOperationsService = {
       `one-guard-shift-operations.${extension}`;
 
     const url = URL.createObjectURL(response.data);
-
     const anchor = document.createElement("a");
 
-    anchor.href = url;
-    anchor.download = filename;
+    try {
+      anchor.href = url;
+      anchor.download = filename;
 
-    document.body.appendChild(anchor);
+      document.body.appendChild(anchor);
+      anchor.click();
+    } finally {
+      anchor.remove();
 
-    anchor.click();
+      window.setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 10000);
+    }
+  },
 
-    anchor.remove();
+  list(
+    filters: ShiftFilters = {}
+  ): Promise<ShiftListBody> {
+    return this.getOperations(filters);
+  },
 
-    // Release the temporary download URL.
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 10000);
+  overview(
+    filters: ShiftFilters = {}
+  ): Promise<ShiftOverviewBody> {
+    return this.getOverview(filters);
+  },
+
+  details(
+    assignmentId: number
+  ): Promise<ShiftDetails> {
+    return this.getAssignmentDetails(assignmentId);
+  },
+
+  exportFile(
+    format: ShiftExportFormat,
+    filters: ShiftFilters = {}
+  ): Promise<void> {
+    return this.exportOperations(format, filters);
   },
 };
+
+export default shiftOperationsService;
