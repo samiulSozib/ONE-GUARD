@@ -1,151 +1,182 @@
 
-import api, { handleApiResponse } from "./api.service";
-
 import type { ApiResponse } from "@/app/types/api.types";
 
 import type {
-  ShiftDetails,
-  ShiftExportFormat,
   ShiftFilters,
-  ShiftListBody,
-  ShiftOverviewBody,
+  ShiftOperationsList,
+  ShiftOperationsOverview,
+  ShiftAssignmentDetails,
 } from "@/app/types/shift-operations";
 
-const BASE_ROUTE = "/admin/shift-operations";
+import api, { handleApiResponse } from "./api.service";
 
-const cleanParams = (filters: ShiftFilters) =>
-  Object.fromEntries(
+/**
+ * ONE GUARD SECURITY
+ * Shift Operations API Service
+ *
+ * The API base URL and Bearer token are managed
+ * by the existing api.service.ts file.
+ */
+
+const SHIFT_OPERATIONS_URL = "/admin/shift-operations";
+
+export type ShiftExportFormat = "csv" | "excel" | "pdf";
+
+/**
+ * Prepare API query parameters.
+ *
+ * Important:
+ * We preserve "0" because boolean filters such as
+ * has_incidents=0 are valid backend filters.
+ */
+function buildQueryParams(
+  filters: ShiftFilters
+): Record<string, string | number> {
+  return Object.fromEntries(
     Object.entries(filters).filter(
       ([, value]) =>
         value !== undefined &&
         value !== null &&
-        value !== "" &&
-        value !== "all"
+        value !== ""
     )
-  );
+  ) as Record<string, string | number>;
+}
 
-async function getExportError(blob: Blob): Promise<string> {
-  try {
-    const text = await blob.text();
-    const parsed = JSON.parse(text);
+/**
+ * Download a server-generated file in the browser.
+ */
+function downloadBlob(
+  blob: Blob,
+  filename: string
+): void {
+  const url = window.URL.createObjectURL(blob);
 
-    return (
-      parsed.message ||
-      parsed.error ||
-      "Failed to export Shift Operations."
-    );
-  } catch {
-    return "Failed to export Shift Operations.";
-  }
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 export const shiftOperationsService = {
+  /**
+   * 1. Operational shift listing
+   *
+   * GET /admin/shift-operations
+   *
+   * Supports date range, search, filters,
+   * and server-side pagination.
+   */
   getOperations: (
-    filters: ShiftFilters = {}
-  ): Promise<ShiftListBody> =>
+    filters: ShiftFilters
+  ): Promise<ShiftOperationsList> =>
     handleApiResponse(
-      api.get<ApiResponse<ShiftListBody>>(
-        BASE_ROUTE,
+      api.get<ApiResponse<ShiftOperationsList>>(
+        SHIFT_OPERATIONS_URL,
         {
-          params: cleanParams(filters),
+          params: buildQueryParams(filters),
         }
       )
     ),
 
+  /**
+   * 2. Operational overview
+   *
+   * GET /admin/shift-operations/overview
+   *
+   * Returns summary statistics across all
+   * matching operational rows.
+   */
   getOverview: (
-    filters: ShiftFilters = {}
-  ): Promise<ShiftOverviewBody> =>
+    filters: ShiftFilters
+  ): Promise<ShiftOperationsOverview> =>
     handleApiResponse(
-      api.get<ApiResponse<ShiftOverviewBody>>(
-        `${BASE_ROUTE}/overview`,
+      api.get<ApiResponse<ShiftOperationsOverview>>(
+        `${SHIFT_OPERATIONS_URL}/overview`,
         {
-          params: cleanParams(filters),
+          params: buildQueryParams(filters),
         }
       )
     ),
 
+  /**
+   * 3. Assignment details
+   *
+   * GET /admin/shift-operations/assignments/{id}
+   *
+   * Used by the right-side details drawer.
+   */
   getAssignmentDetails: (
     assignmentId: number
-  ): Promise<ShiftDetails> =>
+  ): Promise<ShiftAssignmentDetails> =>
     handleApiResponse(
-      api.get<ApiResponse<ShiftDetails>>(
-        `${BASE_ROUTE}/assignments/${assignmentId}`
+      api.get<ApiResponse<ShiftAssignmentDetails>>(
+        `${SHIFT_OPERATIONS_URL}/assignments/${assignmentId}`
       )
     ),
 
-  async exportOperations(
+  /**
+   * 4-6. Export Shift Operations
+   *
+   * GET /admin/shift-operations/export/csv
+   * GET /admin/shift-operations/export/excel
+   * GET /admin/shift-operations/export/pdf
+   *
+   * Downloads all matching filtered rows,
+   * subject to the backend export limits.
+   */
+  exportOperations: async (
     format: ShiftExportFormat,
-    filters: ShiftFilters = {}
-  ): Promise<void> {
+    filters: ShiftFilters
+  ): Promise<void> => {
     const response = await api.get<Blob>(
-      `${BASE_ROUTE}/export/${format}`,
+      `${SHIFT_OPERATIONS_URL}/export/${format}`,
       {
-        params: cleanParams(filters),
+        params: buildQueryParams(filters),
         responseType: "blob",
+        headers: {
+          Accept: "*/*",
+        },
       }
     );
 
-    const contentType = String(
-      response.headers?.["content-type"] ?? ""
-    ).toLowerCase();
+    const blob = response.data;
 
+    // The backend might return a JSON error
+    // instead of an exported file.
     if (
-      contentType.includes("application/json") ||
-      contentType.includes("application/problem+json")
+      blob.type.includes("application/json") ||
+      blob.type.includes("text/json")
     ) {
-      throw new Error(
-        await getExportError(response.data)
-      );
+      const responseText = await blob.text();
+
+      let errorMessage = "Export failed.";
+
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage =
+          errorData.message ||
+          errorData.errors?.message ||
+          errorMessage;
+      } catch {
+        errorMessage = responseText || errorMessage;
+      }
+
+      throw new Error(errorMessage);
     }
 
     const extension =
       format === "excel" ? "xlsx" : format;
 
     const filename =
-      `one-guard-shift-operations.${extension}`;
+      `shift-operations-${filters.from}-to-${filters.to}.${extension}`;
 
-    const url = URL.createObjectURL(response.data);
-    const anchor = document.createElement("a");
-
-    try {
-      anchor.href = url;
-      anchor.download = filename;
-
-      document.body.appendChild(anchor);
-      anchor.click();
-    } finally {
-      anchor.remove();
-
-      window.setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 10000);
-    }
-  },
-
-  list(
-    filters: ShiftFilters = {}
-  ): Promise<ShiftListBody> {
-    return this.getOperations(filters);
-  },
-
-  overview(
-    filters: ShiftFilters = {}
-  ): Promise<ShiftOverviewBody> {
-    return this.getOverview(filters);
-  },
-
-  details(
-    assignmentId: number
-  ): Promise<ShiftDetails> {
-    return this.getAssignmentDetails(assignmentId);
-  },
-
-  exportFile(
-    format: ShiftExportFormat,
-    filters: ShiftFilters = {}
-  ): Promise<void> {
-    return this.exportOperations(format, filters);
+    downloadBlob(blob, filename);
   },
 };
-
-export default shiftOperationsService;

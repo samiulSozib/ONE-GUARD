@@ -1,1665 +1,1440 @@
+
 "use client";
 
-import ShiftFilterLookup from "./shift-filter-lookup";
-
-import React, { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
-
-  Activity, AlertTriangle, CheckCircle2, Clock, Download,
-
-  FileText, FilterX, Footprints, RefreshCcw, Search,
-
-  ShieldCheck, Users, X,
-
+  Activity,
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Download,
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  Search,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Users,
+  UserRound,
+  X,
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-
 import { Button } from "@/components/ui/button";
 
-import { shiftOperationsService } from "@/service/shift-operations.service";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 import type {
-
-  ShiftDetails,
-
   ShiftFilters,
-
-  ShiftListBody,
-
-  ShiftRow,
-
-  ShiftSummary,
-
+  ShiftOperationRow,
+  ShiftOperationsList,
+  ShiftOperationsOverview,
+  ShiftOperationsSummary,
+  ShiftAssignmentDetails,
 } from "@/app/types/shift-operations";
 
-type Tab =
+import {
+  shiftOperationsService,
+  type ShiftExportFormat,
+} from "@/service/shift-operations.service";
 
-  | "overview"
+/* =====================================================
+   Types
+===================================================== */
 
-  | "attendance"
+type ViewMode =
+  | "all"
+  | "assignments"
+  | "unfilled";
 
-  | "patrol"
+type FilterKey = Exclude<
+  keyof ShiftFilters,
+  "from" | "to" | "page" | "per_page" | "search"
+>;
 
-  | "incidents"
-
-  | "reports"
-
-  | "replacements"
-
-  | "history";
-
-type FilterKey = keyof ShiftFilters;
-
-const dateKey = (date: Date) => date.toISOString().slice(0, 10);
-
-const createDefaults = (): ShiftFilters => ({
-
-  from: dateKey(new Date(Date.now() - 7 * 86400000)),
-
-  to: dateKey(new Date(Date.now() + 7 * 86400000)),
-
-  page: 1,
-
-  per_page: 20,
-
-});
-
-const filtersList: {
-
+type FilterDefinition = {
   key: FilterKey;
-
-  title: string;
-
-  options: string[];
-
-}[] = [
-
-    {
-
-      key: "service_mode",
-
-      title: "Shift mode",
-
-      options: ["continuous_shift", "patrol_visits"],
-
-    },
-
-    {
-
-      key: "operational_status",
-
-      title: "Operational status",
-
-      options: [
-
-        "upcoming", "on_duty", "on_break", "checked_out",
-
-        "missing_check_out", "not_checked_in_after_start", "unassigned",
-
-      ],
-
-    },
-
-    {
-
-      key: "attendance",
-
-      title: "Attendance",
-
-      options: ["attended", "not_attended"],
-
-    },
-
-    {
-
-      key: "assignment_status",
-
-      title: "Assignment status",
-
-      options: ["active", "pending", "completed", "cancelled", "replaced"],
-
-    },
-
-    {
-
-      key: "check_in_timing",
-
-      title: "Check-in timing",
-
-      options: ["early", "on_time", "late"],
-
-    },
-
-    {
-
-      key: "check_out_timing",
-
-      title: "Checkout timing",
-
-      options: ["early", "on_time", "late"],
-
-    },
-
-    {
-
-      key: "checkout_source",
-
-      title: "Checkout source",
-
-      options: ["automatic", "manual", "unknown"],
-
-    },
-
-    {
-
-      key: "patrol_status",
-
-      title: "Patrol status",
-
-      options: [
-
-        "not_applicable", "not_started", "in_progress",
-
-        "completed", "incomplete", "missed",
-
-      ],
-
-    },
-
-    {
-
-      key: "coverage_status",
-
-      title: "Coverage",
-
-      options: ["covered", "partial", "unassigned", "overstaffed"],
-
-    },
-
-    {
-
-      key: "has_incidents",
-
-      title: "Has incidents",
-
-      options: ["1", "0"],
-
-    },
-
-    {
-
-      key: "has_reports",
-
-      title: "Has shift reports",
-
-      options: ["1", "0"],
-
-    },
-
-    {
-
-      key: "is_replaced",
-
-      title: "Replaced",
-
-      options: ["1", "0"],
-
-    },
-
-    {
-
-      key: "has_early_checkout_request",
-
-      title: "Early checkout request",
-
-      options: ["1", "0"],
-
-    },
-
-  ];
-
-const idFilters: { key: FilterKey; title: string }[] = [
-
-  { key: "client_id", title: "Client ID" },
-
-  { key: "site_id", title: "Site ID" },
-
-  { key: "site_location_id", title: "Location ID" },
-
-  { key: "guard_id", title: "Guard ID" },
-
-  { key: "duty_schedule_id", title: "Schedule ID" },
-
-  { key: "duty_id", title: "Duty ID" },
-
+  label: string;
+  options?: { value: string; label: string }[];
+  placeholder?: string;
+};
+
+const PRIMARY = "#5F0015";
+
+const emptySummary: ShiftOperationsSummary = {
+  assignment_rows: 0,
+  unfilled_duties: 0,
+  unfilled_positions: 0,
+  attended_assignments: 0,
+  on_duty: 0,
+  on_break: 0,
+  missing_check_out: 0,
+  early_check_ins: 0,
+  early_checkouts: 0,
+  replaced_assignments: 0,
+  patrol_completed: 0,
+  patrol_incomplete: 0,
+  shifts_with_incidents: 0,
+  shifts_with_reports: 0,
+};
+
+const fieldClass =
+  "h-9 w-full min-w-0 rounded-md border border-input " +
+  "bg-background px-3 text-sm text-foreground " +
+  "outline-none focus-visible:ring-2 " +
+  "focus-visible:ring-[#5F0015]/25";
+
+const filterDefinitions: FilterDefinition[] = [
+  { key: "client_id", label: "Client ID", placeholder: "Client ID" },
+  { key: "site_id", label: "Site ID", placeholder: "Site ID" },
+  {
+    key: "site_location_id",
+    label: "Site Location ID",
+    placeholder: "Location ID",
+  },
+  { key: "guard_id", label: "Guard ID", placeholder: "Guard ID" },
+  {
+    key: "duty_schedule_id",
+    label: "Duty Schedule ID",
+    placeholder: "Schedule ID",
+  },
+  { key: "duty_id", label: "Duty ID", placeholder: "Duty ID" },
+  {
+    key: "service_mode",
+    label: "Service Mode",
+    options: [
+      { value: "continuous_shift", label: "Continuous Shift" },
+      { value: "patrol_visits", label: "Patrol Visits" },
+    ],
+  },
+  {
+    key: "assignment_status",
+    label: "Assignment Status",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "pending", label: "Pending" },
+      { value: "completed", label: "Completed" },
+      { value: "cancelled", label: "Cancelled" },
+      { value: "replaced", label: "Replaced" },
+    ],
+  },
+  {
+    key: "operational_status",
+    label: "Operational Status",
+    options: [
+      { value: "upcoming", label: "Upcoming" },
+      { value: "on_duty", label: "On Duty" },
+      { value: "on_break", label: "On Break" },
+      { value: "checked_out", label: "Checked Out" },
+      { value: "missing_check_out", label: "Missing Checkout" },
+      {
+        value: "not_checked_in_after_start",
+        label: "Not Checked In",
+      },
+      { value: "unassigned", label: "Unassigned" },
+      { value: "replaced", label: "Replaced" },
+      { value: "cancelled", label: "Cancelled" },
+    ],
+  },
+  {
+    key: "attendance",
+    label: "Attendance",
+    options: [
+      { value: "attended", label: "Attended" },
+      { value: "not_attended", label: "Not Attended" },
+      { value: "not_due", label: "Not Due" },
+    ],
+  },
+  {
+    key: "check_in_timing",
+    label: "Check-In Timing",
+    options: [
+      { value: "early", label: "Early" },
+      { value: "on_time", label: "On Time" },
+      { value: "late", label: "Late" },
+    ],
+  },
+  {
+    key: "check_out_timing",
+    label: "Checkout Timing",
+    options: [
+      { value: "early", label: "Early" },
+      { value: "on_time", label: "On Time" },
+      { value: "late", label: "Late" },
+    ],
+  },
+  {
+    key: "checkout_source",
+    label: "Checkout Source",
+    options: [
+      { value: "automatic", label: "Automatic" },
+      { value: "manual", label: "Manual" },
+      { value: "unknown", label: "Unknown" },
+    ],
+  },
+  {
+    key: "patrol_status",
+    label: "Patrol Status",
+    options: [
+      { value: "not_applicable", label: "Not Applicable" },
+      { value: "not_started", label: "Not Started" },
+      { value: "in_progress", label: "In Progress" },
+      { value: "completed", label: "Completed" },
+      { value: "incomplete", label: "Incomplete" },
+      { value: "missed", label: "Missed" },
+    ],
+  },
+  {
+    key: "coverage_status",
+    label: "Coverage Status",
+    options: [
+      { value: "covered", label: "Covered" },
+      { value: "partial", label: "Partial" },
+      { value: "unassigned", label: "Unassigned" },
+      { value: "overstaffed", label: "Overstaffed" },
+    ],
+  },
+  ...(
+    [
+      ["has_incidents", "Has Incidents"],
+      ["has_reports", "Has Reports"],
+      ["is_replaced", "Is Replaced"],
+      ["has_early_checkout_request", "Early Checkout Request"],
+    ] as const
+  ).map(([key, label]) => ({
+    key,
+    label,
+    options: [
+      { value: "1", label: "Yes" },
+      { value: "0", label: "No" },
+    ],
+  })),
 ];
 
-const pretty = (value: string | null | undefined) =>
+function dateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
-  value ? value.replaceAll("_", " ") : "—";
+function initialFilters(): ShiftFilters {
+  const today = new Date();
+  const previous = new Date(today);
+  previous.setDate(previous.getDate() - 6);
 
-function formatDate(
+  return {
+    from: dateString(previous),
+    to: dateString(today),
+    page: 1,
+    per_page: 20,
+  };
+}
 
-  value: string | null | undefined,
+function readable(value: string | null | undefined): string {
+  if (!value) return "—";
 
-  timezone?: string | null
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
-) {
-
+function dateTime(
+  value?: string | null,
+  timeZone?: string | null
+): string {
   if (!value) return "—";
 
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return "—";
 
   try {
-
     return new Intl.DateTimeFormat("en-US", {
-
-      dateStyle: "medium",
-
-      timeStyle: "short",
-
-      timeZone: timezone || "UTC",
-
+      timeZone: timeZone || "UTC",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     }).format(date);
-
   } catch {
-
-    return date.toISOString();
-
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
   }
-
 }
 
-function errorMessage(error: unknown): string {
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Unable to load shift operations.";
+}
 
-  if (error && typeof error === "object" && "response" in error) {
+function badgeClasses(value?: string | null): string {
+  switch (value) {
+    case "on_duty":
+    case "active":
+    case "attended":
+    case "covered":
+    case "completed":
+      return "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300";
 
-    const response = (
+    case "on_break":
+    case "upcoming":
+    case "pending":
+    case "partial":
+    case "early":
+      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300";
 
-      error as { response?: { data?: { message?: string } } }
+    case "unassigned":
+    case "not_attended":
+    case "not_checked_in_after_start":
+    case "missing_check_out":
+    case "missed":
+    case "incomplete":
+    case "late":
+      return "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300";
 
-    ).response;
+    case "checked_out":
+    case "on_time":
+      return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300";
 
-    if (response?.data?.message) return response.data.message;
-
+    default:
+      return "border-border bg-muted text-muted-foreground";
   }
-
-  return error instanceof Error ? error.message : "Request failed";
-
 }
 
-function Status({ value }: { value?: string | null }) {
-
-  const status = value || "";
-
-  const color =
-
-    ["on_duty", "covered", "attended", "checked_out", "completed"].includes(status)
-
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-
-      : ["missing_check_out", "unassigned", "missed", "cancelled"].includes(status)
-
-        ? "bg-red-500/10 text-red-700 dark:text-red-400"
-
-        : ["partial", "replaced", "on_break", "late", "incomplete"].includes(status)
-
-          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-
-          : "bg-muted text-muted-foreground";
-
-  return (
-
-    <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium capitalize ${color}`}>
-
-      {pretty(status)}
-
-    </span>
-
-  );
-
-}
-
-function InfoRow({
-
-  title,
-
-  value,
-
+function StatusBadge({
+  status,
+  label,
 }: {
-
-  title: string;
-
-  value: React.ReactNode;
-
+  status?: string | null;
+  label?: string;
 }) {
-
   return (
-
-    <div className="flex justify-between gap-4 border-b py-2 text-sm last:border-0">
-
-      <span className="shrink-0 text-muted-foreground">{title}</span>
-
-      <div className="min-w-0 break-words text-right font-medium">
-
-        {value ?? "—"}
-
-      </div>
-
-    </div>
-
-  );
-
-}
-
-function RecordList({
-
-  title,
-
-  records,
-
-}: {
-
-  title: string;
-
-  records: Array<Record<string, unknown>>;
-
-}) {
-
-  if (!records.length) {
-
-    return (
-
-      <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-
-        No {title.toLowerCase()} found.
-
-      </div>
-
-    );
-
-  }
-
-  return (
-
-    <div className="space-y-3">
-
-      {records.map((record, index) => (
-
-        <Card key={String(record.id ?? index)} className="p-4">
-
-          {Object.entries(record)
-
-            .filter(([, value]) => value !== null && value !== undefined)
-
-            .map(([key, value]) => (
-
-              <InfoRow
-
-                key={key}
-
-                title={pretty(key)}
-
-                value={
-
-                  typeof value === "object"
-
-                    ? <pre className="max-w-xs whitespace-pre-wrap break-all text-xs">
-
-                      {JSON.stringify(value, null, 2)}
-
-                    </pre>
-
-                    : String(value)
-
-                }
-
-              />
-
-            ))}
-
-        </Card>
-
-      ))}
-
-    </div>
-
-  );
-
-}
-
-function DetailsDrawer({
-
-  detail,
-
-  loading,
-
-  error,
-
-  onClose,
-
-}: {
-
-  detail: ShiftDetails | null;
-
-  loading: boolean;
-
-  error: string | null;
-
-  onClose: () => void;
-
-}) {
-
-  const [tab, setTab] = useState<Tab>("overview");
-
-  const tabs: { key: Tab; title: string }[] = [
-
-    { key: "overview", title: "Overview" },
-
-    { key: "attendance", title: "Attendance" },
-
-    { key: "patrol", title: "Patrol Visits" },
-
-    { key: "incidents", title: "Incidents" },
-
-    { key: "reports", title: "Shift Reports" },
-
-    { key: "replacements", title: "Assignments" },
-
-    { key: "history", title: "Activity History" },
-
-  ];
-
-  const item = detail?.item;
-
-  const timezone = item?.duty.site_timezone;
-
-  return (
-
-    <div
-
-      className="fixed inset-0 z-50 flex justify-end bg-black/50"
-
-      onMouseDown={onClose}
-
+    <span
+      className={
+        "inline-flex max-w-full items-center rounded-full border " +
+        "px-2.5 py-1 text-[11px] font-medium " +
+        badgeClasses(status)
+      }
     >
-
-      <div
-
-        role="dialog"
-
-        aria-modal="true"
-
-        aria-label="Shift operation details"
-
-        onMouseDown={(event) => event.stopPropagation()}
-
-        className="flex h-full w-full max-w-2xl flex-col bg-background shadow-2xl"
-
-      >
-
-        <div className="flex items-start justify-between border-b p-5">
-
-          <div>
-
-            <h2 className="text-lg font-semibold">Assignment Details</h2>
-
-            <p className="text-sm text-muted-foreground">
-
-              {item?.duty.title || "Shift Operations"}
-
-              {item?.assignment_id ? ` · #${item.assignment_id}` : ""}
-
-            </p>
-
-          </div>
-
-          <Button size="icon" variant="ghost" onClick={onClose}>
-
-            <X className="h-5 w-5" />
-
-          </Button>
-
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto border-b p-3">
-
-          {tabs.map((entry) => (
-
-            <button
-
-              key={entry.key}
-
-              type="button"
-
-              onClick={() => setTab(entry.key)}
-
-              className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium ${tab === entry.key
-
-                  ? "bg-primary text-primary-foreground"
-
-                  : "bg-muted text-muted-foreground"
-
-                }`}
-
-            >
-
-              {entry.title}
-
-            </button>
-
-          ))}
-
-        </div>
-
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
-
-          {loading ? (
-
-            <p className="text-muted-foreground">Loading details…</p>
-
-          ) : error ? (
-
-            <p className="text-red-600">{error}</p>
-
-          ) : !item || !detail ? (
-
-            <p className="text-muted-foreground">No assignment found.</p>
-
-          ) : (
-
-            <>
-
-              {tab === "overview" && (
-
-                <Card className="p-4">
-
-                  <InfoRow title="Guard" value={item.guard?.name || `Guard #${item.guard?.id ?? "—"}`} />
-
-                  <InfoRow title="Guard code" value={item.guard?.code} />
-
-                  <InfoRow title="Client ID" value={item.duty.client_id} />
-
-                  <InfoRow title="Site" value={item.duty.site_name} />
-
-                  <InfoRow title="Location" value={item.duty.site_location_name} />
-
-                  <InfoRow title="Service" value={pretty(item.duty.service_mode)} />
-
-                  <InfoRow title="Start" value={formatDate(item.duty.start_datetime, timezone)} />
-
-                  <InfoRow title="End" value={formatDate(item.duty.end_datetime, timezone)} />
-
-                  <InfoRow title="Timezone" value={timezone || "UTC"} />
-
-                  <InfoRow title="Operational status" value={<Status value={item.operational_status} />} />
-
-                  <InfoRow title="Assignment status" value={<Status value={item.assignment_status} />} />
-
-                  <InfoRow title="Coverage" value={<Status value={item.coverage.status} />} />
-
-                  <InfoRow title="Required guards" value={item.coverage.required} />
-
-                  <InfoRow title="Assigned guards" value={item.coverage.assigned} />
-
-                  <InfoRow title="Attended guards" value={item.coverage.attended} />
-
-                </Card>
-
-              )}
-
-              {tab === "attendance" && (
-
-                <>
-
-                  <Card className="p-4">
-
-                    <InfoRow title="Attended" value={item.attended ? "Yes" : "No"} />
-
-                    <InfoRow title="Check-in" value={formatDate(item.check_in_time, timezone)} />
-
-                    <InfoRow
-
-                      title="Check-in timing"
-
-                      value={
-
-                        item.check_in_timing
-
-                          ? `${pretty(item.check_in_timing.classification)} (${item.check_in_timing.difference_minutes} minutes)`
-
-                          : "—"
-
-                      }
-
-                    />
-
-                    <InfoRow title="Checkout" value={formatDate(item.check_out_time, timezone)} />
-
-                    <InfoRow
-
-                      title="Checkout timing"
-
-                      value={
-
-                        item.check_out_timing
-
-                          ? `${pretty(item.check_out_timing.classification)} (${item.check_out_timing.difference_minutes} minutes)`
-
-                          : "—"
-
-                      }
-
-                    />
-
-                    <InfoRow title="Checkout source" value={pretty(item.checkout_source)} />
-
-                  </Card>
-
-                  <h3 className="font-semibold">Attendance record</h3>
-
-                  <RecordList
-
-                    title="Attendance"
-
-                    records={detail.attendance ? [detail.attendance] : []}
-
-                  />
-
-                  <h3 className="font-semibold">Early Checkout Requests</h3>
-
-                  <RecordList
-
-                    title="Early Checkout Requests"
-
-                    records={detail.early_checkout_requests ?? []}
-
-                  />
-
-                </>
-
-              )}
-
-              {tab === "patrol" && (
-
-                <>
-
-                  <Card className="p-4">
-
-                    <InfoRow title="Status" value={<Status value={item.patrol?.status} />} />
-
-                    <InfoRow title="Required visits" value={item.patrol?.required ?? 0} />
-
-                    <InfoRow title="Completed" value={item.patrol?.completed ?? 0} />
-
-                    <InfoRow title="Missed" value={item.patrol?.missed ?? 0} />
-
-                  </Card>
-
-                  <RecordList title="Patrol Visits" records={detail.patrol_visits ?? []} />
-
-                </>
-
-              )}
-
-              {tab === "incidents" && (
-
-                <RecordList title="Incidents" records={detail.incidents ?? []} />
-
-              )}
-
-              {tab === "reports" && (
-
-                <RecordList title="Shift Reports" records={detail.shift_reports ?? []} />
-
-              )}
-
-              {tab === "replacements" && (
-
-                <RecordList
-
-                  title="Assignments"
-
-                  records={(detail.assignments ?? []).map((a) => ({ ...a }))}
-
-                />
-
-              )}
-
-              {tab === "history" && (
-
-                <RecordList
-
-                  title="Shift Logs"
-
-                  records={(detail.shift_logs ?? []).map((log) => ({ ...log }))}
-
-                />
-
-              )}
-
-            </>
-
-          )}
-
-        </div>
-
-      </div>
-
-    </div>
-
+      <span className="truncate">
+        {label || readable(status)}
+      </span>
+    </span>
   );
-
 }
+
+function SummaryCard({
+  label,
+  value,
+  icon: Icon,
+  note,
+}: {
+  label: string;
+  value: number;
+  icon: typeof Users;
+  note?: string;
+}) {
+  return (
+    <Card className="min-w-0 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground">
+            {label}
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums">
+            {value.toLocaleString()}
+          </p>
+        </div>
+        <div className="rounded-lg bg-[#5F0015]/10 p-2.5">
+          <Icon className="h-4 w-4 text-[#5F0015]" />
+        </div>
+      </div>
+      {note && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {note}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function DetailValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words text-sm font-medium">
+        {value === null || value === undefined || value === ""
+          ? "—"
+          : value}
+      </p>
+    </div>
+  );
+}
+
+/* =====================================================
+   Main Component
+===================================================== */
 
 export default function ShiftOperationsManagement() {
+  const [filters, setFilters] =
+    useState<ShiftFilters>(initialFilters);
 
-  const [draft, setDraft] = useState<ShiftFilters>(createDefaults);
+  const [draftFilters, setDraftFilters] =
+    useState<ShiftFilters>(initialFilters);
 
-  const [applied, setApplied] = useState<ShiftFilters>(createDefaults);
+  const [searchText, setSearchText] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [view, setView] = useState<ViewMode>("all");
 
-  const [data, setData] = useState<ShiftListBody | null>(null);
+  const [list, setList] =
+    useState<ShiftOperationsList | null>(null);
 
-  const [summary, setSummary] = useState<ShiftSummary | null>(null);
+  const [overview, setOverview] =
+    useState<ShiftOperationsOverview | null>(null);
 
-  const [loading, setLoading] = useState(false);
-
+  const [loading, setLoading] = useState(true);
+  const [overviewLoading, setOverviewLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [advanced, setAdvanced] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [exporting, setExporting] =
+    useState<ShiftExportFormat | null>(null);
 
-  const [exporting, setExporting] = useState<string | null>(null);
+  const [selectedRow, setSelectedRow] =
+    useState<ShiftOperationRow | null>(null);
 
-  const [assignmentId, setAssignmentId] = useState<number | null>(null);
-
-  const [details, setDetails] = useState<ShiftDetails | null>(null);
+  const [details, setDetails] =
+    useState<ShiftAssignmentDetails | null>(null);
 
   const [detailsLoading, setDetailsLoading] = useState(false);
-
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  /* =====================================================
+     API Data
+  ===================================================== */
+
+  useEffect(() => {
+    let active = true;
 
     setLoading(true);
-
     setError(null);
 
-    try {
-
-      const [result, overview] = await Promise.all([
-
-        shiftOperationsService.list(applied),
-
-        shiftOperationsService.overview(applied),
-
-      ]);
-
-      setData(result);
-
-      setSummary(overview.summary);
-
-    } catch (e) {
-
-      setError(errorMessage(e));
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  }, [applied]);
-
-  useEffect(() => {
-
-    void load();
-
-  }, [load]);
-
-  useEffect(() => {
-
-    if (assignmentId === null) return;
-
-    let cancelled = false;
-
-    setDetails(null);
-
-    setDetailsError(null);
-
-    setDetailsLoading(true);
-
     shiftOperationsService
-
-      .details(assignmentId)
-
-      .then((result) => {
-
-        if (!cancelled) setDetails(result);
-
+      .getOperations(filters)
+      .then((response) => {
+        if (active) setList(response);
       })
-
-      .catch((e) => {
-
-        if (!cancelled) setDetailsError(errorMessage(e));
-
+      .catch((err: unknown) => {
+        if (active) {
+          setError(getErrorMessage(err));
+          setList(null);
+        }
       })
-
       .finally(() => {
-
-        if (!cancelled) setDetailsLoading(false);
-
+        if (active) setLoading(false);
       });
 
     return () => {
-
-      cancelled = true;
-
+      active = false;
     };
+  }, [filters, refreshKey]);
 
-  }, [assignmentId]);
+  useEffect(() => {
+    let active = true;
 
-  const update = (key: FilterKey, value: string) => {
+    setOverviewLoading(true);
 
-    setDraft((old) => ({ ...old, [key]: value }));
+    const { page, per_page, ...overviewFilters } = filters;
+    void page;
+    void per_page;
 
-  };
+    shiftOperationsService
+      .getOverview(overviewFilters)
+      .then((response) => {
+        if (active) setOverview(response);
+      })
+      .catch(() => {
+        if (active) setOverview(null);
+      })
+      .finally(() => {
+        if (active) setOverviewLoading(false);
+      });
 
-  const apply = () => {
+    return () => {
+      active = false;
+    };
+  }, [filters, refreshKey]);
 
-    setApplied({ ...draft, page: 1 });
+  const summary =
+    overview?.summary || list?.summary || emptySummary;
 
-  };
+  const visibleRows = useMemo(() => {
+    const rows = list?.items || [];
 
-  const reset = () => {
-
-    const next = createDefaults();
-
-    setDraft(next);
-
-    setApplied(next);
-
-  };
-
-  const pageTo = (page: number) => {
-
-    setApplied((old) => ({ ...old, page }));
-
-  };
-
-  const download = async (format: "csv" | "excel" | "pdf") => {
-
-    setExporting(format);
-
-    setError(null);
-
-    try {
-
-      await shiftOperationsService.exportFile(format, applied);
-
-    } catch (e) {
-
-      setError(errorMessage(e));
-
-    } finally {
-
-      setExporting(null);
-
+    if (view === "assignments") {
+      return rows.filter((row) => row.row_type === "assignment");
     }
 
+    if (view === "unfilled") {
+      return rows.filter((row) => row.row_type === "unfilled_slots");
+    }
+
+    return rows;
+  }, [list, view]);
+
+  const currentPage = list?.pagination.current_page || 1;
+  const lastPage = list?.pagination.last_page || 1;
+  const totalRows = list?.pagination.total || 0;
+  const perPage = list?.pagination.per_page || 20;
+
+  const updateDraft = (
+    key: keyof ShiftFilters,
+    value: string
+  ) => {
+    setDraftFilters((previous) => ({
+      ...previous,
+      [key]: value || undefined,
+    }));
   };
 
-  const stats = summary || data?.summary || {};
+  const applyFilters = useCallback(() => {
+    const from = draftFilters.from;
+    const to = draftFilters.to;
 
-  const rows = data?.items || [];
+    if (!from || !to || to < from) {
+      setError("Please select a valid date range.");
+      return;
+    }
 
-  const cards = [
+    const milliseconds =
+      new Date(`${to}T00:00:00Z`).getTime() -
+      new Date(`${from}T00:00:00Z`).getTime();
 
-    { title: "Assignments", key: "assignment_rows", icon: Users },
+    if (milliseconds > 30 * 86400000) {
+      setError("The maximum reporting range is 31 calendar days.");
+      return;
+    }
 
-    { title: "Attended", key: "attended_assignments", icon: CheckCircle2 },
+    setError(null);
+    setFilters({
+      ...draftFilters,
+      search: searchText.trim() || undefined,
+      page: 1,
+      per_page: filters.per_page || 20,
+    });
+  }, [draftFilters, searchText, filters.per_page]);
 
-    { title: "On Duty", key: "on_duty", icon: ShieldCheck },
+  const clearFilters = () => {
+    const initial = initialFilters();
+    setDraftFilters(initial);
+    setFilters(initial);
+    setSearchText("");
+    setView("all");
+    setError(null);
+  };
 
-    { title: "On Break", key: "on_break", icon: Clock },
+  const changePage = (page: number) => {
+    if (page < 1 || page > lastPage) return;
 
-    { title: "Missing Checkout", key: "missing_check_out", icon: AlertTriangle },
+    setFilters((previous) => ({
+      ...previous,
+      page,
+    }));
+  };
 
-    { title: "Unfilled Positions", key: "unfilled_positions", icon: Users },
+  const openDetails = async (row: ShiftOperationRow) => {
+    if (row.assignment_id === null) return;
 
-    { title: "Completed Patrols", key: "patrol_completed", icon: Footprints },
+    setSelectedRow(row);
+    setDetails(null);
+    setDetailsError(null);
+    setDetailsLoading(true);
 
-    { title: "Incident Duties", key: "shifts_with_incidents", icon: Activity },
+    try {
+      const result =
+        await shiftOperationsService.getAssignmentDetails(
+          row.assignment_id
+        );
 
-    { title: "Shift Report Duties", key: "shifts_with_reports", icon: FileText },
+      setDetails(result);
+    } catch (err: unknown) {
+      setDetailsError(getErrorMessage(err));
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
-    { title: "Replacements", key: "replaced_assignments", icon: RefreshCcw },
+  const handleExport = async (format: ShiftExportFormat) => {
+    setExporting(format);
 
-  ];
+    try {
+      await shiftOperationsService.exportOperations(format, filters);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setExporting(null);
+    }
+  };
 
-  const field =
-
-    "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
-
-  const labelClass = "mb-1 block text-xs font-medium text-muted-foreground";
+  /* =====================================================
+     UI
+  ===================================================== */
 
   return (
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* Header */}
 
-    <div className="flex w-full min-w-0 max-w-full flex-col gap-4 overflow-x-clip">
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#5F0015]/10">
+              <Shield className="h-5 w-5 text-[#5F0015]" />
+            </div>
 
-      <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-base font-semibold">
+                Shift Operations
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Monitor guards, shift attendance, patrols and coverage
+              </p>
+            </div>
+          </div>
 
-        <div>
-
-          <h1 className="text-2xl font-semibold tracking-tight">
-
-            Shift Operations
-
-          </h1>
-
-          <p className="text-sm text-muted-foreground">
-
-            Unified guard attendance, coverage, patrols and operational reports
-
-          </p>
-
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-
-          <Button
-
-            variant="outline"
-
-            onClick={() => void load()}
-
-            disabled={loading}
-
-          >
-
-            <RefreshCcw className="mr-2 h-4 w-4" />
-
-            Refresh
-
-          </Button>
-
-          {(["csv", "excel", "pdf"] as const).map((format) => (
-
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-
-              key={format}
-
+              size="sm"
               variant="outline"
-
-              disabled={exporting !== null}
-
-              onClick={() => void download(format)}
-
+              onClick={() => setRefreshKey((key) => key + 1)}
+              disabled={loading}
             >
-
-              <Download className="mr-2 h-4 w-4" />
-
-              {exporting === format ? "Preparing…" : format.toUpperCase()}
-
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
             </Button>
 
-          ))}
+            <Button
+              size="sm"
+              className="bg-[#5F0015] text-white hover:bg-[#75001a]"
+              onClick={() => handleExport("csv")}
+              disabled={exporting !== null}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
 
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleExport("excel")}
+              disabled={exporting !== null}
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Excel
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleExport("pdf")}
+              disabled={exporting !== null}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
+          </div>
         </div>
+      </Card>
 
-      </div>
+      {/* Error */}
 
       {error && (
-
-        <Card className="border-red-500/30 p-4 text-sm text-red-600">
-
-          {error}
-
-        </Card>
-
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button type="button" onClick={() => setError(null)}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
-      <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      {/* Summary */}
 
-        {cards.map(({ title, key, icon: Icon }) => (
-
-          <Card key={key} className="p-4">
-
-            <div className="flex items-center justify-between gap-2">
-
-              <span className="text-xs text-muted-foreground">{title}</span>
-
-              <Icon className="h-4 w-4 text-muted-foreground" />
-
-            </div>
-
-            <div className="mt-2 text-2xl font-semibold tabular-nums">
-
-              {loading && !summary
-
-                ? "…"
-
-                : typeof stats[key] === "number"
-
-                  ? stats[key].toLocaleString()
-
-                  : "—"}
-
-            </div>
-
-          </Card>
-
-        ))}
-
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+        <SummaryCard
+          label="Guard Assignments"
+          value={summary.assignment_rows}
+          icon={Users}
+        />
+        <SummaryCard
+          label="Unfilled Positions"
+          value={summary.unfilled_positions}
+          icon={ShieldAlert}
+        />
+        <SummaryCard
+          label="Attended"
+          value={summary.attended_assignments}
+          icon={CheckCircle2}
+        />
+        <SummaryCard
+          label="On Duty"
+          value={summary.on_duty}
+          icon={ShieldCheck}
+        />
+        <SummaryCard
+          label="On Break"
+          value={summary.on_break}
+          icon={Clock3}
+        />
+        <SummaryCard
+          label="Missing Checkout"
+          value={summary.missing_check_out}
+          icon={AlertCircle}
+        />
+        <SummaryCard
+          label="Replaced Assignments"
+          value={summary.replaced_assignments}
+          icon={RefreshCw}
+        />
+        <SummaryCard
+          label="Incomplete Patrols"
+          value={summary.patrol_incomplete}
+          icon={Activity}
+        />
       </div>
 
-      <Card className="w-full min-w-0 max-w-full space-y-4 p-3 sm:p-4">
-
-        <div className="flex flex-wrap items-end gap-3">
-
-          <div className="w-full min-w-0 flex-1 sm:min-w-[190px]">
-
-            <label className={labelClass}>Search</label>
-
-            <div className="relative">
-
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-
-              <input
-
-                className={`${field} pl-9`}
-
-                value={draft.search || ""}
-
-                placeholder="Guard, shift or site"
-
-                onChange={(e) => update("search", e.target.value)}
-
-                onKeyDown={(e) => {
-
-                  if (e.key === "Enter") apply();
-
-                }}
-
-              />
-
-            </div>
-
-          </div>
-
-          <div>
-
-            <label className={labelClass}>From (UTC)</label>
-
-            <input
-
-              type="date"
-
-              className={field}
-
-              value={draft.from || ""}
-
-              onChange={(e) => update("from", e.target.value)}
-
-            />
-
-          </div>
-
-          <div>
-
-            <label className={labelClass}>To (UTC)</label>
-
-            <input
-
-              type="date"
-
-              className={field}
-
-              value={draft.to || ""}
-
-              onChange={(e) => update("to", e.target.value)}
-
-            />
-
-          </div>
-
-          <Button onClick={apply}>Apply Filters</Button>
-
-          <Button variant="outline" onClick={() => setAdvanced((v) => !v)}>
-
-            {advanced ? "Hide Filters" : "Advanced Filters"}
-
-          </Button>
-
-          <Button variant="ghost" onClick={reset}>
-
-            <FilterX className="mr-2 h-4 w-4" />
-
-            Reset
-
-          </Button>
-
-        </div>
-
-        {advanced && (
-
-          <div className="grid w-full min-w-0 grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-
-            {idFilters.map(({ key, title }) => (
-
-              <div key={key} className="min-w-0">
-
-                <label className={labelClass}>
-
-                  {title.replace(" ID", "")}
-
-                </label>
-
-                <ShiftFilterLookup
-
-                  field={key as
-
-                    | "client_id"
-
-                    | "site_id"
-
-                    | "site_location_id"
-
-                    | "guard_id"
-
-                    | "duty_schedule_id"
-
-                    | "duty_id"
-
-                  }
-
-                  value={String(draft[key] ?? "")}
-
-                  onChange={(value) => {
-
-                    setDraft((current) => {
-
-                      const next = { ...current, [key]: value };
-
-                      if (key === "client_id") {
-
-                        next.site_id = "";
-
-                        next.site_location_id = "";
-
-                      }
-
-                      if (key === "site_id") {
-
-                        next.site_location_id = "";
-
-                      }
-
-                      return next;
-
-                    });
-
-                  }}
-
-                  clientId={String(draft.client_id ?? "")}
-
-                  siteId={String(draft.site_id ?? "")}
-
-                  className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
-
-                />
-
-              </div>
-
-            ))}
-
-            {filtersList.map(({ key, title, options }) => (
-
-              <div key={key}>
-
-                <label className={labelClass}>{title}</label>
-
-                <select
-
-                  className={field}
-
-                  value={String(draft[key] ?? "")}
-
-                  onChange={(e) => update(key, e.target.value)}
-
-                >
-
-                  <option value="">All</option>
-
-                  {options.map((value) => (
-
-                    <option key={value} value={value}>
-
-                      {value === "1"
-
-                        ? "Yes"
-
-                        : value === "0"
-
-                          ? "No"
-
-                          : pretty(value)}
-
-                    </option>
-
-                  ))}
-
-                </select>
-
-              </div>
-
-            ))}
-
-          </div>
-
-        )}
-
+      {overviewLoading && (
         <p className="text-xs text-muted-foreground">
-
-          Date filters use the backend UTC range. Individual shift times
-
-          are displayed in each site's timezone.
-
+          Updating operational summary...
         </p>
-
-      </Card>
-
-      <Card className="w-full min-w-0 max-w-full overflow-hidden">
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-
-          <div>
-
-            <h2 className="font-semibold">Operational Records</h2>
-
-            <p className="text-xs text-muted-foreground">
-
-              {data
-
-                ? `${data.pagination.total ?? 0} matching rows`
-
-                : "Loading operations"}
-
-            </p>
-
-          </div>
-
-          <div className="flex items-center gap-2">
-
-            <span className="text-xs text-muted-foreground">Per page</span>
-
-            <select
-
-              className={`${field} w-24`}
-
-              value={applied.per_page ?? 20}
-
-              onChange={(e) => {
-
-                const size = Number(e.target.value);
-
-                setApplied((old) => ({ ...old, per_page: size, page: 1 }));
-
-                setDraft((old) => ({ ...old, per_page: size, page: 1 }));
-
-              }}
-
-            >
-
-              {[10, 20, 50, 100].map((value) => (
-
-                <option key={value} value={value}>{value}</option>
-
-              ))}
-
-            </select>
-
-          </div>
-
-        </div>
-
-        <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain">
-
-          <table className="w-full min-w-[1350px] text-left text-xs">
-
-            <thead className="bg-muted/60 text-muted-foreground">
-
-              <tr>
-
-                {[
-
-                  "Guard / Assignment", "Site / Client", "Duty",
-
-                  "Scheduled Start", "Scheduled End", "Check-In",
-
-                  "Checkout", "Operational Status", "Coverage",
-
-                  "Patrol", "Incidents", "Reports", "Details",
-
-                ].map((title) => (
-
-                  <th key={title} className="whitespace-nowrap px-3 py-3 font-semibold">
-
-                    {title}
-
-                  </th>
-
-                ))}
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {rows.map((row: ShiftRow, index) => {
-
-                const timezone = row.duty.site_timezone;
-
-                return (
-
-                  <tr
-
-                    key={`${row.row_type}-${row.duty_id}-${row.assignment_id ?? index}`}
-
-                    className="border-t hover:bg-muted/30"
-
-                  >
-
-                    <td className="px-3 py-3">
-
-                      <div className="font-medium">
-
-                        {row.row_type === "unfilled_slots"
-
-                          ? `${row.unfilled_count ?? 1} unfilled position(s)`
-
-                          : row.guard?.name || `Guard #${row.guard?.id ?? "—"}`}
-
-                      </div>
-
-                      <div className="text-muted-foreground">
-
-                        {row.guard?.code || "—"}
-
-                        {row.assignment_id ? ` · #${row.assignment_id}` : ""}
-
-                      </div>
-
-                      {row.guard?.is_missing && (
-
-                        <span className="text-red-600">Guard record unavailable</span>
-
-                      )}
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      <div className="font-medium">{row.duty.site_name || "—"}</div>
-
-                      <div className="text-muted-foreground">
-
-                        Client #{row.duty.client_id ?? "—"}
-
-                      </div>
-
-                      <div className="max-w-[180px] truncate text-muted-foreground">
-
-                        {row.duty.site_location_name || "—"}
-
-                      </div>
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      <div className="max-w-[180px] truncate font-medium">
-
-                        {row.duty.title || "—"}
-
-                      </div>
-
-                      <div className="text-muted-foreground capitalize">
-
-                        {pretty(row.duty.service_mode)}
-
-                      </div>
-
-                    </td>
-
-                    <td className="whitespace-nowrap px-3 py-3">
-
-                      {formatDate(row.duty.start_datetime, timezone)}
-
-                    </td>
-
-                    <td className="whitespace-nowrap px-3 py-3">
-
-                      {formatDate(row.duty.end_datetime, timezone)}
-
-                    </td>
-
-                    <td className="whitespace-nowrap px-3 py-3">
-
-                      <div>{formatDate(row.check_in_time, timezone)}</div>
-
-                      {row.check_in_timing && (
-
-                        <Status value={row.check_in_timing.classification} />
-
-                      )}
-
-                    </td>
-
-                    <td className="whitespace-nowrap px-3 py-3">
-
-                      <div>{formatDate(row.check_out_time, timezone)}</div>
-
-                      {row.check_out_timing && (
-
-                        <Status value={row.check_out_timing.classification} />
-
-                      )}
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      <Status value={row.operational_status} />
-
-                      {row.is_replaced && (
-
-                        <div className="mt-1"><Status value="replaced" /></div>
-
-                      )}
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      <Status value={row.coverage.status} />
-
-                      <div className="mt-1 text-muted-foreground">
-
-                        {row.coverage.assigned}/{row.coverage.required} assigned
-
-                      </div>
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      <Status value={row.patrol?.status} />
-
-                      <div className="mt-1 text-muted-foreground">
-
-                        {row.patrol?.completed ?? 0}/{row.patrol?.required ?? 0}
-
-                      </div>
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      {row.incidents?.duty_count ?? 0}
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      {row.shift_reports?.duty_count ?? 0}
-
-                    </td>
-
-                    <td className="px-3 py-3">
-
-                      <Button
-
-                        size="sm"
-
-                        variant="outline"
-
-                        disabled={!row.assignment_id}
-
-                        onClick={() => {
-
-                          if (row.assignment_id) setAssignmentId(row.assignment_id);
-
-                        }}
-
-                      >
-
-                        View
-
-                      </Button>
-
-                    </td>
-
-                  </tr>
-
-                );
-
-              })}
-
-            </tbody>
-
-          </table>
-
-          {loading && (
-
-            <div className="p-8 text-center text-sm text-muted-foreground">
-
-              Loading shift operations…
-
-            </div>
-
-          )}
-
-          {!loading && rows.length === 0 && (
-
-            <div className="p-8 text-center text-sm text-muted-foreground">
-
-              No operational records match these filters.
-
-            </div>
-
-          )}
-
-        </div>
-
-        <div className="flex items-center justify-between gap-3 border-t p-4">
-
-          <span className="text-xs text-muted-foreground">
-
-            Showing {rows.length} records
-
-          </span>
-
-          <div className="flex items-center gap-2">
-
-            <Button
-
-              size="sm"
-
-              variant="outline"
-
-              disabled={loading || (applied.page ?? 1) <= 1}
-
-              onClick={() => pageTo((applied.page ?? 1) - 1)}
-
-            >
-
-              Previous
-
-            </Button>
-
-            <span className="text-xs">
-
-              {data?.pagination.current_page ?? 1}
-
-              {" / "}
-
-              {data?.pagination.last_page ?? 1}
-
-            </span>
-
-            <Button
-
-              size="sm"
-
-              variant="outline"
-
-              disabled={
-
-                loading ||
-
-                (applied.page ?? 1) >= (data?.pagination.last_page ?? 1)
-
-              }
-
-              onClick={() => pageTo((applied.page ?? 1) + 1)}
-
-            >
-
-              Next
-
-            </Button>
-
-          </div>
-
-        </div>
-
-      </Card>
-
-      {assignmentId !== null && (
-
-        <DetailsDrawer
-
-          key={assignmentId}
-
-          detail={details}
-
-          loading={detailsLoading}
-
-          error={detailsError}
-
-          onClose={() => setAssignmentId(null)}
-
-        />
-
       )}
 
+      {/* Filters */}
+
+      <Card className="p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">
+              Search & Filters
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Filter operations by date, guard, duty, attendance and status
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearFilters}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Clear
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="md:col-span-2">
+            <label className="mb-1.5 block text-xs font-medium">
+              Search
+            </label>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                className={`${fieldClass} pl-9`}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") applyFilters();
+                }}
+                placeholder="Search guard, shift, site..."
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium">
+              From Date (UTC)
+            </label>
+            <input
+              type="date"
+              className={fieldClass}
+              value={draftFilters.from}
+              onChange={(e) => updateDraft("from", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium">
+              To Date (UTC)
+            </label>
+            <input
+              type="date"
+              className={fieldClass}
+              value={draftFilters.to}
+              onChange={(e) => updateDraft("to", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            Advanced Filters
+            <ChevronDown
+              className={`ml-2 h-4 w-4 transition-transform ${
+                advancedOpen ? "rotate-180" : ""
+              }`}
+            />
+          </Button>
+
+          <Button
+            size="sm"
+            className="bg-[#5F0015] text-white hover:bg-[#75001a]"
+            onClick={applyFilters}
+          >
+            <Search className="mr-2 h-4 w-4" />
+            Apply Filters
+          </Button>
+        </div>
+
+        {advancedOpen && (
+          <div className="mt-4 border-t pt-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filterDefinitions.map((definition) => (
+                <div key={definition.key}>
+                  <label className="mb-1.5 block text-xs font-medium">
+                    {definition.label}
+                  </label>
+
+                  {definition.options ? (
+                    <select
+                      className={fieldClass}
+                      value={String(
+                        draftFilters[definition.key] ?? ""
+                      )}
+                      onChange={(e) =>
+                        updateDraft(definition.key, e.target.value)
+                      }
+                    >
+                      <option value="">All</option>
+                      {definition.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="number"
+                      min="1"
+                      className={fieldClass}
+                      placeholder={definition.placeholder}
+                      value={String(
+                        draftFilters[definition.key] ?? ""
+                      )}
+                      onChange={(e) =>
+                        updateDraft(definition.key, e.target.value)
+                      }
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Operations */}
+
+      <Card className="overflow-hidden">
+        <div className="border-b p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">
+                Operational Shift List
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {totalRows.toLocaleString()} operational rows
+                across all pages
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+
+              <span className="text-xs text-muted-foreground">
+                {filters.from} — {filters.to}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(
+              [
+                ["all", "All Operations"],
+                ["assignments", "Guard Assignments"],
+                ["unfilled", "Unfilled Positions"],
+              ] as const
+            ).map(([value, label]) => (
+              <Button
+                key={value}
+                size="sm"
+                variant={view === value ? "default" : "outline"}
+                className={
+                  view === value
+                    ? "bg-[#5F0015] text-white hover:bg-[#75001a]"
+                    : ""
+                }
+                onClick={() => setView(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          {view !== "all" && (
+            <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
+              This view filters the current server page only.
+              Counts and pagination still refer to all operational rows.
+            </p>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 p-6">
+            <Loader2 className="h-7 w-7 animate-spin text-[#5F0015]" />
+            <p className="text-sm font-medium">
+              Loading Shift Operations
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Retrieving operational records...
+            </p>
+          </div>
+        ) : visibleRows.length === 0 ? (
+          <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 p-6 text-center">
+            <ShieldAlert className="h-9 w-9 text-muted-foreground" />
+            <p className="text-sm font-semibold">
+              No shift operations found
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Try a different date range or adjust your filters.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[1140px] text-left">
+                <thead className="border-b bg-muted/40">
+                  <tr>
+                    {[
+                      "Guard / Position",
+                      "Shift / Duty",
+                      "Site",
+                      "Schedule",
+                      "Attendance",
+                      "Operational Status",
+                      "Coverage",
+                      "Actions",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        className="whitespace-nowrap px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y">
+                  {visibleRows.map((row) => {
+                    const vacant = row.row_type === "unfilled_slots";
+                    const missingGuard =
+                      !vacant && row.guard?.is_missing;
+
+                    return (
+                      <tr
+                        key={
+                          vacant
+                            ? `vacant-${row.duty_id}`
+                            : `assignment-${row.assignment_id}`
+                        }
+                        className="transition-colors hover:bg-muted/30"
+                      >
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                              <UserRound className="h-4 w-4 text-muted-foreground" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="max-w-[175px] truncate text-sm font-medium">
+                                {vacant
+                                  ? `${row.unfilled_count ?? 0} Vacant Position(s)`
+                                  : missingGuard
+                                    ? "Guard record unavailable"
+                                    : row.guard?.name || "Unnamed Guard"}
+                              </p>
+
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {vacant
+                                  ? `Duty #${row.duty_id}`
+                                  : row.guard?.code ||
+                                    `Guard #${row.guard?.id ?? "—"}`}
+                              </p>
+
+                              {row.is_replaced && (
+                                <span className="mt-1 block text-[11px] text-amber-700">
+                                  Replaced
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <p className="max-w-[200px] text-sm font-medium">
+                            {row.duty.title}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Duty #{row.duty_id}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {readable(row.duty.service_mode)}
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <p className="max-w-[160px] truncate text-sm">
+                            {row.duty.site_name || "—"}
+                          </p>
+                          <p className="mt-1 max-w-[160px] truncate text-xs text-muted-foreground">
+                            {row.duty.site_location_name || "—"}
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <p className="whitespace-nowrap text-sm">
+                            {dateTime(
+                              row.duty.start_datetime,
+                              row.duty.site_timezone
+                            )}
+                          </p>
+                          <p className="mt-1 whitespace-nowrap text-xs text-muted-foreground">
+                            to{" "}
+                            {dateTime(
+                              row.duty.end_datetime,
+                              row.duty.site_timezone
+                            )}
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          {vacant ? (
+                            <span className="text-xs text-muted-foreground">
+                              Not applicable
+                            </span>
+                          ) : (
+                            <div className="space-y-2">
+                              <StatusBadge
+                                status={row.attendance_status}
+                              />
+                              {row.check_in_timing && (
+                                <p className="text-xs text-muted-foreground">
+                                  Check-in:{" "}
+                                  {readable(
+                                    row.check_in_timing.classification
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <StatusBadge status={row.operational_status} />
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <StatusBadge status={row.coverage.status} />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {row.coverage.assigned}/
+                            {row.coverage.required} assigned
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          {row.assignment_id !== null ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDetails(row)}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Details
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Vacant
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+
+            <div className="divide-y lg:hidden">
+              {visibleRows.map((row) => {
+                const vacant = row.row_type === "unfilled_slots";
+
+                return (
+                  <div
+                    key={
+                      vacant
+                        ? `mobile-vacant-${row.duty_id}`
+                        : `mobile-${row.assignment_id}`
+                    }
+                    className="space-y-3 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">
+                          {vacant
+                            ? `${row.unfilled_count ?? 0} Vacant Position(s)`
+                            : row.guard?.is_missing
+                              ? "Guard record unavailable"
+                              : row.guard?.name || "Unnamed Guard"}
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {vacant
+                            ? `Duty #${row.duty_id}`
+                            : row.guard?.code || "No Guard Code"}
+                        </p>
+                      </div>
+
+                      <StatusBadge status={row.operational_status} />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium">
+                        {row.duty.title}
+                      </p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {row.duty.site_name || "—"}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3 text-xs">
+                      <div>
+                        <p className="text-muted-foreground">Start</p>
+                        <p className="mt-1 font-medium">
+                          {dateTime(
+                            row.duty.start_datetime,
+                            row.duty.site_timezone
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">End</p>
+                        <p className="mt-1 font-medium">
+                          {dateTime(
+                            row.duty.end_datetime,
+                            row.duty.site_timezone
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge status={row.coverage.status} />
+                        {!vacant && (
+                          <StatusBadge status={row.attendance_status} />
+                        )}
+                      </div>
+
+                      {row.assignment_id !== null && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDetails(row)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Pagination */}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
+          <div className="text-xs text-muted-foreground">
+            Page {currentPage} of {lastPage} ·{" "}
+            {totalRows.toLocaleString()} rows
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+              value={perPage}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                setFilters((previous) => ({
+                  ...previous,
+                  page: 1,
+                  per_page: next,
+                }));
+              }}
+            >
+              {[10, 20, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size} / page
+                </option>
+              ))}
+            </select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || currentPage <= 1}
+              onClick={() => changePage(currentPage - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || currentPage >= lastPage}
+              onClick={() => changePage(currentPage + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Details dialog */}
+
+      <Dialog
+        open={selectedRow !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedRow(null);
+            setDetails(null);
+            setDetailsError(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[780px]">
+          <DialogHeader>
+            <DialogTitle>Assignment Details</DialogTitle>
+            <DialogDescription>
+              Assignment #{selectedRow?.assignment_id ?? "—"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRow && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={selectedRow.operational_status} />
+                <StatusBadge status={selectedRow.assignment_status} />
+                <StatusBadge status={selectedRow.coverage.status} />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DetailValue
+                  label="Guard"
+                  value={
+                    selectedRow.guard?.is_missing
+                      ? "Guard record unavailable"
+                      : selectedRow.guard?.name
+                  }
+                />
+                <DetailValue
+                  label="Guard Code"
+                  value={selectedRow.guard?.code}
+                />
+                <DetailValue
+                  label="Duty"
+                  value={selectedRow.duty.title}
+                />
+                <DetailValue
+                  label="Site"
+                  value={selectedRow.duty.site_name}
+                />
+                <DetailValue
+                  label="Site Location"
+                  value={selectedRow.duty.site_location_name}
+                />
+                <DetailValue
+                  label="Service Mode"
+                  value={readable(selectedRow.duty.service_mode)}
+                />
+                <DetailValue
+                  label="Shift Start"
+                  value={dateTime(
+                    selectedRow.duty.start_datetime,
+                    selectedRow.duty.site_timezone
+                  )}
+                />
+                <DetailValue
+                  label="Shift End"
+                  value={dateTime(
+                    selectedRow.duty.end_datetime,
+                    selectedRow.duty.site_timezone
+                  )}
+                />
+                <DetailValue
+                  label="Check-In"
+                  value={dateTime(
+                    selectedRow.check_in_time,
+                    selectedRow.duty.site_timezone
+                  )}
+                />
+                <DetailValue
+                  label="Check-Out"
+                  value={dateTime(
+                    selectedRow.check_out_time,
+                    selectedRow.duty.site_timezone
+                  )}
+                />
+                <DetailValue
+                  label="Attendance"
+                  value={readable(selectedRow.attendance_status)}
+                />
+                <DetailValue
+                  label="Checkout Source"
+                  value={readable(selectedRow.checkout_source)}
+                />
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-3 text-sm font-semibold">
+                  Staffing & Coverage
+                </h3>
+
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-xl font-bold">
+                      {selectedRow.coverage.required}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Required
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold">
+                      {selectedRow.coverage.assigned}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Assigned
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold">
+                      {selectedRow.coverage.attended ?? 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Attended
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {detailsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading complete assignment details...
+                </div>
+              ) : detailsError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {detailsError}
+                </div>
+              ) : details ? (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold">
+                    Full Operational Record
+                  </h3>
+
+                  {Object.entries(details).map(([key, value]) => (
+                    <details
+                      key={key}
+                      className="rounded-lg border p-3"
+                    >
+                      <summary className="cursor-pointer text-sm font-medium">
+                        {readable(key)}
+                      </summary>
+
+                      <pre className="mt-3 max-h-72 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-words">
+                        {JSON.stringify(value, null, 2)}
+                      </pre>
+                    </details>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
-
   );
-
 }
