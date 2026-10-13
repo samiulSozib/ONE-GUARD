@@ -1,13 +1,10 @@
-
 "use client";
-
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
-
 import {
   Activity,
   AlertCircle,
@@ -33,10 +30,9 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import ShiftEntitySearchSelect from "./shift-entity-search-select";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +40,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-
 import type {
   ShiftFilters,
   ShiftOperationRow,
@@ -53,35 +48,28 @@ import type {
   ShiftOperationsSummary,
   ShiftAssignmentDetails,
 } from "@/app/types/shift-operations";
-
 import {
   shiftOperationsService,
   type ShiftExportFormat,
 } from "@/service/shift-operations.service";
-
 /* =====================================================
    Types
 ===================================================== */
-
 type ViewMode =
   | "all"
   | "assignments"
   | "unfilled";
-
 type FilterKey = Exclude<
   keyof ShiftFilters,
   "from" | "to" | "page" | "per_page" | "search"
 >;
-
 type FilterDefinition = {
   key: FilterKey;
   label: string;
   options?: { value: string; label: string }[];
   placeholder?: string;
 };
-
 const PRIMARY = "#5F0015";
-
 const emptySummary: ShiftOperationsSummary = {
   assignment_rows: 0,
   unfilled_duties: 0,
@@ -98,28 +86,26 @@ const emptySummary: ShiftOperationsSummary = {
   shifts_with_incidents: 0,
   shifts_with_reports: 0,
 };
-
 const fieldClass =
   "h-9 w-full min-w-0 rounded-md border border-input " +
   "bg-background px-3 text-sm text-foreground " +
   "outline-none focus-visible:ring-2 " +
   "focus-visible:ring-[#5F0015]/25";
-
 const filterDefinitions: FilterDefinition[] = [
-  { key: "client_id", label: "Client ID", placeholder: "Client ID" },
-  { key: "site_id", label: "Site ID", placeholder: "Site ID" },
+  { key: "client_id", label: "Client", placeholder: "Client ID" },
+  { key: "site_id", label: "Site", placeholder: "Site ID" },
   {
     key: "site_location_id",
-    label: "Site Location ID",
+    label: "Site Location",
     placeholder: "Location ID",
   },
-  { key: "guard_id", label: "Guard ID", placeholder: "Guard ID" },
+  { key: "guard_id", label: "Security Officer", placeholder: "Guard ID" },
   {
     key: "duty_schedule_id",
-    label: "Duty Schedule ID",
+    label: "Shift Schedule",
     placeholder: "Schedule ID",
   },
-  { key: "duty_id", label: "Duty ID", placeholder: "Duty ID" },
+  { key: "duty_id", label: "Duty", placeholder: "Duty ID" },
   {
     key: "service_mode",
     label: "Service Mode",
@@ -231,19 +217,16 @@ const filterDefinitions: FilterDefinition[] = [
     ],
   })),
 ];
-
 function dateString(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
-
 function initialFilters(): ShiftFilters {
   const today = new Date();
   const previous = new Date(today);
   previous.setDate(previous.getDate() - 6);
-
   return {
     from: dateString(previous),
     to: dateString(today),
@@ -251,24 +234,19 @@ function initialFilters(): ShiftFilters {
     per_page: 20,
   };
 }
-
 function readable(value: string | null | undefined): string {
   if (!value) return "—";
-
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
-
 function dateTime(
   value?: string | null,
   timeZone?: string | null
 ): string {
   if (!value) return "—";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-
   try {
     return new Intl.DateTimeFormat("en-US", {
       timeZone: timeZone || "UTC",
@@ -289,13 +267,11 @@ function dateTime(
     }).format(date);
   }
 }
-
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   return "Unable to load shift operations.";
 }
-
 function badgeClasses(value?: string | null): string {
   switch (value) {
     case "on_duty":
@@ -304,14 +280,12 @@ function badgeClasses(value?: string | null): string {
     case "covered":
     case "completed":
       return "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300";
-
     case "on_break":
     case "upcoming":
     case "pending":
     case "partial":
     case "early":
       return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300";
-
     case "unassigned":
     case "not_attended":
     case "not_checked_in_after_start":
@@ -320,16 +294,13 @@ function badgeClasses(value?: string | null): string {
     case "incomplete":
     case "late":
       return "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300";
-
     case "checked_out":
     case "on_time":
       return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300";
-
     default:
       return "border-border bg-muted text-muted-foreground";
   }
 }
-
 function StatusBadge({
   status,
   label,
@@ -351,7 +322,6 @@ function StatusBadge({
     </span>
   );
 }
-
 function SummaryCard({
   label,
   value,
@@ -386,7 +356,6 @@ function SummaryCard({
     </Card>
   );
 }
-
 function DetailValue({
   label,
   value,
@@ -405,59 +374,58 @@ function DetailValue({
     </div>
   );
 }
-
 /* =====================================================
    Main Component
 ===================================================== */
-
 export default function ShiftOperationsManagement() {
   const [filters, setFilters] =
     useState<ShiftFilters>(initialFilters);
-
   const [draftFilters, setDraftFilters] =
     useState<ShiftFilters>(initialFilters);
-
   const [searchText, setSearchText] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("all");
-
+  // The backend wraps its result in body; api.service unwraps it.
+  // Validate the unwrapped object before rendering wide table content.
   const [list, setList] =
     useState<ShiftOperationsList | null>(null);
-
   const [overview, setOverview] =
     useState<ShiftOperationsOverview | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [refreshKey, setRefreshKey] = useState(0);
   const [exporting, setExporting] =
     useState<ShiftExportFormat | null>(null);
-
   const [selectedRow, setSelectedRow] =
     useState<ShiftOperationRow | null>(null);
-
   const [details, setDetails] =
     useState<ShiftAssignmentDetails | null>(null);
-
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-
   /* =====================================================
      API Data
   ===================================================== */
-
   useEffect(() => {
     let active = true;
-
     setLoading(true);
     setError(null);
-
     shiftOperationsService
       .getOperations(filters)
       .then((response) => {
-        if (active) setList(response);
+        if (!active) return;
+        if (
+          !response ||
+          !Array.isArray(response.items) ||
+          !response.pagination ||
+          typeof response.pagination.total !== "number" ||
+          !response.summary
+        ) {
+          throw new Error(
+            "Unexpected Shift Operations response. Expected body.items, body.pagination and body.summary."
+          );
+        }
+        setList(response);
       })
       .catch((err: unknown) => {
         if (active) {
@@ -468,21 +436,16 @@ export default function ShiftOperationsManagement() {
       .finally(() => {
         if (active) setLoading(false);
       });
-
     return () => {
       active = false;
     };
   }, [filters, refreshKey]);
-
   useEffect(() => {
     let active = true;
-
     setOverviewLoading(true);
-
     const { page, per_page, ...overviewFilters } = filters;
     void page;
     void per_page;
-
     shiftOperationsService
       .getOverview(overviewFilters)
       .then((response) => {
@@ -494,34 +457,26 @@ export default function ShiftOperationsManagement() {
       .finally(() => {
         if (active) setOverviewLoading(false);
       });
-
     return () => {
       active = false;
     };
   }, [filters, refreshKey]);
-
   const summary =
     overview?.summary || list?.summary || emptySummary;
-
   const visibleRows = useMemo(() => {
     const rows = list?.items || [];
-
     if (view === "assignments") {
       return rows.filter((row) => row.row_type === "assignment");
     }
-
     if (view === "unfilled") {
       return rows.filter((row) => row.row_type === "unfilled_slots");
     }
-
     return rows;
   }, [list, view]);
-
   const currentPage = list?.pagination.current_page || 1;
   const lastPage = list?.pagination.last_page || 1;
   const totalRows = list?.pagination.total || 0;
   const perPage = list?.pagination.per_page || 20;
-
   const updateDraft = (
     key: keyof ShiftFilters,
     value: string
@@ -531,25 +486,20 @@ export default function ShiftOperationsManagement() {
       [key]: value || undefined,
     }));
   };
-
   const applyFilters = useCallback(() => {
     const from = draftFilters.from;
     const to = draftFilters.to;
-
     if (!from || !to || to < from) {
       setError("Please select a valid date range.");
       return;
     }
-
     const milliseconds =
       new Date(`${to}T00:00:00Z`).getTime() -
       new Date(`${from}T00:00:00Z`).getTime();
-
     if (milliseconds > 30 * 86400000) {
       setError("The maximum reporting range is 31 calendar days.");
       return;
     }
-
     setError(null);
     setFilters({
       ...draftFilters,
@@ -558,7 +508,6 @@ export default function ShiftOperationsManagement() {
       per_page: filters.per_page || 20,
     });
   }, [draftFilters, searchText, filters.per_page]);
-
   const clearFilters = () => {
     const initial = initialFilters();
     setDraftFilters(initial);
@@ -567,30 +516,24 @@ export default function ShiftOperationsManagement() {
     setView("all");
     setError(null);
   };
-
   const changePage = (page: number) => {
     if (page < 1 || page > lastPage) return;
-
     setFilters((previous) => ({
       ...previous,
       page,
     }));
   };
-
   const openDetails = async (row: ShiftOperationRow) => {
     if (row.assignment_id === null) return;
-
     setSelectedRow(row);
     setDetails(null);
     setDetailsError(null);
     setDetailsLoading(true);
-
     try {
       const result =
         await shiftOperationsService.getAssignmentDetails(
           row.assignment_id
         );
-
       setDetails(result);
     } catch (err: unknown) {
       setDetailsError(getErrorMessage(err));
@@ -598,10 +541,8 @@ export default function ShiftOperationsManagement() {
       setDetailsLoading(false);
     }
   };
-
   const handleExport = async (format: ShiftExportFormat) => {
     setExporting(format);
-
     try {
       await shiftOperationsService.exportOperations(format, filters);
     } catch (err: unknown) {
@@ -610,22 +551,17 @@ export default function ShiftOperationsManagement() {
       setExporting(null);
     }
   };
-
   /* =====================================================
      UI
   ===================================================== */
-
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4">
-      {/* Header */}
-
-      <Card className="p-4">
+<div className="flex w-full min-w-0 max-w-full flex-1 flex-col gap-4 overflow-x-clip p-3 pt-5 sm:p-4 md:p-6">      {/* Header */}
+      <Card className="w-full min-w-0 max-w-full overflow-hidden p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#5F0015]/10">
               <Shield className="h-5 w-5 text-[#5F0015]" />
             </div>
-
             <div>
               <h1 className="text-base font-semibold">
                 Shift Operations
@@ -635,8 +571,7 @@ export default function ShiftOperationsManagement() {
               </p>
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -648,7 +583,6 @@ export default function ShiftOperationsManagement() {
               />
               Refresh
             </Button>
-
             <Button
               size="sm"
               className="bg-[#5F0015] text-white hover:bg-[#75001a]"
@@ -658,7 +592,6 @@ export default function ShiftOperationsManagement() {
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
-
             <Button
               size="sm"
               variant="outline"
@@ -668,7 +601,6 @@ export default function ShiftOperationsManagement() {
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Excel
             </Button>
-
             <Button
               size="sm"
               variant="outline"
@@ -681,12 +613,10 @@ export default function ShiftOperationsManagement() {
           </div>
         </div>
       </Card>
-
       {/* Error */}
-
       {error && (
         <div className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          <div className="flex items-start gap-2">
+          <div className="flex min-w-0 items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -695,11 +625,9 @@ export default function ShiftOperationsManagement() {
           </button>
         </div>
       )}
-
       {/* Summary */}
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-        <SummaryCard
+      <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryCard
           label="Guard Assignments"
           value={summary.assignment_rows}
           icon={Users}
@@ -740,16 +668,13 @@ export default function ShiftOperationsManagement() {
           icon={Activity}
         />
       </div>
-
       {overviewLoading && (
         <p className="text-xs text-muted-foreground">
           Updating operational summary...
         </p>
       )}
-
       {/* Filters */}
-
-      <Card className="p-4">
+      <Card className="w-full min-w-0 max-w-full overflow-hidden p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">
@@ -759,7 +684,6 @@ export default function ShiftOperationsManagement() {
               Filter operations by date, guard, duty, attendance and status
             </p>
           </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -769,13 +693,11 @@ export default function ShiftOperationsManagement() {
             Clear
           </Button>
         </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="md:col-span-2">
             <label className="mb-1.5 block text-xs font-medium">
               Search
             </label>
-
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
@@ -789,7 +711,6 @@ export default function ShiftOperationsManagement() {
               />
             </div>
           </div>
-
           <div>
             <label className="mb-1.5 block text-xs font-medium">
               From Date (UTC)
@@ -801,7 +722,6 @@ export default function ShiftOperationsManagement() {
               onChange={(e) => updateDraft("from", e.target.value)}
             />
           </div>
-
           <div>
             <label className="mb-1.5 block text-xs font-medium">
               To Date (UTC)
@@ -814,7 +734,6 @@ export default function ShiftOperationsManagement() {
             />
           </div>
         </div>
-
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="outline"
@@ -829,7 +748,6 @@ export default function ShiftOperationsManagement() {
               }`}
             />
           </Button>
-
           <Button
             size="sm"
             className="bg-[#5F0015] text-white hover:bg-[#75001a]"
@@ -839,16 +757,14 @@ export default function ShiftOperationsManagement() {
             Apply Filters
           </Button>
         </div>
-
         {advancedOpen && (
           <div className="mt-4 border-t pt-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filterDefinitions.map((definition) => (
                 <div key={definition.key}>
                   <label className="mb-1.5 block text-xs font-medium">
                     {definition.label}
                   </label>
-
                   {definition.options ? (
                     <select
                       className={fieldClass}
@@ -867,17 +783,24 @@ export default function ShiftOperationsManagement() {
                       ))}
                     </select>
                   ) : (
-                    <input
-                      type="number"
-                      min="1"
-                      className={fieldClass}
-                      placeholder={definition.placeholder}
-                      value={String(
-                        draftFilters[definition.key] ?? ""
-                      )}
-                      onChange={(e) =>
-                        updateDraft(definition.key, e.target.value)
-                      }
+                    <ShiftEntitySearchSelect
+                      field={definition.key as "client_id" | "site_id" | "site_location_id" | "guard_id" | "duty_schedule_id" | "duty_id"}
+                      value={String(draftFilters[definition.key] ?? "")}
+                      clientId={String(draftFilters.client_id ?? "")}
+                      siteId={String(draftFilters.site_id ?? "")}
+                      onChange={(value) => {
+                        setDraftFilters((previous) => ({
+                          ...previous,
+                          [definition.key]: value || undefined,
+                          ...(definition.key === "client_id" ? {
+                            site_id: undefined,
+                            site_location_id: undefined,
+                          } : {}),
+                          ...(definition.key === "site_id" ? {
+                            site_location_id: undefined,
+                          } : {}),
+                        }));
+                      }}
                     />
                   )}
                 </div>
@@ -886,10 +809,8 @@ export default function ShiftOperationsManagement() {
           </div>
         )}
       </Card>
-
       {/* Operations */}
-
-      <Card className="overflow-hidden">
+      <Card className="w-full min-w-0 max-w-full overflow-hidden">
         <div className="border-b p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -901,16 +822,13 @@ export default function ShiftOperationsManagement() {
                 across all pages
               </p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
-
               <span className="text-xs text-muted-foreground">
                 {filters.from} — {filters.to}
               </span>
             </div>
           </div>
-
           <div className="mt-4 flex flex-wrap gap-2">
             {(
               [
@@ -934,7 +852,6 @@ export default function ShiftOperationsManagement() {
               </Button>
             ))}
           </div>
-
           {view !== "all" && (
             <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
               This view filters the current server page only.
@@ -942,7 +859,6 @@ export default function ShiftOperationsManagement() {
             </p>
           )}
         </div>
-
         {loading ? (
           <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 p-6">
             <Loader2 className="h-7 w-7 animate-spin text-[#5F0015]" />
@@ -966,9 +882,8 @@ export default function ShiftOperationsManagement() {
         ) : (
           <>
             {/* Desktop table */}
-
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[1140px] text-left">
+            <div className="hidden w-0 min-w-full max-w-full overflow-x-auto overscroll-x-contain lg:block">
+              <table className="w-full min-w-[1140px] table-fixed text-left">
                 <thead className="border-b bg-muted/40">
                   <tr>
                     {[
@@ -990,13 +905,11 @@ export default function ShiftOperationsManagement() {
                     ))}
                   </tr>
                 </thead>
-
                 <tbody className="divide-y">
                   {visibleRows.map((row) => {
                     const vacant = row.row_type === "unfilled_slots";
                     const missingGuard =
                       !vacant && row.guard?.is_missing;
-
                     return (
                       <tr
                         key={
@@ -1011,7 +924,6 @@ export default function ShiftOperationsManagement() {
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
                               <UserRound className="h-4 w-4 text-muted-foreground" />
                             </div>
-
                             <div className="min-w-0">
                               <p className="max-w-[175px] truncate text-sm font-medium">
                                 {vacant
@@ -1020,14 +932,12 @@ export default function ShiftOperationsManagement() {
                                     ? "Guard record unavailable"
                                     : row.guard?.name || "Unnamed Guard"}
                               </p>
-
                               <p className="mt-1 text-xs text-muted-foreground">
                                 {vacant
                                   ? `Duty #${row.duty_id}`
                                   : row.guard?.code ||
                                     `Guard #${row.guard?.id ?? "—"}`}
                               </p>
-
                               {row.is_replaced && (
                                 <span className="mt-1 block text-[11px] text-amber-700">
                                   Replaced
@@ -1036,9 +946,8 @@ export default function ShiftOperationsManagement() {
                             </div>
                           </div>
                         </td>
-
                         <td className="px-4 py-4">
-                          <p className="max-w-[200px] text-sm font-medium">
+                          <p className="max-w-[200px] break-words text-sm font-medium">
                             {row.duty.title}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -1048,7 +957,6 @@ export default function ShiftOperationsManagement() {
                             {readable(row.duty.service_mode)}
                           </p>
                         </td>
-
                         <td className="px-4 py-4">
                           <p className="max-w-[160px] truncate text-sm">
                             {row.duty.site_name || "—"}
@@ -1057,7 +965,6 @@ export default function ShiftOperationsManagement() {
                             {row.duty.site_location_name || "—"}
                           </p>
                         </td>
-
                         <td className="px-4 py-4">
                           <p className="whitespace-nowrap text-sm">
                             {dateTime(
@@ -1073,7 +980,6 @@ export default function ShiftOperationsManagement() {
                             )}
                           </p>
                         </td>
-
                         <td className="px-4 py-4">
                           {vacant ? (
                             <span className="text-xs text-muted-foreground">
@@ -1095,11 +1001,9 @@ export default function ShiftOperationsManagement() {
                             </div>
                           )}
                         </td>
-
                         <td className="px-4 py-4">
                           <StatusBadge status={row.operational_status} />
                         </td>
-
                         <td className="px-4 py-4">
                           <StatusBadge status={row.coverage.status} />
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -1107,7 +1011,6 @@ export default function ShiftOperationsManagement() {
                             {row.coverage.required} assigned
                           </p>
                         </td>
-
                         <td className="px-4 py-4">
                           {row.assignment_id !== null ? (
                             <Button
@@ -1130,13 +1033,10 @@ export default function ShiftOperationsManagement() {
                 </tbody>
               </table>
             </div>
-
             {/* Mobile cards */}
-
             <div className="divide-y lg:hidden">
               {visibleRows.map((row) => {
                 const vacant = row.row_type === "unfilled_slots";
-
                 return (
                   <div
                     key={
@@ -1155,17 +1055,14 @@ export default function ShiftOperationsManagement() {
                               ? "Guard record unavailable"
                               : row.guard?.name || "Unnamed Guard"}
                         </p>
-
                         <p className="mt-1 text-xs text-muted-foreground">
                           {vacant
                             ? `Duty #${row.duty_id}`
                             : row.guard?.code || "No Guard Code"}
                         </p>
                       </div>
-
                       <StatusBadge status={row.operational_status} />
                     </div>
-
                     <div>
                       <p className="text-sm font-medium">
                         {row.duty.title}
@@ -1175,7 +1072,6 @@ export default function ShiftOperationsManagement() {
                         {row.duty.site_name || "—"}
                       </p>
                     </div>
-
                     <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3 text-xs">
                       <div>
                         <p className="text-muted-foreground">Start</p>
@@ -1196,7 +1092,6 @@ export default function ShiftOperationsManagement() {
                         </p>
                       </div>
                     </div>
-
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap gap-2">
                         <StatusBadge status={row.coverage.status} />
@@ -1204,7 +1099,6 @@ export default function ShiftOperationsManagement() {
                           <StatusBadge status={row.attendance_status} />
                         )}
                       </div>
-
                       {row.assignment_id !== null && (
                         <Button
                           variant="outline"
@@ -1222,15 +1116,12 @@ export default function ShiftOperationsManagement() {
             </div>
           </>
         )}
-
         {/* Pagination */}
-
         <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
           <div className="text-xs text-muted-foreground">
             Page {currentPage} of {lastPage} ·{" "}
             {totalRows.toLocaleString()} rows
           </div>
-
           <div className="flex items-center gap-2">
             <select
               className="h-9 rounded-md border bg-background px-2 text-sm"
@@ -1250,7 +1141,6 @@ export default function ShiftOperationsManagement() {
                 </option>
               ))}
             </select>
-
             <Button
               variant="outline"
               size="sm"
@@ -1259,7 +1149,6 @@ export default function ShiftOperationsManagement() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-
             <Button
               variant="outline"
               size="sm"
@@ -1271,9 +1160,7 @@ export default function ShiftOperationsManagement() {
           </div>
         </div>
       </Card>
-
       {/* Details dialog */}
-
       <Dialog
         open={selectedRow !== null}
         onOpenChange={(open) => {
@@ -1291,15 +1178,13 @@ export default function ShiftOperationsManagement() {
               Assignment #{selectedRow?.assignment_id ?? "—"}
             </DialogDescription>
           </DialogHeader>
-
           {selectedRow && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <StatusBadge status={selectedRow.operational_status} />
                 <StatusBadge status={selectedRow.assignment_status} />
                 <StatusBadge status={selectedRow.coverage.status} />
               </div>
-
               <div className="grid gap-3 sm:grid-cols-2">
                 <DetailValue
                   label="Guard"
@@ -1366,12 +1251,10 @@ export default function ShiftOperationsManagement() {
                   value={readable(selectedRow.checkout_source)}
                 />
               </div>
-
               <div className="rounded-lg border p-4">
                 <h3 className="mb-3 text-sm font-semibold">
                   Staffing & Coverage
                 </h3>
-
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
                     <p className="text-xl font-bold">
@@ -1399,7 +1282,6 @@ export default function ShiftOperationsManagement() {
                   </div>
                 </div>
               </div>
-
               {detailsLoading ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -1414,7 +1296,6 @@ export default function ShiftOperationsManagement() {
                   <h3 className="text-sm font-semibold">
                     Full Operational Record
                   </h3>
-
                   {Object.entries(details).map(([key, value]) => (
                     <details
                       key={key}
@@ -1423,7 +1304,6 @@ export default function ShiftOperationsManagement() {
                       <summary className="cursor-pointer text-sm font-medium">
                         {readable(key)}
                       </summary>
-
                       <pre className="mt-3 max-h-72 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-words">
                         {JSON.stringify(value, null, 2)}
                       </pre>
