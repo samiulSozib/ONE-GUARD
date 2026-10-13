@@ -33,13 +33,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ShiftEntitySearchSelect from "./shift-entity-search-select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import ShiftAssignmentDetailsDrawer from "./shift-assignment-details-drawer";
 import type {
   ShiftFilters,
   ShiftOperationRow,
@@ -69,7 +63,6 @@ type FilterDefinition = {
   options?: { value: string; label: string }[];
   placeholder?: string;
 };
-const PRIMARY = "#5F0015";
 const emptySummary: ShiftOperationsSummary = {
   assignment_rows: 0,
   unfilled_duties: 0,
@@ -354,24 +347,6 @@ function SummaryCard({
         </p>
       )}
     </Card>
-  );
-}
-function DetailValue({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | null | undefined;
-}) {
-  return (
-    <div className="min-w-0 rounded-lg border p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 break-words text-sm font-medium">
-        {value === null || value === undefined || value === ""
-          ? "—"
-          : value}
-      </p>
-    </div>
   );
 }
 /* =====================================================
@@ -1160,161 +1135,17 @@ export default function ShiftOperationsManagement() {
           </div>
         </div>
       </Card>
-      {/* Details dialog */}
-      <Dialog
-        open={selectedRow !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedRow(null);
-            setDetails(null);
-            setDetailsError(null);
-          }
+      <ShiftAssignmentDetailsDrawer
+        row={selectedRow}
+        details={details}
+        loading={detailsLoading}
+        error={detailsError}
+        onClose={() => {
+          setSelectedRow(null);
+          setDetails(null);
+          setDetailsError(null);
         }}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[780px]">
-          <DialogHeader>
-            <DialogTitle>Assignment Details</DialogTitle>
-            <DialogDescription>
-              Assignment #{selectedRow?.assignment_id ?? "—"}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRow && (
-            <div className="space-y-4">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <StatusBadge status={selectedRow.operational_status} />
-                <StatusBadge status={selectedRow.assignment_status} />
-                <StatusBadge status={selectedRow.coverage.status} />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DetailValue
-                  label="Guard"
-                  value={
-                    selectedRow.guard?.is_missing
-                      ? "Guard record unavailable"
-                      : selectedRow.guard?.name
-                  }
-                />
-                <DetailValue
-                  label="Guard Code"
-                  value={selectedRow.guard?.code}
-                />
-                <DetailValue
-                  label="Duty"
-                  value={selectedRow.duty.title}
-                />
-                <DetailValue
-                  label="Site"
-                  value={selectedRow.duty.site_name}
-                />
-                <DetailValue
-                  label="Site Location"
-                  value={selectedRow.duty.site_location_name}
-                />
-                <DetailValue
-                  label="Service Mode"
-                  value={readable(selectedRow.duty.service_mode)}
-                />
-                <DetailValue
-                  label="Shift Start"
-                  value={dateTime(
-                    selectedRow.duty.start_datetime,
-                    selectedRow.duty.site_timezone
-                  )}
-                />
-                <DetailValue
-                  label="Shift End"
-                  value={dateTime(
-                    selectedRow.duty.end_datetime,
-                    selectedRow.duty.site_timezone
-                  )}
-                />
-                <DetailValue
-                  label="Check-In"
-                  value={dateTime(
-                    selectedRow.check_in_time,
-                    selectedRow.duty.site_timezone
-                  )}
-                />
-                <DetailValue
-                  label="Check-Out"
-                  value={dateTime(
-                    selectedRow.check_out_time,
-                    selectedRow.duty.site_timezone
-                  )}
-                />
-                <DetailValue
-                  label="Attendance"
-                  value={readable(selectedRow.attendance_status)}
-                />
-                <DetailValue
-                  label="Checkout Source"
-                  value={readable(selectedRow.checkout_source)}
-                />
-              </div>
-              <div className="rounded-lg border p-4">
-                <h3 className="mb-3 text-sm font-semibold">
-                  Staffing & Coverage
-                </h3>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="text-xl font-bold">
-                      {selectedRow.coverage.required}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Required
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold">
-                      {selectedRow.coverage.assigned}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Assigned
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold">
-                      {selectedRow.coverage.attended ?? 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Attended
-                    </p>
-                  </div>
-                </div>
-              </div>
-              {detailsLoading ? (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading complete assignment details...
-                </div>
-              ) : detailsError ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {detailsError}
-                </div>
-              ) : details ? (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">
-                    Full Operational Record
-                  </h3>
-                  {Object.entries(details).map(([key, value]) => (
-                    <details
-                      key={key}
-                      className="rounded-lg border p-3"
-                    >
-                      <summary className="cursor-pointer text-sm font-medium">
-                        {readable(key)}
-                      </summary>
-                      <pre className="mt-3 max-h-72 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-words">
-                        {JSON.stringify(value, null, 2)}
-                      </pre>
-                    </details>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      />
     </div>
   );
 }
