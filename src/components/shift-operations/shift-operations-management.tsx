@@ -1,4 +1,5 @@
 "use client";
+import ShiftFilterLookup from "./shift-filter-lookup";
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -528,8 +529,8 @@ export default function ShiftOperationsManagement() {
   const labelClass = "mb-1 block text-xs font-medium text-muted-foreground";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex w-full min-w-0 max-w-full flex-col gap-4 overflow-x-clip">
+      <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
             Shift Operations
@@ -569,7 +570,7 @@ export default function ShiftOperationsManagement() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {cards.map(({ title, key, icon: Icon }) => (
           <Card key={key} className="p-4">
             <div className="flex items-center justify-between gap-2">
@@ -587,9 +588,9 @@ export default function ShiftOperationsManagement() {
         ))}
       </div>
 
-      <Card className="space-y-4 p-4">
+      <Card className="w-full min-w-0 max-w-full space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[190px] flex-1">
+          <div className="w-full min-w-0 flex-1 sm:min-w-[190px]">
             <label className={labelClass}>Search</label>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -638,17 +639,42 @@ export default function ShiftOperationsManagement() {
         </div>
 
         {advanced && (
-          <div className="grid grid-cols-2 gap-3 border-t pt-4 md:grid-cols-3 xl:grid-cols-5">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {idFilters.map(({ key, title }) => (
-              <div key={key}>
-                <label className={labelClass}>{title}</label>
-                <input
-                  type="number"
-                  min="1"
-                  className={field}
-                  placeholder="All"
+              <div key={key} className="min-w-0">
+                <label className={labelClass}>
+                  {title.replace(" ID", "")}
+                </label>
+
+                <ShiftFilterLookup
+                  field={key as
+                    | "client_id"
+                    | "site_id"
+                    | "site_location_id"
+                    | "guard_id"
+                    | "duty_schedule_id"
+                    | "duty_id"
+                  }
                   value={String(draft[key] ?? "")}
-                  onChange={(e) => update(key, e.target.value)}
+                  onChange={(value) => {
+                    setDraft((current) => {
+                      const next = { ...current, [key]: value };
+
+                      if (key === "client_id") {
+                        next.site_id = "";
+                        next.site_location_id = "";
+                      }
+
+                      if (key === "site_id") {
+                        next.site_location_id = "";
+                      }
+
+                      return next;
+                    });
+                  }}
+                  clientId={String(draft.client_id ?? "")}
+                  siteId={String(draft.site_id ?? "")}
+                  className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
                 />
               </div>
             ))}
@@ -683,7 +709,7 @@ export default function ShiftOperationsManagement() {
         </p>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="w-full min-w-0 max-w-full overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
           <div>
             <h2 className="font-semibold">Operational Records</h2>
@@ -712,7 +738,7 @@ export default function ShiftOperationsManagement() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[1350px] text-left text-xs">
             <thead className="bg-muted/60 text-muted-foreground">
               <tr>
