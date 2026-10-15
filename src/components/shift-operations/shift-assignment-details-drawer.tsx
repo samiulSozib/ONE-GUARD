@@ -1,7 +1,5 @@
 "use client";
 
-
-
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -23,8 +21,6 @@ import type {
   ShiftAssignmentDetails,
 
 } from "@/app/types/shift-operations";
-
-
 
 type Tab = "overview" | "attendance" | "patrol" | "incidents" | "reports" | "early_checkout" | "history";
 
@@ -134,89 +130,168 @@ function Records({ records, singular, icon: Icon }: { records: unknown; singular
 
 }
 
-
 type PatrolView = Record<string, unknown>;
+
 const patrolNumber = (value: unknown): number | null =>
+
   typeof value === "number" && Number.isFinite(value) ? value :
+
   typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)) ? Number(value) : null;
+
 const patrolText = (value: unknown): string | null =>
+
   value === null || value === undefined || value === "" ? null : String(value);
+
 const patrolTime = (value: unknown, timezone: string): string =>
+
   displayDate(patrolText(value), timezone);
 
 function PatrolDetails({ row, details, timezone, loading }: {
+
   row: ShiftOperationRow;
+
   details: ShiftAssignmentDetails | null;
+
   timezone: string;
+
   loading: boolean;
+
 }) {
+
   const payload = asRecord(details);
+
   const item = asRecord(payload?.item);
+
   const rawPatrol = asRecord(item?.patrol) ?? asRecord(row.patrol) ?? {};
+
   const visits = (Array.isArray(payload?.patrol_visits) ? payload.patrol_visits : [])
+
     .map(asRecord).filter((v): v is PatrolView => v !== null)
+
     .sort((a,b) => (patrolNumber(a.visit_number) ?? 0) - (patrolNumber(b.visit_number) ?? 0));
+
   const count = (key: string, status?: string): number =>
+
     patrolNumber(rawPatrol[key]) ?? (status ? visits.filter(v => v.status === status).length : 0);
+
   const required = count("required");
+
   const completed = count("completed", "completed");
+
   const checkedIn = patrolNumber(rawPatrol.checked_in) ?? patrolNumber(rawPatrol.in_progress) ?? visits.filter(v => v.status === "checked_in").length;
+
   const pending = count("pending", "pending");
+
   const missed = count("missed", "missed");
+
   const cancelled = count("cancelled", "cancelled");
+
   const recorded = patrolNumber(rawPatrol.recorded) ?? visits.length;
+
   const remaining = Math.max(0, required - completed);
+
   const unrecorded = Math.max(0, required - recorded + cancelled);
+
   const percent = required > 0 ? Math.min(100, Math.round(completed / required * 100)) : 0;
+
   const isPatrol = row.duty.service_mode === "patrol_visits";
+
   if (!isPatrol) return <Section title="Patrol Visits" icon={Footprints}><p className="text-sm text-muted-foreground">This assignment uses {humanize(row.duty.service_mode)}, not Patrol Visits.</p></Section>;
+
   return <div className="space-y-4">
+
     <Section title="Patrol Progress" icon={Footprints}>
+
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+
         <span className="text-sm font-semibold">{completed} of {required} visits completed</span>
+
         <span className="rounded-full border bg-muted px-2.5 py-1 text-xs font-semibold">{humanize(rawPatrol.status)} · {percent}%</span>
+
       </div>
+
       <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Patrol completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+
         <div className="h-full rounded-full bg-[#5F0015]" style={{width: `${percent}%`}} />
+
       </div>
+
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+
         <Metric title="Required" value={required}/>
+
         <Metric title="Completed" value={completed}/>
+
         <Metric title="Checked In" value={checkedIn}/>
+
         <Metric title="Pending" value={pending}/>
+
         <Metric title="Missed" value={missed}/>
+
         <Metric title="Not Completed" value={remaining}/>
+
       </div>
+
       <p className="mt-3 text-xs text-muted-foreground">Not completed = required minus completed. It includes visits still pending or in progress; it does not necessarily mean missed.</p>
+
       {cancelled > 0 && <p className="mt-2 text-xs text-muted-foreground">Cancelled visit records: {cancelled}</p>}
+
       {unrecorded > 0 && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">{unrecorded} required visit slot(s) do not have an active visit record yet.</p>}
+
     </Section>
+
     <Section title="Individual Visit Timeline" icon={Clock3}>
+
       {loading ? <p className="text-sm text-muted-foreground">Loading patrol visit history…</p> : visits.length === 0 ?
+
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No patrol visit records found for this assignment.</p> :
+
         <div className="space-y-3">{visits.map((visit, index) => {
+
           const inAt = patrolText(visit.checked_in_at);
+
           const outAt = patrolText(visit.checked_out_at);
+
           const duration = patrolNumber(visit.duration_minutes);
+
           const startCoords = [patrolText(visit.checkin_latitude), patrolText(visit.checkin_longitude)];
+
           const endCoords = [patrolText(visit.checkout_latitude), patrolText(visit.checkout_longitude)];
+
           return <div key={String(visit.id ?? index)} className="rounded-xl border bg-background p-3 sm:p-4">
+
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+
               <span className="text-sm font-semibold">Visit #{patrolNumber(visit.visit_number) ?? index + 1}</span>
+
               <span className="rounded-full border bg-muted px-2.5 py-1 text-xs font-semibold">{humanize(visit.status)}</span>
+
             </div>
+
             <dl className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
+
               <div><dt className="text-muted-foreground">Check-in</dt><dd className="mt-1 font-medium">{patrolTime(inAt, timezone)}</dd></div>
+
               <div><dt className="text-muted-foreground">Checkout</dt><dd className="mt-1 font-medium">{patrolTime(outAt, timezone)}</dd></div>
+
               <div><dt className="text-muted-foreground">Duration</dt><dd className="mt-1 font-medium">{duration === null ? "—" : `${duration} min`}</dd></div>
+
             </dl>
+
             {startCoords.every(Boolean) && <p className="mt-3 text-xs text-muted-foreground">Check-in GPS: {startCoords.join(", ")}</p>}
+
             {endCoords.every(Boolean) && <p className="mt-1 text-xs text-muted-foreground">Checkout GPS: {endCoords.join(", ")}</p>}
+
             {patrolText(visit.notes) && <p className="mt-3 rounded-lg bg-muted/40 p-2 text-xs">{patrolText(visit.notes)}</p>}
+
           </div>;
+
         })}</div>}
+
     </Section>
+
   </div>;
+
 }
 
 export default function ShiftAssignmentDetailsDrawer({ row, details, loading, error, onClose }: {
@@ -264,6 +339,8 @@ export default function ShiftAssignmentDetailsDrawer({ row, details, loading, er
   const getRecords = (key: string): unknown => detailData?.[key];
 
   const attendance = asRecord(getRecords("attendance"));
+
+  const earlyCheckoutRequest = asRecord(row.early_checkout_request);
 
   const logs = Array.isArray(getRecords("shift_logs"))
 
@@ -315,9 +392,9 @@ export default function ShiftAssignmentDetailsDrawer({ row, details, loading, er
 
         {tab === "reports" && !loading && <Records singular="Shift Report" icon={FileText} records={getRecords("shift_reports")} />}
 
-        {tab === "early_checkout" && <div className="space-y-4">{row.early_checkout_request && <Section title="Current Request" icon={Clock3}><dl><Pair title="Status" value={humanize(row.early_checkout_request.status)} /><Pair title="Reason" value={row.early_checkout_request.reason_text} /></dl></Section>}{!loading && <Records singular="Early Checkout Request" icon={Clock3} records={getRecords("early_checkout_requests")} />}</div>}
+        {tab === "early_checkout" && <div className="space-y-4">{earlyCheckoutRequest !== null && <Section title="Current Request" icon={Clock3}><dl><Pair title="Status" value={humanize(earlyCheckoutRequest.status)} /><Pair title="Reason" value={earlyCheckoutRequest.reason_text} /></dl></Section>}{!loading && <Records singular="Early Checkout Request" icon={Clock3} records={getRecords("early_checkout_requests")} />}</div>}
 
-        {tab === "history" && !loading && <div className="space-y-4">{logs.length > 0 && <Section title="Shift Timeline" icon={Activity}><ol className="relative ml-2 border-l border-[#5F0015]/30 pl-5">{logs.map((log, index) => <li key={String(log.id ?? index)} className="relative pb-5 last:pb-0"><span className="absolute -left-[25px] top-1 h-2.5 w-2.5 rounded-full bg-[#5F0015] ring-4 ring-background" /><p className="text-xs font-semibold">{humanize(log.action)}</p><p className="mt-1 text-[11px] text-muted-foreground">{displayDate(typeof log.action_time === "string" ? log.action_time : null, timezone)}{log.is_auto ? " · Automatic" : ""}</p>{log.remarks && <p className="mt-1 text-xs">{labelValue(log.remarks)}</p>}</li>)}</ol></Section>}<Records singular="Assignment" icon={Users} records={getRecords("assignments")} />{!logs.length && <Records singular="Shift Log" icon={History} records={[]} />}</div>}
+        {tab === "history" && !loading && <div className="space-y-4">{logs.length > 0 && <Section title="Shift Timeline" icon={Activity}><ol className="relative ml-2 border-l border-[#5F0015]/30 pl-5">{logs.map((log, index) => <li key={String(log.id ?? index)} className="relative pb-5 last:pb-0"><span className="absolute -left-[25px] top-1 h-2.5 w-2.5 rounded-full bg-[#5F0015] ring-4 ring-background" /><p className="text-xs font-semibold">{humanize(log.action)}</p><p className="mt-1 text-[11px] text-muted-foreground">{displayDate(typeof log.action_time === "string" ? log.action_time : null, timezone)}{log.is_auto ? " · Automatic" : ""}</p>{log.remarks != null && log.remarks !== "" && <p className="mt-1 text-xs">{labelValue(log.remarks)}</p>}</li>)}</ol></Section>}<Records singular="Assignment" icon={Users} records={getRecords("assignments")} />{!logs.length && <Records singular="Shift Log" icon={History} records={[]} />}</div>}
 
       </div>
 
