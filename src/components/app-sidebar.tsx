@@ -23,6 +23,7 @@ import {
   Shield,
   UserCheck,
   UserPlus,
+  UserRoundX,
   Users,
   Wallet,
 } from "lucide-react"
@@ -87,6 +88,11 @@ const navGroups = [
         title: "Client Accounts",
         url: "/clients",
         icon: Users,
+      },
+      {
+        title: "Account Deletion Requests",
+        url: "/account-deletion-requests",
+        icon: UserRoundX,
       },
       {
         title: "Client Contracts",
