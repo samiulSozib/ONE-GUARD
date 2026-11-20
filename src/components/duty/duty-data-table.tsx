@@ -39,6 +39,7 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
+  UserPlus,
 } from "lucide-react";
 import {
   Card,
@@ -87,9 +88,22 @@ import { useAppSelector } from "@/hooks/useAppSelector";
 import {
   fetchDuties,
   deleteDuty,
-  toggleDutyStatus,
+  updateDutyWorkflowStatus,
+  setDutyActive,
 } from "@/store/slices/dutySlice";
-import { Duty, DutyParams } from "@/app/types/duty";
+import {
+  Duty,
+  DutyParams,
+  getAssignmentOperationalColor,
+  getAssignmentOperationalDisplay,
+  getDutyRosterStatus,
+} from "@/app/types/duty";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { fetchSites } from "@/store/slices/siteSlice";
+import { fetchGuards } from "@/store/slices/guardSlice";
+import { GuardAssignmentCreateForm } from "@/components/guard-assignment/guard-assignment-create-form";
+import { Site } from "@/app/types/site";
+import { Guard } from "@/app/types/guard";
 
 // Components
 import { DeleteDialog } from "../shared/delete-dialog";
@@ -232,38 +246,92 @@ const shiftConfig = {
   },
 };
 
-// Shift type display component with larger image and label
+/** Compact morning / day / night indicator */
 const ShiftTypeDisplay = ({ shiftType }: { shiftType: 'morning' | 'day' | 'night' }) => {
   const config = shiftConfig[shiftType];
 
   return (
-    <div className={`flex flex-col items-center gap-1 px-1 py-1.5 rounded-xl border-2 ${config.bgColor} ${config.borderColor} min-w-[60px] sm:min-w-[70px] md:min-w-[80px] transition-all duration-200 hover:scale-105 hover:shadow-md`}>
-      <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex-shrink-0">
+    <div
+      className={`inline-flex flex-col items-center gap-0.5 px-1 py-1 rounded-lg border ${config.bgColor} ${config.borderColor}`}
+      title={config.label}
+    >
+      <div className="relative h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0">
         <Image
           src={config.image}
           alt={config.label}
-          width={64}
-          height={64}
-          className="rounded-full object-cover border-2 border-white shadow-sm"
+          width={32}
+          height={32}
+          className="rounded-full object-cover border border-white shadow-sm"
           onError={(e) => {
-            // Fallback to emoji if image fails to load
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
             const parent = target.parentElement;
-            if (parent) {
+            if (parent && !parent.querySelector('[data-shift-emoji]')) {
               const emojiSpan = document.createElement('span');
-              emojiSpan.className = `text-2xl sm:text-3xl md:text-4xl ${config.textColor}`;
+              emojiSpan.dataset.shiftEmoji = '1';
+              emojiSpan.className = `text-sm ${config.textColor}`;
               emojiSpan.textContent = config.emoji;
               parent.appendChild(emojiSpan);
             }
           }}
         />
       </div>
-      <span className={`text-[9px] sm:text-[10px] md:text-xs font-semibold ${config.textColor} uppercase tracking-wider`}>
+      <span className={`text-[8px] sm:text-[9px] font-semibold ${config.textColor} uppercase tracking-wide`}>
         {config.label}
       </span>
     </div>
   );
+};
+
+const getLiveRowStyle = (live: string): { rowBgColor: string; borderColor: string } => {
+  switch (live) {
+    case 'unassigned':
+    case 'no_show':
+      return {
+        rowBgColor: 'bg-red-50/90 dark:bg-red-950/35',
+        borderColor: 'border-l-4 border-l-red-500',
+      };
+    case 'missing_check_out':
+    case 'late':
+      return {
+        rowBgColor: 'bg-orange-50/90 dark:bg-orange-950/35',
+        borderColor: 'border-l-4 border-l-orange-500',
+      };
+    case 'not_checked_in_after_start':
+    case 'not_checked_in':
+      return {
+        rowBgColor: 'bg-amber-50/90 dark:bg-amber-950/35',
+        borderColor: 'border-l-4 border-l-amber-500',
+      };
+    case 'on_duty':
+      return {
+        rowBgColor: 'bg-emerald-50/85 dark:bg-emerald-950/30',
+        borderColor: 'border-l-4 border-l-emerald-500',
+      };
+    case 'upcoming':
+      return {
+        rowBgColor: 'bg-sky-50/85 dark:bg-sky-950/30',
+        borderColor: 'border-l-4 border-l-sky-500',
+      };
+    case 'checked_out':
+    case 'past':
+    case 'completed':
+      return {
+        rowBgColor: 'bg-slate-50/80 dark:bg-slate-900/40',
+        borderColor: 'border-l-4 border-l-slate-400',
+      };
+    case 'cancelled':
+    case 'replaced':
+      return {
+        rowBgColor: 'bg-gray-50/80 dark:bg-gray-900/40',
+        borderColor: 'border-l-4 border-l-gray-400',
+      };
+    default:
+      return {
+        rowBgColor: 'bg-white dark:bg-gray-900/50',
+        borderColor: 'border-l-4 border-l-transparent',
+      };
+  }
 };
 
 export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
@@ -272,6 +340,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
   // Redux state
   const { duties, pagination, isLoading, error } = useAppSelector((state) => state.duty);
+  const { sites } = useAppSelector((state) => state.site);
+  const { guards } = useAppSelector((state) => state.guard);
 
   // Local state
   const [searchTerm, setSearchTerm] = useState("");
@@ -293,6 +363,11 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
   const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
   const [serviceModeFilter, setServiceModeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [guardFilter, setGuardFilter] = useState<string>("all");
+  const [liveStatusFilter, setLiveStatusFilter] = useState("all");
+  const [timingFilter, setTimingFilter] = useState("all");
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignDutyId, setAssignDutyId] = useState<number | undefined>(undefined);
 
   // Mobile filter collapse state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -308,6 +383,11 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
+    dispatch(fetchGuards({ page: 1, per_page: 100, is_active: true }));
+  }, [dispatch]);
 
   // Check if timezones are the same
   const isSameTimezone = (siteTimezone: string | null | undefined): boolean => {
@@ -460,12 +540,28 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       fetchParams.status = statusFilter;
     }
 
+    if (coverageFilter !== "all") {
+      fetchParams.coverage_status = coverageFilter;
+    }
+
     if (sourceTypeFilter !== "all") {
       fetchParams.source_type = sourceTypeFilter as DutyParams['source_type'];
     }
 
     if (serviceModeFilter !== "all") {
       fetchParams.service_mode = serviceModeFilter as 'continuous_shift' | 'patrol_visits';
+    }
+
+    if (guardFilter !== "all") {
+      fetchParams.guard_id = parseInt(guardFilter);
+    }
+
+    if (liveStatusFilter !== "all") {
+      fetchParams.live_status = liveStatusFilter;
+    }
+
+    if (timingFilter !== "all") {
+      fetchParams.timing = timingFilter as DutyParams['timing'];
     }
 
     if (dateFilter) {
@@ -475,7 +571,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }
 
     dispatch(fetchDuties(fetchParams));
-  }, [dispatch, filters.page, searchTerm, siteFilter, statusFilter, sourceTypeFilter, serviceModeFilter, dateFilter]);
+  }, [dispatch, filters.page, searchTerm, siteFilter, statusFilter, coverageFilter, sourceTypeFilter, serviceModeFilter, dateFilter, guardFilter, liveStatusFilter, timingFilter]);
 
   const handleTitleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitleSearch(e.target.value);
@@ -495,6 +591,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     setCoverageFilter("all");
     setSourceTypeFilter("all");
     setServiceModeFilter("all");
+    setGuardFilter("all");
+    setLiveStatusFilter("all");
+    setTimingFilter("all");
     setFilters({ page: 1, per_page: 10 });
     setSelectedDuties([]);
   };
@@ -555,11 +654,36 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
 
     if (result.isConfirmed) {
       try {
-        await dispatch(toggleDutyStatus({ id: duty.id, status: newStatus })).unwrap();
+        await dispatch(updateDutyWorkflowStatus({ id: duty.id, status: newStatus })).unwrap();
         await SweetAlertService.success('Status Updated', `"${duty.title}" has been marked as ${statusDisplay}.`, { timer: 2000 });
         refreshList();
       } catch (error) {
         await SweetAlertService.error('Update Failed', 'There was an error updating the duty status.');
+      }
+    }
+  };
+
+  const handleDutyActiveToggle = async (e: React.MouseEvent, duty: Duty, is_active: boolean) => {
+    e.stopPropagation();
+    const label = is_active ? 'Enable' : 'Disable';
+    const result = await Swal.fire({
+      title: `${label} Duty?`,
+      text: `Are you sure you want to ${label.toLowerCase()} "${duty.title}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: is_active ? '#10b981' : '#f97316',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Yes, ${label.toLowerCase()}`,
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+    });
+    if (result.isConfirmed) {
+      try {
+        await dispatch(setDutyActive({ id: duty.id, is_active })).unwrap();
+        await SweetAlertService.success('Updated', `"${duty.title}" is now ${is_active ? 'active' : 'inactive'}.`, { timer: 2000 });
+        refreshList();
+      } catch (error) {
+        await SweetAlertService.error('Update Failed', 'Could not update duty active flag.');
       }
     }
   };
@@ -618,7 +742,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     setEditDialogOpen(true);
   };
 
-  const refreshList = () => {
+  const buildFetchParams = (): DutyParams => {
     const fetchParams: DutyParams = {
       page: filters.page || 1,
       per_page: filters.per_page || 10,
@@ -627,7 +751,34 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
       include_site_location: true,
       include_duty_schedule: true,
     };
-    dispatch(fetchDuties(fetchParams));
+    if (siteFilter !== "all") fetchParams.site_id = parseInt(siteFilter);
+    if (statusFilter !== "all") fetchParams.status = statusFilter;
+    if (coverageFilter !== "all") fetchParams.coverage_status = coverageFilter;
+    if (sourceTypeFilter !== "all") fetchParams.source_type = sourceTypeFilter as DutyParams['source_type'];
+    if (serviceModeFilter !== "all") fetchParams.service_mode = serviceModeFilter as 'continuous_shift' | 'patrol_visits';
+    if (guardFilter !== "all") fetchParams.guard_id = parseInt(guardFilter);
+    if (liveStatusFilter !== "all") fetchParams.live_status = liveStatusFilter;
+    if (timingFilter !== "all") fetchParams.timing = timingFilter as DutyParams['timing'];
+    if (dateFilter) {
+      const formattedDate = format(dateFilter, 'yyyy-MM-dd');
+      fetchParams.date_from = formattedDate;
+      fetchParams.date_to = formattedDate;
+    }
+    return fetchParams;
+  };
+
+  const refreshList = () => {
+    dispatch(fetchDuties(buildFetchParams()));
+  };
+
+  const openAssignDialog = (duty: Duty) => {
+    setAssignDutyId(duty.id);
+    setAssignDialogOpen(true);
+  };
+
+  const setFilterAndResetPage = <T,>(setter: (value: T) => void, value: T) => {
+    setter(value);
+    setFilters((prev) => ({ ...prev, page: 1 }));
   };
 
   const formatDate = (dateString: string) => {
@@ -722,11 +873,11 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     }
   };
 
-  // Get unique sites for filter
-  const uniqueSites = Array.from(new Set(duties.map(d => d.site?.id))).map(id => {
-    const duty = duties.find(d => d.site?.id === id);
-    return { id, name: duty?.site?.site_name || `Site ${id}` };
-  });
+  const siteOptions = (sites || []).map((site: Site) => ({
+    id: site.id,
+    name: site.site_name || site.title || `Site ${site.id}`,
+  }));
+
 
   // Count active filters
   const getActiveFilterCount = () => {
@@ -738,6 +889,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
     if (sourceTypeFilter !== "all") count++;
     if (serviceModeFilter !== "all") count++;
     if (dateFilter) count++;
+    if (guardFilter !== "all") count++;
+    if (liveStatusFilter !== "all") count++;
+    if (timingFilter !== "all") count++;
     return count;
   };
 
@@ -836,7 +990,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             <div className="xs:col-span-2 sm:col-span-3">
               <InputGroup>
                 <InputGroupInput
-                  placeholder="Search by duty title..."
+                  placeholder="Search duty, site, or guard..."
                   value={titleSearch}
                   onChange={handleTitleSearch}
                   onKeyDown={(e) => e.key === 'Enter' && handleTitleSearchSubmit()}
@@ -849,7 +1003,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
 
             <div className="xs:col-span-1 sm:col-span-2">
-              <Select value={siteFilter} onValueChange={setSiteFilter}>
+              <Select value={siteFilter} onValueChange={(v) => setFilterAndResetPage(setSiteFilter, v)}>
                 <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="All Sites" />
                 </SelectTrigger>
@@ -857,7 +1011,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   <SelectGroup>
                     <SelectLabel>Sites</SelectLabel>
                     <SelectItem value="all">All Sites</SelectItem>
-                    {uniqueSites.map((site) => (
+                    {siteOptions.map((site) => (
                       <SelectItem key={site.id} value={String(site.id)}>
                         {site.name}
                       </SelectItem>
@@ -868,7 +1022,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
 
             <div className="xs:col-span-1 sm:col-span-1">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(v) => setFilterAndResetPage(setStatusFilter, v)}>
                 <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -876,16 +1030,16 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   <SelectGroup>
                     <SelectLabel>Status</SelectLabel>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending (legacy)</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="xs:col-span-1 sm:col-span-1">
-              <Select value={coverageFilter} onValueChange={setCoverageFilter}>
+              <Select value={coverageFilter} onValueChange={(v) => setFilterAndResetPage(setCoverageFilter, v)}>
                 <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Coverage" />
                 </SelectTrigger>
@@ -896,13 +1050,72 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     <SelectItem value="partial">Partial</SelectItem>
                     <SelectItem value="covered">Covered</SelectItem>
+                    <SelectItem value="not_required">Not Required</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="xs:col-span-1 sm:col-span-2">
+              <Select value={guardFilter} onValueChange={(v) => setFilterAndResetPage(setGuardFilter, v)}>
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="All Guards" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Assigned Guard</SelectLabel>
+                    <SelectItem value="all">All Guards</SelectItem>
+                    {(guards || []).map((guard: Guard) => (
+                      <SelectItem key={guard.id} value={String(guard.id)}>
+                        {guard.full_name || guard.guard_code || `Guard ${guard.id}`}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="xs:col-span-1 sm:col-span-1">
-              <Select value={sourceTypeFilter} onValueChange={setSourceTypeFilter}>
+              <Select value={liveStatusFilter} onValueChange={(v) => setFilterAndResetPage(setLiveStatusFilter, v)}>
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Live status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Live Status</SelectLabel>
+                    <SelectItem value="all">All Live Status</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="not_checked_in">No check-in</SelectItem>
+                    <SelectItem value="on_duty">On duty</SelectItem>
+                    <SelectItem value="missing_check_out">Missing check-out</SelectItem>
+                    <SelectItem value="no_show">No show</SelectItem>
+                    <SelectItem value="checked_out">Checked out</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="past">Past</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="xs:col-span-1 sm:col-span-1">
+              <Select value={timingFilter} onValueChange={(v) => setFilterAndResetPage(setTimingFilter, v)}>
+                <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Timing" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Timing</SelectLabel>
+                    <SelectItem value="all">All Timing</SelectItem>
+                    <SelectItem value="current">Running Now</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="past">Past</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="xs:col-span-1 sm:col-span-1">
+              <Select value={sourceTypeFilter} onValueChange={(v) => setFilterAndResetPage(setSourceTypeFilter, v)}>
                 <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
@@ -920,7 +1133,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
 
             <div className="xs:col-span-1 sm:col-span-1">
-              <Select value={serviceModeFilter} onValueChange={setServiceModeFilter}>
+              <Select value={serviceModeFilter} onValueChange={(v) => setFilterAndResetPage(setServiceModeFilter, v)}>
                 <SelectTrigger className="w-full h-8 sm:h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Service Mode" />
                 </SelectTrigger>
@@ -1030,6 +1243,101 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
             </div>
           </div>
 
+          {/* Quick answers for admins */}
+          <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 border-b bg-white/60 dark:bg-gray-900/40">
+            <span className="text-[10px] sm:text-xs font-medium text-gray-500 mr-1">Quick:</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] sm:text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              onClick={() => {
+                setLiveStatusFilter('on_duty');
+                setTimingFilter('all');
+                setDateFilter(new Date());
+                setFilters((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              On duty now
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] sm:text-xs border-amber-300 text-amber-800 hover:bg-amber-50"
+              onClick={() => {
+                setLiveStatusFilter('not_checked_in');
+                setTimingFilter('all');
+                setDateFilter(new Date());
+                setFilters((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              No check-in
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] sm:text-xs border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => {
+                setLiveStatusFilter('no_show');
+                setTimingFilter('all');
+                setDateFilter(undefined);
+                setFilters((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              No show
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] sm:text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+              onClick={() => {
+                setLiveStatusFilter('missing_check_out');
+                setTimingFilter('all');
+                setDateFilter(undefined);
+                setFilters((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              Missing check-out
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] sm:text-xs border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => {
+                setLiveStatusFilter('unassigned');
+                setTimingFilter('all');
+                setDateFilter(new Date());
+                setFilters((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              Unassigned today
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] sm:text-xs border-sky-300 text-sky-700 hover:bg-sky-50"
+              onClick={() => {
+                setLiveStatusFilter('upcoming');
+                setTimingFilter('upcoming');
+                setDateFilter(undefined);
+                setFilters((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              Upcoming
+            </Button>
+            <div className="hidden md:flex items-center gap-2 ml-auto text-[9px] text-gray-500">
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> No show</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> No check-in</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500" /> Missing out</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> On duty</span>
+            </div>
+          </div>
+
           {error && !isLoading && (
             <div className="p-4 text-center text-red-600">
               Error loading duties: {error}
@@ -1044,16 +1352,16 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                   <TableHead className="w-8 sm:w-12">
                     <span className="sr-only">Select</span>
                   </TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm min-w-[150px]">Officer</TableHead>
                   <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Shift</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Duty Title & Site</TableHead>
                   <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Scheduled Time (Site)</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Your Time</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Diff</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Service Mode</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Type</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Guards</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Coverage</TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="hidden md:table-cell text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Your Time</TableHead>
+                  <TableHead className="hidden lg:table-cell text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Diff</TableHead>
+                  <TableHead className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Mode</TableHead>
+                  <TableHead className="hidden lg:table-cell text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Type</TableHead>
+                  <TableHead className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Coverage</TableHead>
+                  <TableHead className="hidden md:table-cell text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Duty Status</TableHead>
                   <TableHead className="text-center text-gray-700 dark:text-gray-300 font-semibold text-[10px] sm:text-xs md:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1068,8 +1376,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           No duties found
                         </h3>
                         <p className="text-sm text-gray-500 mb-4">
-                          {searchTerm || siteFilter !== "all" || statusFilter !== "all"
-                            ? "Try adjusting your search or filters"
+                          {getActiveFilterCount() > 0
+                            ? "Try adjusting filters — Clear Filters resets everything"
                             : "Get started by creating a new duty"}
                         </p>
                         {onAddClick && (
@@ -1079,7 +1387,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  duties.map((duty: Duty, index: number) => {
+                  duties.map((duty: Duty) => {
                     const siteTimezone = duty.site?.timezone || 'UTC';
                     const isToday = isTodayDuty(duty.start_datetime);
                     const isTomorrow = isTomorrowDuty(duty.start_datetime);
@@ -1102,23 +1410,9 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     const userStartTime = convertToUserTimezone(duty.start_datetime, 'hh:mm a');
                     const userEndTime = convertToUserTimezone(duty.end_datetime, 'hh:mm a');
 
-                    let rowBgColor = '';
-                    let borderColor = '';
-
-                    if (isToday) {
-                      rowBgColor = 'bg-blue-50/80 dark:bg-blue-900/30';
-                      borderColor = 'border-l-4 border-l-blue-500';
-                    } else if (isTomorrow) {
-                      rowBgColor = 'bg-purple-50/60 dark:bg-purple-900/20';
-                      borderColor = 'border-l-4 border-l-purple-400';
-                    } else if (isYesterday) {
-                      rowBgColor = 'bg-amber-50/60 dark:bg-amber-900/20';
-                      borderColor = 'border-l-4 border-l-amber-400';
-                    } else if (index % 2 === 0) {
-                      rowBgColor = 'bg-white dark:bg-gray-900/50';
-                    } else {
-                      rowBgColor = 'bg-gray-50/50 dark:bg-gray-800/30';
-                    }
+                    const liveStatus = getDutyRosterStatus(duty);
+                    const { rowBgColor, borderColor } = getLiveRowStyle(liveStatus);
+                    const assignments = duty.assignments || [];
 
                     const dayName = getDayName(duty.start_datetime);
                     const dateLabel = getDateLabel(duty.start_datetime);
@@ -1126,7 +1420,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                     return (
                       <TableRow
                         key={duty.id}
-                        className={`${rowBgColor} ${borderColor} hover:bg-blue-50/80 dark:hover:bg-blue-900/30 cursor-pointer transition-colors`}
+                        className={`${rowBgColor} ${borderColor} hover:brightness-[0.98] dark:hover:brightness-110 cursor-pointer transition-colors`}
                         onClick={() => handleViewClick(duty)}
                       >
                         {/* Select Checkbox */}
@@ -1140,7 +1434,78 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           />
                         </TableCell>
 
-                        {/* Shift Type - First Column after checkbox */}
+                        {/* Officer — profile + name + live status (2nd column) */}
+                        <TableCell className="py-2 sm:py-3 px-2 sm:px-3" onClick={(e) => e.stopPropagation()}>
+                          {!assignments.length ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-red-300 bg-white/70 px-2 py-1.5 text-[10px] sm:text-xs text-red-600 hover:bg-red-50"
+                              onClick={() => openAssignDialog(duty)}
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                              Assign officer
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2 min-w-[150px]">
+                              <div className="flex -space-x-2 shrink-0">
+                                {assignments.slice(0, 2).map((a) => {
+                                  const name = a.guard?.full_name || `Guard #${a.guard_id}`;
+                                  const initials = name
+                                    .split(' ')
+                                    .map((p) => p[0])
+                                    .filter(Boolean)
+                                    .join('')
+                                    .slice(0, 2)
+                                    .toUpperCase();
+                                  return (
+                                    <Avatar
+                                      key={a.id}
+                                      className="h-8 w-8 border-2 border-white dark:border-gray-900 shadow-sm"
+                                      title={name}
+                                    >
+                                      {a.guard?.profile_image_url ? (
+                                        <AvatarImage src={a.guard.profile_image_url} alt={name} />
+                                      ) : null}
+                                      <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700">
+                                        {initials}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  );
+                                })}
+                                {assignments.length > 2 && (
+                                  <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-gray-900 flex items-center justify-center text-[10px] font-medium text-gray-600">
+                                    +{assignments.length - 2}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 space-y-0.5">
+                                <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[140px]">
+                                  {assignments[0]?.guard?.full_name || `Guard #${assignments[0]?.guard_id}`}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <Badge
+                                    variant="outline"
+                                    className={`${getAssignmentOperationalColor(
+                                      assignments[0]?.operational_status || liveStatus
+                                    )} border px-1.5 py-0 text-[9px] font-medium`}
+                                  >
+                                    {getAssignmentOperationalDisplay(
+                                      assignments[0]?.operational_status || liveStatus
+                                    )}
+                                  </Badge>
+                                  <span className="text-[9px] sm:text-[10px] text-gray-500">
+                                    {duty.assigned_guards_count || assignments.length}/{duty.guards_required}
+                                  </span>
+                                  {assignments.length > 1 && (
+                                    <span className="text-[9px] text-gray-400">+{assignments.length - 1}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </TableCell>
+
+                        {/* Compact morning / day / night */}
                         <TableCell className="text-center py-2 sm:py-3 px-1 sm:px-2">
                           <ShiftTypeDisplay shiftType={shiftType} />
                         </TableCell>
@@ -1242,7 +1607,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         </TableCell>
 
                         {/* Your Time (User Timezone) */}
-                        <TableCell className="py-2 sm:py-3 px-2 sm:px-3">
+                        <TableCell className="hidden md:table-cell py-2 sm:py-3 px-2 sm:px-3">
                           {showUserTime ? (
                             <div className="flex flex-col">
                               <div className="flex items-center gap-1 sm:gap-2">
@@ -1280,7 +1645,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         </TableCell>
 
                         {/* Time Difference */}
-                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                        <TableCell className="hidden lg:table-cell py-2 sm:py-3 px-1 sm:px-2">
                           {siteTimezone && timeDiff !== 'Same' && timeDiff !== 'N/A' ? (
                             <Badge variant="outline" className={`text-[8px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 ${
                               timeDiff.startsWith('+') ? 'border-blue-300 text-blue-600 bg-blue-50' :
@@ -1301,7 +1666,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         </TableCell>
 
                         {/* Service Mode */}
-                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                        <TableCell className="hidden sm:table-cell py-2 sm:py-3 px-1 sm:px-2">
                           {duty.service_mode === 'patrol_visits' ? (
                             <Badge variant="outline" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700 flex items-center gap-1 px-2 py-1">
                               <Target className="h-3 w-3" />
@@ -1315,7 +1680,7 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                         </TableCell>
 
                         {/* Type */}
-                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                        <TableCell className="hidden lg:table-cell py-2 sm:py-3 px-1 sm:px-2">
                           <Badge
                             variant="outline"
                             className={`${sourceTypeColors[duty.source_type || 'manual']} border-0 px-1.5 sm:px-3 py-0.5 sm:py-1 font-medium text-[8px] sm:text-xs`}
@@ -1326,23 +1691,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           </Badge>
                         </TableCell>
 
-                        {/* Guards */}
-                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
-                          <div className="flex items-center gap-0.5 sm:gap-2">
-                            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-                            <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">
-                              {duty.assigned_guards_count || 0}
-                            </span>
-                            <span className="text-gray-400 text-[8px] sm:text-xs">/</span>
-                            <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">{duty.guards_required}</span>
-                            {duty.assigned_guards_count === duty.guards_required && duty.guards_required > 0 && (
-                              <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-500" />
-                            )}
-                          </div>
-                        </TableCell>
-
                         {/* Coverage */}
-                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                        <TableCell className="hidden sm:table-cell py-2 sm:py-3 px-1 sm:px-2">
                           <Badge
                             className={`${coverageStatusColors[duty.coverage_status || 'unassigned']} border px-1.5 sm:px-3 py-0.5 sm:py-1 flex items-center gap-1 w-fit font-medium text-[8px] sm:text-xs`}
                           >
@@ -1351,8 +1701,8 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                           </Badge>
                         </TableCell>
 
-                        {/* Status */}
-                        <TableCell className="py-2 sm:py-3 px-1 sm:px-2">
+                        {/* Duty Status */}
+                        <TableCell className="hidden md:table-cell py-2 sm:py-3 px-1 sm:px-2">
                           <Badge
                             className={`${dutyStatusColors[duty.status] || 'bg-gray-100 text-gray-800'} border px-1.5 sm:px-3 py-0.5 sm:py-1 font-medium text-[8px] sm:text-xs`}
                           >
@@ -1377,14 +1727,27 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                 <Pencil className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-amber-500" />
                                 Edit duty
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openAssignDialog(duty)} className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer text-xs sm:text-sm">
+                                <UserPlus className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
+                                Assign guard
+                              </DropdownMenuItem>
 
-                              {canChangeTo(duty.status, 'approved') && (
+                              {(duty.assignments?.[0]?.guard_id || duty.assignments?.[0]?.guard?.id) && (
                                 <DropdownMenuItem
-                                  onClick={(e) => handleDutyStatusUpdate(e, duty, 'approved')}
-                                  className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg cursor-pointer text-xs sm:text-sm"
+                                  onClick={() => {
+                                    const guardId =
+                                      duty.assignments?.[0]?.guard_id ||
+                                      duty.assignments?.[0]?.guard?.id;
+                                    if (guardId) {
+                                      router.push(
+                                        `/guard-live-map?guardId=${guardId}`
+                                      );
+                                    }
+                                  }}
+                                  className="hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg cursor-pointer text-xs sm:text-sm"
                                 >
-                                  <CheckCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
-                                  Approve Duty
+                                  <MapPin className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-sky-600" />
+                                  View on map
                                 </DropdownMenuItem>
                               )}
 
@@ -1397,6 +1760,23 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
                                   Mark Completed
                                 </DropdownMenuItem>
                               )}
+
+                              <DropdownMenuItem
+                                onClick={(e) => handleDutyActiveToggle(e, duty, !duty.is_active)}
+                                className="hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg cursor-pointer text-xs sm:text-sm"
+                              >
+                                {duty.is_active ? (
+                                  <>
+                                    <XCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-orange-500" />
+                                    Disable duty
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-violet-500" />
+                                    Enable duty
+                                  </>
+                                )}
+                              </DropdownMenuItem>
 
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -1474,6 +1854,17 @@ export function DutyDataTable({ onAddClick, onViewClick }: DutyDataTableProps) {
           onSuccess={refreshList}
         />
       )}
+
+      <GuardAssignmentCreateForm
+        trigger={<div />}
+        isOpen={assignDialogOpen}
+        onOpenChange={(open) => {
+          setAssignDialogOpen(open);
+          if (!open) setAssignDutyId(undefined);
+        }}
+        preSelectedDutyId={assignDutyId}
+        onSuccess={refreshList}
+      />
     </>
   );
 }

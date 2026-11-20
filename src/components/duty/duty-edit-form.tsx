@@ -230,7 +230,7 @@ export function DutyEditForm({
             required_hours: 8,
             mandatory_check_in_time: "",
             notes: "",
-            status: "pending"
+            status: "approved"
         },
         mode: "onBlur"
     })
@@ -355,7 +355,7 @@ export function DutyEditForm({
                     required_hours: data.required_hours || 8,
                     mandatory_check_in_time: data.mandatory_check_in_time || "",
                     notes: data.notes || "",
-                    status: (data.status as "pending" | "approved" | "completed") || "pending"
+                    status: (data.status as "pending" | "approved" | "completed") || "approved"
                 })
             }
         } catch (error) {
@@ -773,18 +773,9 @@ export function DutyEditForm({
 
                                 <div className="space-y-2">
                                     <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Status *
+                                        Status
                                     </Label>
                                     <div className="flex gap-2 bg-gray-50 dark:bg-gray-800 p-1 rounded-lg">
-                                        <Button
-                                            type="button"
-                                            variant={formValues.status === "pending" ? "default" : "ghost"}
-                                            className="flex-1 transition-all duration-200 text-xs sm:text-sm"
-                                            onClick={() => setValue("status", "pending", { shouldValidate: true })}
-                                            disabled={isLoading || isFetching}
-                                        >
-                                            Pending
-                                        </Button>
                                         <Button
                                             type="button"
                                             variant={formValues.status === "approved" ? "default" : "ghost"}

@@ -319,6 +319,11 @@ export function DutyScheduleShow({
                   {item.required_visits} visit{item.required_visits !== 1 ? 's' : ''} required within this window
                 </p>
               )}
+              {item.guard_pay_basis && item.guard_pay_rate !== null && (
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
+                  Guard pay: {item.guard_pay_rate} / {item.guard_pay_basis.replaceAll('_', ' ')}
+                </p>
+              )}
             </div>
           </div>
 

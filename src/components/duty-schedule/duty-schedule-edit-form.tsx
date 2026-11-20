@@ -41,9 +41,13 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogActionFooter } from "../shared/dialog-action-footer";
+import { EntityFieldWithCreate } from "../shared/entity-field-with-create";
+import { CreateSiteWithClientForm } from "@/components/clients/create-site-with-client-form";
+import { SiteLocationCreateForm } from "@/components/site-location/site-location-create-form";
+import { ClientContractServiceCreateForm } from "@/components/client-contract-service/client-contract-service-create-form";
+import { DutyTimeTypeCreateForm } from "@/components/duty-time-type/duty-time-type-create-form";
 import { FloatingLabelInput } from "../ui/floating-input";
 import { FloatingLabelTextarea } from "../ui/floating-textarea";
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 
@@ -221,6 +225,9 @@ const dutyScheduleSchema = z.object({
     .optional()
     .nullable(),
 
+  guard_pay_basis: z.enum(['per_shift', 'per_hour', 'per_visit']).optional().nullable(),
+  guard_pay_rate: z.number().min(0, { message: "Pay rate must be 0 or greater" }).optional().nullable(),
+
   mandatory_check_in_time: z.string()
     .optional()
     .nullable(),
@@ -261,6 +268,10 @@ export function DutyScheduleEditForm({
   const [isFetching, setIsFetching] = useState(false);
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [selectedSiteTimezone, setSelectedSiteTimezone] = useState<string | undefined>(undefined);
+  const [siteCreateOpen, setSiteCreateOpen] = useState(false);
+  const [locationCreateOpen, setLocationCreateOpen] = useState(false);
+  const [serviceCreateOpen, setServiceCreateOpen] = useState(false);
+  const [dutyTimeTypeCreateOpen, setDutyTimeTypeCreateOpen] = useState(false);
 
   // Redux states
   const { sites } = useAppSelector((state) => state.site);
@@ -303,6 +314,8 @@ export function DutyScheduleEditForm({
       end_time: "16:00",
       guards_required: 1,
       required_hours: 8,
+      guard_pay_basis: null,
+      guard_pay_rate: null,
       mandatory_check_in_time: null,
       status: "active",
       is_active: true,
@@ -422,6 +435,8 @@ export function DutyScheduleEditForm({
           end_time: data.end_time || "16:00",
           guards_required: data.guards_required || 1,
           required_hours: data.required_hours || 8,
+          guard_pay_basis: data.guard_pay_basis || null,
+          guard_pay_rate: data.guard_pay_rate ?? null,
           mandatory_check_in_time: data.mandatory_check_in_time || null,
           status: data.status || "active",
           is_active: data.is_active !== undefined ? data.is_active : true,
@@ -473,6 +488,11 @@ export function DutyScheduleEditForm({
         end_time: data.end_time,
         guards_required: data.guards_required,
         required_hours: data.required_hours || 0,
+        guard_pay_basis: data.guard_pay_basis || null,
+        guard_pay_rate:
+          data.guard_pay_rate === null || data.guard_pay_rate === undefined || Number.isNaN(data.guard_pay_rate)
+            ? null
+            : data.guard_pay_rate,
         mandatory_check_in_time: data.mandatory_check_in_time || null,
         status: data.status,
         is_active: data.is_active,
@@ -526,7 +546,10 @@ export function DutyScheduleEditForm({
     }
   };
 
+  const selectedSite = sites.find((s: Site) => s.id === formValues.site_id);
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         {trigger}
@@ -690,31 +713,28 @@ export function DutyScheduleEditForm({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Site *
-                  </Label>
-                  <SearchableDropdownWithIcon
-                    value={formValues.site_id || ""}
-                    onValueChange={(value) => {
+                <EntityFieldWithCreate
+                  label="Site"
+                  required
+                  error={errors.site_id?.message}
+                  createTitle="Create new site"
+                  onCreateClick={() => setSiteCreateOpen(true)}
+                  dropdownProps={{
+                    value: formValues.site_id || "",
+                    onValueChange: (value) => {
                       const siteId = Number(value);
                       setValue("site_id", siteId, { shouldValidate: true });
                       setValue("site_location_id", null);
-
-                      // Find the selected site and get its timezone
-                      const selectedSite = sites.find((site: Site) => site.id === siteId);
-                      if (selectedSite) {
-                        setSelectedSiteTimezone(selectedSite.timezone || undefined);
-                      } else {
-                        setSelectedSiteTimezone(undefined);
-                      }
-                    }}
-                    options={sites.map((site: Site) => ({
+                      setValue("client_contract_service_id", null);
+                      const next = sites.find((site: Site) => site.id === siteId);
+                      setSelectedSiteTimezone(next?.timezone || undefined);
+                    },
+                    options: sites.map((site: Site) => ({
                       value: site.id,
                       label: site.site_name || site.title || `Site ${site.id}`,
                       ...site
-                    }))}
-                    onSearch={(search) => {
+                    })),
+                    onSearch: (search) => {
                       setSiteSearch(search);
                       dispatch(fetchSites({
                         page: 1,
@@ -722,34 +742,32 @@ export function DutyScheduleEditForm({
                         is_active: true,
                         search: search
                       }));
-                    }}
-                    placeholder="Select site"
-                    disabled={isLoading || isFetching}
-                    emptyMessage={siteSearch ? "No sites found" : "No sites available"}
-                    searchPlaceholder="Search sites..."
-                    icon={Building}
-                    iconPosition="left"
-                  />
-                  {errors.site_id && (
-                    <p className="text-sm text-red-500 mt-1">{errors.site_id.message}</p>
-                  )}
-                </div>
+                    },
+                    placeholder: "Select site",
+                    disabled: isLoading || isFetching,
+                    emptyMessage: siteSearch ? "No sites found" : "No sites available",
+                    searchPlaceholder: "Search sites...",
+                    icon: Building,
+                    iconPosition: "left",
+                  }}
+                />
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Site Location (Optional)
-                  </Label>
-                  <SearchableDropdownWithIcon
-                    value={formValues.site_location_id || ""}
-                    onValueChange={(value) => {
+                <EntityFieldWithCreate
+                  label="Site Location (Optional)"
+                  createTitle="Create new location"
+                  createDisabled={!formValues.site_id}
+                  onCreateClick={() => setLocationCreateOpen(true)}
+                  dropdownProps={{
+                    value: formValues.site_location_id || "",
+                    onValueChange: (value) => {
                       setValue("site_location_id", Number(value), { shouldValidate: true });
-                    }}
-                    options={siteLocations.map((location: SiteLocation) => ({
+                    },
+                    options: siteLocations.map((location: SiteLocation) => ({
                       value: location.id,
                       label: location.title,
                       ...location
-                    }))}
-                    onSearch={(search) => {
+                    })),
+                    onSearch: (search) => {
                       setLocationSearch(search);
                       if (formValues.site_id) {
                         dispatch(fetchSiteLocations({
@@ -760,43 +778,42 @@ export function DutyScheduleEditForm({
                           site_id: formValues.site_id
                         }));
                       }
-                    }}
-                    placeholder={formValues.site_id ? "Select location" : "Select site first"}
-                    disabled={isLoading || isFetching || !formValues.site_id}
-                    emptyMessage={
+                    },
+                    placeholder: formValues.site_id ? "Select location" : "Select site first",
+                    disabled: isLoading || isFetching || !formValues.site_id,
+                    emptyMessage:
                       !formValues.site_id
                         ? "Select a site first"
                         : locationSearch
                           ? "No locations found"
-                          : "No locations available"
-                    }
-                    searchPlaceholder="Search locations..."
-                    icon={MapPin}
-                    iconPosition="left"
-                  />
-                </div>
+                          : "No locations available",
+                    searchPlaceholder: "Search locations...",
+                    icon: MapPin,
+                    iconPosition: "left",
+                  }}
+                />
               </div>
 
               {/* Contract Service - Hidden for recurring schedules */}
               {formValues.schedule_type !== 'recurring' && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Contract Service (Optional)
-                  </Label>
-                  <SearchableDropdownWithIcon
-                    value={formValues.client_contract_service_id || ""}
-                    onValueChange={(value) => {
+                <EntityFieldWithCreate
+                  label="Contract Service (Optional)"
+                  createTitle="Create contract service"
+                  onCreateClick={() => setServiceCreateOpen(true)}
+                  dropdownProps={{
+                    value: formValues.client_contract_service_id || "",
+                    onValueChange: (value) => {
                       setValue("client_contract_service_id", Number(value), { shouldValidate: true });
-                    }}
-                    options={clientContractServices.map((service: ClientContractService) => ({
+                    },
+                    options: clientContractServices.map((service: ClientContractService) => ({
                       value: service.id,
                       label: (service.company_service?.name || '') +
                         (service.pricing_type ? ` ${service.pricing_type}` : '') +
                         (service.billing_method?.name ? ` (${service.billing_method.name})` : '') ||
                         `Service ${service.id}`,
                       ...service
-                    }))}
-                    onSearch={(search) => {
+                    })),
+                    onSearch: (search) => {
                       setServiceSearch(search);
                       dispatch(fetchClientContractServices({
                         page: 1,
@@ -804,15 +821,15 @@ export function DutyScheduleEditForm({
                         is_active: true,
                         search: search
                       }));
-                    }}
-                    placeholder="Select contract service"
-                    disabled={isLoading || isFetching}
-                    emptyMessage={serviceSearch ? "No contract services found" : "No contract services available"}
-                    searchPlaceholder="Search contract services..."
-                    icon={Package}
-                    iconPosition="left"
-                  />
-                </div>
+                    },
+                    placeholder: "Select contract service",
+                    disabled: isLoading || isFetching,
+                    emptyMessage: serviceSearch ? "No contract services found" : "No contract services available",
+                    searchPlaceholder: "Search contract services...",
+                    icon: Package,
+                    iconPosition: "left",
+                  }}
+                />
               )}
             </div>
 
@@ -1014,6 +1031,53 @@ export function DutyScheduleEditForm({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Guard Pay Basis (optional)
+                  </Label>
+                  <Select
+                    value={formValues.guard_pay_basis || "none"}
+                    onValueChange={(value) => {
+                      setValue(
+                        "guard_pay_basis",
+                        value === "none" ? null : (value as 'per_shift' | 'per_hour' | 'per_visit'),
+                        { shouldValidate: true }
+                      );
+                      if (value === "none") {
+                        setValue("guard_pay_rate", null);
+                      }
+                    }}
+                    disabled={isLoading || isFetching}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No pay rate" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No pay rate</SelectItem>
+                      <SelectItem value="per_shift">Per completed shift</SelectItem>
+                      <SelectItem value="per_hour">Per hour worked</SelectItem>
+                      <SelectItem value="per_visit">Per completed visit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">Affects newly generated duties only.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <FloatingLabelInput
+                    label="Guard Pay Rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("guard_pay_rate", {
+                      setValueAs: (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+                    })}
+                    error={errors.guard_pay_rate?.message}
+                    disabled={isLoading || isFetching || !formValues.guard_pay_basis}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-2">
                   <FloatingLabelInput
                     label="Mandatory Check-in Time"
                     type="time"
@@ -1023,21 +1087,21 @@ export function DutyScheduleEditForm({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Duty Time Type (Optional)
-                  </Label>
-                  <SearchableDropdownWithIcon
-                    value={formValues.duty_time_type_id || ""}
-                    onValueChange={(value) => {
+                <EntityFieldWithCreate
+                  label="Duty Time Type (Optional)"
+                  createTitle="Create duty time type"
+                  onCreateClick={() => setDutyTimeTypeCreateOpen(true)}
+                  dropdownProps={{
+                    value: formValues.duty_time_type_id || "",
+                    onValueChange: (value) => {
                       setValue("duty_time_type_id", Number(value), { shouldValidate: true });
-                    }}
-                    options={dutyTimeTypes.map((type: DutyTimeType) => ({
+                    },
+                    options: dutyTimeTypes.map((type: DutyTimeType) => ({
                       value: type.id,
                       label: type.title || `Type ${type.id}`,
                       ...type
-                    }))}
-                    onSearch={(search) => {
+                    })),
+                    onSearch: (search) => {
                       setDutyTimeTypeSearch(search);
                       dispatch(fetchDutyTimeTypes({
                         page: 1,
@@ -1045,15 +1109,15 @@ export function DutyScheduleEditForm({
                         is_active: true,
                         search: search
                       }));
-                    }}
-                    placeholder="Select duty time type"
-                    disabled={isLoading || isFetching}
-                    emptyMessage={dutyTimeTypeSearch ? "No types found" : "No types available"}
-                    searchPlaceholder="Search duty time types..."
-                    icon={Clock}
-                    iconPosition="left"
-                  />
-                </div>
+                    },
+                    placeholder: "Select duty time type",
+                    disabled: isLoading || isFetching,
+                    emptyMessage: dutyTimeTypeSearch ? "No types found" : "No types available",
+                    searchPlaceholder: "Search duty time types...",
+                    icon: Clock,
+                    iconPosition: "left",
+                  }}
+                />
               </div>
             </div>
 
@@ -1118,5 +1182,68 @@ export function DutyScheduleEditForm({
         )}
       </DialogContent>
     </Dialog>
+
+    <CreateSiteWithClientForm
+      trigger={<div />}
+      isOpen={siteCreateOpen}
+      onOpenChange={setSiteCreateOpen}
+      onSuccess={(site) => {
+        dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
+        if (site?.id) {
+          setValue("site_id", site.id, { shouldValidate: true });
+          setValue("site_location_id", null);
+          setValue("client_contract_service_id", null);
+          setSelectedSiteTimezone(site.timezone || undefined);
+        }
+        setSiteCreateOpen(false);
+      }}
+    />
+
+    {formValues.site_id ? (
+      <SiteLocationCreateForm
+        trigger={<div />}
+        siteId={formValues.site_id}
+        siteName={selectedSite?.site_name || selectedSite?.title}
+        isOpen={locationCreateOpen}
+        onOpenChange={setLocationCreateOpen}
+        onSuccess={(location) => {
+          dispatch(fetchSiteLocations({
+            page: 1,
+            per_page: 100,
+            is_active: true,
+            site_id: formValues.site_id,
+          }));
+          if (location?.id) {
+            setValue("site_location_id", location.id, { shouldValidate: true });
+          }
+          setLocationCreateOpen(false);
+        }}
+      />
+    ) : null}
+
+    <ClientContractServiceCreateForm
+      trigger={<div />}
+      isOpen={serviceCreateOpen}
+      onOpenChange={setServiceCreateOpen}
+      onSuccess={() => {
+        dispatch(fetchClientContractServices({
+          page: 1,
+          per_page: 100,
+          is_active: true,
+        }));
+        setServiceCreateOpen(false);
+      }}
+    />
+
+    <DutyTimeTypeCreateForm
+      trigger={<div />}
+      isOpen={dutyTimeTypeCreateOpen}
+      onOpenChange={setDutyTimeTypeCreateOpen}
+      onSuccess={() => {
+        dispatch(fetchDutyTimeTypes({ page: 1, per_page: 100, is_active: true }));
+        setDutyTimeTypeCreateOpen(false);
+      }}
+    />
+    </>
   );
 }

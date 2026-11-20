@@ -1,9 +1,11 @@
 // components/auth/GuardedRoute.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector } from '@/hooks/useAppSelector';
+import { getProfile } from '@/store/slices/authSlice';
 
 interface GuardedRouteProps {
   children: React.ReactNode;
@@ -11,13 +13,26 @@ interface GuardedRouteProps {
 
 const GuardedRoute: React.FC<GuardedRouteProps> = ({ children }) => {
   const router = useRouter();
-  const { token, isLoading } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const { token, isLoading, user } = useAppSelector((state) => state.auth);
+  const refreshed = useRef(false);
 
   useEffect(() => {
     if (!isLoading && !token) {
       router.push('/auth/login');
     }
   }, [token, isLoading, router]);
+
+  // Refresh permissions after login / page reload.
+  useEffect(() => {
+    if (!token || refreshed.current) return;
+    if (user?.permissions && user.permissions.length > 0) {
+      refreshed.current = true;
+      return;
+    }
+    refreshed.current = true;
+    void dispatch(getProfile());
+  }, [token, user, dispatch]);
 
   // Show loading state
   if (isLoading) {

@@ -13,6 +13,7 @@ import {
     CLIENT_DOCUMENT_TYPES,
     INDUSTRIES,
 } from "@/lib/validation/client.types"
+import { Client } from "@/app/types/client"
 import { createClient } from "@/store/slices/clientSlice"
 import { DialogTitle } from "@radix-ui/react-dialog"
 import {
@@ -59,7 +60,7 @@ interface ClientCreateFormProps {
     trigger: ReactNode
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
-    onSuccess?: () => void
+    onSuccess?: (client?: Client) => void
     lastClientCode?: string
 }
 
@@ -703,7 +704,7 @@ export function ClientCreateForm({
                 )
 
                 await resetFormAfterSubmit()
-                onSuccess?.()
+                onSuccess?.(result.payload as Client)
                 onOpenChange?.(false)
             } else {
                 const errorMessage = (result.payload as string) || 'Failed to create client'

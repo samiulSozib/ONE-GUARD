@@ -67,6 +67,12 @@ export interface CurrentAssignment {
   end_time: string | null
 }
 
+export interface LiveGuardAttendance {
+  check_in_time: string | null
+  check_out_time: string | null
+  attended: boolean
+}
+
 export type GuardOnlineStatus =
   | "online"
   | "offline"
@@ -98,6 +104,7 @@ export interface LiveGuard {
   location: GuardLocation | null
   device_info: DeviceInfo | null
   current_assignment: CurrentAssignment | null
+  attendance?: LiveGuardAttendance | null
 }
 
 export interface LiveTrackingBody {

@@ -20,6 +20,8 @@ export interface SettingItem {
   type: SettingType;
   description: string | null;
   is_editable: boolean;
+  is_secret?: boolean;
+  has_value?: boolean;
 }
 
 export interface SettingGroup {

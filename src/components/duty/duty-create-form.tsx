@@ -234,7 +234,7 @@ export function DutyCreateForm({
             required_hours: 8,
             mandatory_check_in_time: "",
             notes: "",
-            status: "pending"
+            status: "approved"
         },
         mode: "onBlur"
     })

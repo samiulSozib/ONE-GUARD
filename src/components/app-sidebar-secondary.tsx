@@ -25,6 +25,7 @@ import {
   UserPlus,
   Users,
   Wallet,
+  FileSpreadsheet,
 } from "lucide-react"
 
 import Link from "next/link"
@@ -177,6 +178,11 @@ const navGroups = [
         title: "Time & Attendance",
         url: "/duty-attendance",
         icon: UserCheck,
+      },
+      {
+        title: "Timesheet",
+        url: "/timesheet",
+        icon: FileSpreadsheet,
       },
       {
         title: "Patrol Visits",

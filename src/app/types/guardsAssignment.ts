@@ -1,10 +1,12 @@
+import type { GuardAssignmentStatus } from './guardAssignment';
+
 export interface GuardAssignment {
   id: number;
   guard_id: number;
   duty_id: number;
   start_date: string;
   end_date: string;
-  status?: 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
+  status?: GuardAssignmentStatus | string;
   notes?: string;
   is_active?: boolean;
   created_at: string;

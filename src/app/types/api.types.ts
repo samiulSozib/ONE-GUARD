@@ -28,7 +28,10 @@ export interface User {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
+  deleted_at?: string | null;
+  roles?: string[];
+  permissions?: string[];
+  is_super_admin?: boolean;
 }
 
 export interface LoginResponse {

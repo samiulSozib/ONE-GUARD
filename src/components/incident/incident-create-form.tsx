@@ -34,6 +34,11 @@ import SweetAlertService from "@/lib/sweetAlert"
 import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
+import { EntityFieldWithCreate } from "../shared/entity-field-with-create"
+import { CreateSiteWithClientForm } from "@/components/clients/create-site-with-client-form"
+import { SiteLocationCreateForm } from "@/components/site-location/site-location-create-form"
+import { ClientCreateForm } from "@/components/clients/client-create-form"
+import { GuardCreateForm } from "@/components/guard/guard-create-form"
 import { Input } from "@/components/ui/input"
 
 // Incident type options
@@ -162,6 +167,10 @@ export function IncidentCreateForm({
     const [siteSearch, setSiteSearch] = useState("")
     const [clientSearch, setClientSearch] = useState("")
     const [guardSearch, setGuardSearch] = useState("")
+    const [siteCreateOpen, setSiteCreateOpen] = useState(false)
+    const [locationCreateOpen, setLocationCreateOpen] = useState(false)
+    const [clientCreateOpen, setClientCreateOpen] = useState(false)
+    const [guardCreateOpen, setGuardCreateOpen] = useState(false)
 
     // Date and time states
     const [incidentDate, setIncidentDate] = useState<Date | undefined>(new Date())
@@ -446,6 +455,7 @@ export function IncidentCreateForm({
         }))
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
                 {trigger}
@@ -471,173 +481,166 @@ export function IncidentCreateForm({
 
                     {/* First Row: Site, Site Location, Client - 3 columns */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Site */}
-                        <div className="space-y-2">
-                            <Label htmlFor="site" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Site *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.site_id || ""}
-                                onValueChange={(value) => {
+                        <EntityFieldWithCreate
+                            label="Site"
+                            required
+                            error={errors.site_id?.message}
+                            createTitle="Create new site"
+                            onCreateClick={() => setSiteCreateOpen(true)}
+                            dropdownProps={{
+                                value: formValues.site_id || "",
+                                onValueChange: (value) => {
                                     setValue("site_id", Number(value), { shouldValidate: true })
-                                }}
-                                options={sites.map((site: Site) => ({
+                                },
+                                options: sites.map((site: Site) => ({
                                     value: site.id,
                                     label: site.site_name || site.title || `Site ${site.id}`,
                                     ...site
-                                }))}
-                                onSearch={(search) => {
+                                })),
+                                onSearch: (search) => {
                                     setSiteSearch(search)
                                     dispatch(fetchSites({
                                         page: 1,
                                         per_page: 10,
                                         search: search
                                     }))
-                                }}
-                                placeholder="Select site"
-                                disabled={isLoading || sitesLoading}
-                                isLoading={sitesLoading}
-                                emptyMessage={siteSearch ? "No sites found" : "No sites available"}
-                                searchPlaceholder="Search sites..."
-                                icon={Building}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
+                                },
+                                placeholder: "Select site",
+                                disabled: isLoading || sitesLoading,
+                                isLoading: sitesLoading,
+                                emptyMessage: siteSearch ? "No sites found" : "No sites available",
+                                searchPlaceholder: "Search sites...",
+                                icon: Building,
+                                iconPosition: "left",
+                                displayValue: (value, options) => {
                                     if (!value) return "Select site"
                                     const option = options.find(opt => opt.value === value)
                                     return option?.label || "Select site"
-                                }}
-                            />
-                            {errors.site_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.site_id.message}</p>
-                            )}
-                        </div>
+                                },
+                            }}
+                        />
 
-                        {/* Site Location - Now properly fetched by site_id */}
-                        <div className="space-y-2">
-                            <Label htmlFor="site_location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Site Location *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.site_location_id || ""}
-                                onValueChange={(value) => {
+                        <EntityFieldWithCreate
+                            label="Site Location"
+                            required
+                            error={errors.site_location_id?.message}
+                            createTitle="Create new location"
+                            createDisabled={!selectedSiteId}
+                            onCreateClick={() => setLocationCreateOpen(true)}
+                            dropdownProps={{
+                                value: formValues.site_location_id || "",
+                                onValueChange: (value) => {
                                     setValue(
                                         "site_location_id",
                                         value ? Number(value) : null,
                                         { shouldValidate: true }
                                     )
-                                }}
-                                options={locationOptions}
-                                onSearch={(search) => {
+                                },
+                                options: locationOptions,
+                                onSearch: (search) => {
                                     setLocationSearch(search)
-                                }}
-                                placeholder="Select location"
-                                disabled={isLoading || !selectedSiteId || locationsLoading}
-                                isLoading={locationsLoading}
-                                emptyMessage={!selectedSiteId 
-                                    ? "Select a site first" 
-                                    : locationSearch 
-                                        ? "No locations found" 
-                                        : "No locations available"
-                                }
-                                searchPlaceholder="Search locations..."
-                                icon={Building}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
+                                },
+                                placeholder: "Select location",
+                                disabled: isLoading || !selectedSiteId || locationsLoading,
+                                isLoading: locationsLoading,
+                                emptyMessage: !selectedSiteId
+                                    ? "Select a site first"
+                                    : locationSearch
+                                        ? "No locations found"
+                                        : "No locations available",
+                                searchPlaceholder: "Search locations...",
+                                icon: Building,
+                                iconPosition: "left",
+                                displayValue: (value, options) => {
                                     if (!value) return "Select location"
                                     const option = options.find(opt => opt.value === value)
                                     return option?.label || "Select location"
-                                }}
-                            />
-                            {errors.site_location_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.site_location_id.message}</p>
-                            )}
-                        </div>
+                                },
+                            }}
+                        />
 
-                        {/* Client */}
-                        <div className="space-y-2">
-                            <Label htmlFor="client" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Client *
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.client_id || ""}
-                                onValueChange={(value) => {
+                        <EntityFieldWithCreate
+                            label="Client"
+                            required
+                            error={errors.client_id?.message}
+                            createTitle="Create new client"
+                            onCreateClick={() => setClientCreateOpen(true)}
+                            dropdownProps={{
+                                value: formValues.client_id || "",
+                                onValueChange: (value) => {
                                     setValue("client_id", Number(value), { shouldValidate: true })
-                                }}
-                                options={clients.map((client: Client) => ({
+                                },
+                                options: clients.map((client: Client) => ({
                                     value: client.id,
                                     label: `${client.full_name} (${client.client_code})`,
                                     ...client
-                                }))}
-                                onSearch={(search) => {
+                                })),
+                                onSearch: (search) => {
                                     setClientSearch(search)
                                     dispatch(fetchClients({
                                         page: 1,
                                         per_page: 10,
                                         search: search
                                     }))
-                                }}
-                                placeholder="Select client"
-                                disabled={isLoading || clientsLoading}
-                                isLoading={clientsLoading}
-                                emptyMessage={clientSearch ? "No clients found" : "No clients available"}
-                                searchPlaceholder="Search clients..."
-                                icon={Users}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
+                                },
+                                placeholder: "Select client",
+                                disabled: isLoading || clientsLoading,
+                                isLoading: clientsLoading,
+                                emptyMessage: clientSearch ? "No clients found" : "No clients available",
+                                searchPlaceholder: "Search clients...",
+                                icon: Users,
+                                iconPosition: "left",
+                                displayValue: (value, options) => {
                                     if (!value) return "Select client"
                                     const option = options.find(opt => opt.value === value)
                                     return option?.label || "Select client"
-                                }}
-                            />
-                            {errors.client_id && (
-                                <p className="text-sm text-red-500 mt-1">{errors.client_id.message}</p>
-                            )}
-                        </div>
+                                },
+                            }}
+                        />
                     </div>
 
                     {/* Second Row: Guard, Reporter Type, Reporter ID - 3 columns */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Guard */}
-                        <div className="space-y-2">
-                            <Label htmlFor="guard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Guard (Optional)
-                            </Label>
-                            <SearchableDropdownWithIcon
-                                value={formValues.guard_id || ""}
-                                onValueChange={(value) => {
+                        <EntityFieldWithCreate
+                            label="Guard (Optional)"
+                            createTitle="Create new guard"
+                            onCreateClick={() => setGuardCreateOpen(true)}
+                            dropdownProps={{
+                                value: formValues.guard_id || "",
+                                onValueChange: (value) => {
                                     setValue(
                                         "guard_id",
                                         value ? Number(value) : null,
                                         { shouldValidate: true }
                                     )
-                                }}
-                                options={guards.map((guard: Guard) => ({
+                                },
+                                options: guards.map((guard: Guard) => ({
                                     value: guard.id,
                                     label: `${guard.full_name} (${guard.guard_code})`,
                                     ...guard
-                                }))}
-                                onSearch={(search) => {
+                                })),
+                                onSearch: (search) => {
                                     setGuardSearch(search)
                                     dispatch(fetchGuards({
                                         page: 1,
                                         per_page: 10,
                                         search: search
                                     }))
-                                }}
-                                placeholder="Select guard"
-                                disabled={isLoading || guardsLoading}
-                                isLoading={guardsLoading}
-                                emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                searchPlaceholder="Search guards..."
-                                icon={User}
-                                iconPosition="left"
-                                displayValue={(value, options) => {
+                                },
+                                placeholder: "Select guard",
+                                disabled: isLoading || guardsLoading,
+                                isLoading: guardsLoading,
+                                emptyMessage: guardSearch ? "No guards found" : "No guards available",
+                                searchPlaceholder: "Search guards...",
+                                icon: User,
+                                iconPosition: "left",
+                                displayValue: (value, options) => {
                                     if (!value) return "Select guard (optional)"
                                     const option = options.find(opt => opt.value === value)
                                     return option?.label || "Select guard"
-                                }}
-                            />
-                        </div>
+                                },
+                            }}
+                        />
 
                         {/* Reporter Type */}
                         <div className="space-y-2">
@@ -917,5 +920,60 @@ export function IncidentCreateForm({
                 </form>
             </DialogContent>
         </Dialog>
+
+        <CreateSiteWithClientForm
+            trigger={<div />}
+            isOpen={siteCreateOpen}
+            onOpenChange={setSiteCreateOpen}
+            onSuccess={(site) => {
+                dispatch(fetchSites({ page: 1, per_page: 100 }))
+                if (site?.id) {
+                    setValue("site_id", site.id, { shouldValidate: true })
+                }
+                setSiteCreateOpen(false)
+            }}
+        />
+
+        {formValues.site_id ? (
+            <SiteLocationCreateForm
+                trigger={<div />}
+                siteId={formValues.site_id}
+                siteName={selectedSite?.site_name || selectedSite?.title}
+                isOpen={locationCreateOpen}
+                onOpenChange={setLocationCreateOpen}
+                onSuccess={(location) => {
+                    dispatch(fetchSiteLocations({
+                        page: 1,
+                        per_page: 100,
+                        site_id: formValues.site_id,
+                    }))
+                    if (location?.id) {
+                        setValue("site_location_id", location.id, { shouldValidate: true })
+                    }
+                    setLocationCreateOpen(false)
+                }}
+            />
+        ) : null}
+
+        <ClientCreateForm
+            trigger={<div />}
+            isOpen={clientCreateOpen}
+            onOpenChange={setClientCreateOpen}
+            onSuccess={() => {
+                dispatch(fetchClients({ page: 1, per_page: 100 }))
+                setClientCreateOpen(false)
+            }}
+        />
+
+        <GuardCreateForm
+            trigger={<div />}
+            isOpen={guardCreateOpen}
+            onOpenChange={setGuardCreateOpen}
+            onSuccess={() => {
+                dispatch(fetchGuards({ page: 1, per_page: 100 }))
+                setGuardCreateOpen(false)
+            }}
+        />
+        </>
     )
 }

@@ -26,31 +26,42 @@ import {
 import { format } from "date-fns";
 import {
   Building,
-  CalendarIcon,
   CheckCircle,
   Clock,
   DownloadIcon,
   EllipsisVertical,
   File,
+  FileSpreadsheet,
+  FileText,
   ListFilter,
+  Loader2,
   MapPin,
   Pencil,
   Search,
   Shield,
   Trash2,
   User,
+  X,
   XCircle
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Calendar } from "../ui/calender";
 import { Checkbox } from "../ui/checkbox";
-import { FloatingLabelInput } from "../ui/floating-input";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 // Redux
-import { DutyAttendance, DutyAttendanceParams } from "@/app/types/dutyAttendance";
+import {
+  DutyAttendance,
+  DutyAttendanceExportFormat,
+  DutyAttendanceParams,
+} from "@/app/types/dutyAttendance";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import {
@@ -58,6 +69,8 @@ import {
   fetchAttendances,
   toggleAttendanceStatus,
 } from "@/store/slices/dutyAttendenceSlice";
+import { dutyAttendanceService } from "@/service/dutyAttendence.service";
+import ShiftEntitySearchSelect from "@/components/shift-operations/shift-entity-search-select";
 
 // Components
 import SweetAlertService from "@/lib/sweetAlert";
@@ -88,9 +101,16 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
   // Redux state
   const { attendences, pagination, isLoading, error } = useAppSelector((state) => state.dutyAttendance);
 
-  // Local state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [guardSearch, setGuardSearch] = useState("");
+  // Draft filters
+  const [searchInput, setSearchInput] = useState("");
+  const [guardId, setGuardId] = useState("");
+  const [siteId, setSiteId] = useState("");
+  const [status, setStatus] = useState("all");
+  const [attendanceState, setAttendanceState] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [exporting, setExporting] = useState<DutyAttendanceExportFormat | null>(null);
+
   const [filters, setFilters] = useState<DutyAttendanceParams>({
     page: 1,
     per_page: 10,
@@ -101,88 +121,46 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAttendance, setSelectedAttendance] = useState<DutyAttendance | null>(null);
 
-  // Date filter state
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const buildFetchParams = (next: DutyAttendanceParams = filters): DutyAttendanceParams => ({
+    ...next,
+    include_guard: true,
+    include_duty: true,
+    include_site: true,
+    include_site_location: true,
+  });
 
-  // Fetch attendances on mount and filter changes
   useEffect(() => {
-    const fetchParams = {
-      ...filters,
-      search: searchTerm || undefined,
-      include_guard: true,
-      include_duty: true,
-      include_site: true,
-      include_site_location: true,
-    };
+    dispatch(fetchAttendances(buildFetchParams(filters)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, filters]);
 
-    dispatch(fetchAttendances(fetchParams));
-  }, [dispatch, filters, searchTerm]);
-
-  // Handle search
-  const handleGuardSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setGuardSearch(e.target.value);
-  };
-
-  const handleGuardSearchSubmit = () => {
-    setSearchTerm(guardSearch);
-    setFilters(prev => ({ ...prev, page: 1 }));
-  };
-
-  // Handle filter changes
-  const handleStatusFilter = (status: DutyAttendanceParams['status']) => {
-    setFilters(prev => ({
-      ...prev,
+  const handleApplyFilters = () => {
+    setFilters({
       page: 1,
-      status: status === prev.status ? undefined : status
-    }));
+      per_page: 10,
+      search: searchInput.trim() || undefined,
+      guard_id: guardId ? Number(guardId) : undefined,
+      site_id: siteId ? Number(siteId) : undefined,
+      status: status === "all" ? undefined : status,
+      attendance_state: attendanceState === "all" ? undefined : attendanceState,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    });
   };
 
-  const handleGuardFilter = (guardId: number | undefined) => {
-    setFilters(prev => ({
-      ...prev,
-      page: 1,
-      guard_id: guardId
-    }));
-  };
-
-  const handleDutyFilter = (dutyId: number | undefined) => {
-    setFilters(prev => ({
-      ...prev,
-      page: 1,
-      duty_id: dutyId
-    }));
-  };
-
-  // Handle date filter
-  const handleDateChange = (date: Date | undefined) => {
-    setDateFilter(date);
-
-    if (date) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      setFilters(prev => ({
-        ...prev,
-        page: 1,
-        start_date: formattedDate,
-        end_date: formattedDate,
-      }));
-    } else {
-      setFilters(prev => {
-        const { ...rest } = prev;
-        return { ...rest, page: 1 };
-      });
-    }
-  };
-
-  // Clear all filters
   const handleClearFilters = () => {
-    setSearchTerm("");
-    setGuardSearch("");
-    setDateFilter(undefined);
+    setSearchInput("");
+    setGuardId("");
+    setSiteId("");
+    setStatus("all");
+    setAttendanceState("all");
+    setDateFrom("");
+    setDateTo("");
+    setSelectedAttendances([]);
     setFilters({
       page: 1,
       per_page: 10,
     });
-    setSelectedAttendances([]);
   };
 
   // Handle attendance selection
@@ -226,7 +204,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
         setAttendanceToDelete(null);
 
         // Refresh list
-        dispatch(fetchAttendances(filters));
+        dispatch(fetchAttendances(buildFetchParams(filters)));
       } catch (error) {
         SweetAlertService.error(
           'Delete Failed',
@@ -324,12 +302,24 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
     setFilters(prev => ({ ...prev, page }));
   };
 
-  // Export functionality
-  const handleExport = () => {
-    SweetAlertService.info(
-      'Export Feature',
-      'Export functionality will be implemented soon.'
-    );
+  const handleExport = async (format: DutyAttendanceExportFormat) => {
+    try {
+      setExporting(format);
+      await dutyAttendanceService.exportAttendances(format, {
+        search: filters.search,
+        guard_id: filters.guard_id,
+        site_id: filters.site_id,
+        status: filters.status,
+        attendance_state: filters.attendance_state,
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+      });
+      SweetAlertService.success("Exported", `Attendance ${format.toUpperCase()} downloaded.`);
+    } catch (e: any) {
+      SweetAlertService.error("Export failed", e?.message || "Could not export attendance.");
+    } finally {
+      setExporting(null);
+    }
   };
 
   // Loading skeleton
@@ -364,13 +354,25 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
             Filters
           </CardTitle>
 
-          <CardTitle
-            className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80"
-            onClick={handleExport}
-          >
-            <DownloadIcon size="14px" />
-            Export
-          </CardTitle>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <CardTitle className="text-sm flex items-center gap-1 dark:text-black cursor-pointer hover:opacity-80">
+                {exporting ? <Loader2 size="14px" className="animate-spin" /> : <DownloadIcon size="14px" />}
+                Export
+              </CardTitle>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => handleExport("csv")} disabled={!!exporting}>
+                <DownloadIcon className="mr-2 h-4 w-4" /> CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("excel")} disabled={!!exporting}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                <FileText className="mr-2 h-4 w-4" /> PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <CardTitle className="text-sm flex items-center gap-1 dark:text-black">
             <Checkbox
@@ -385,53 +387,69 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
 
         <CardContent className="p-0">
           {/* Filters Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 border-b px-4 pb-3">
-            {/* Guard Search Input */}
-            <div className="sm:col-span-4">
-              <InputGroup>
-                <InputGroupInput
-                  placeholder="Search by officer name..."
-                  value={guardSearch}
-                  onChange={handleGuardSearch}
-                  onKeyDown={(e) => e.key === 'Enter' && handleGuardSearchSubmit()}
-                />
-                <InputGroupAddon onClick={handleGuardSearchSubmit} className="cursor-pointer">
-                  <Search />
-                </InputGroupAddon>
-              </InputGroup>
+          <div className="grid grid-cols-1 gap-3 border-b px-4 pb-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Search</label>
+              <Input
+                placeholder="Officer, duty, site, remarks..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
+              />
             </div>
-
-            {/* Duty Filter */}
-            <div className="sm:col-span-4">
-              <InputGroup>
-                <InputGroupInput placeholder="Duty Title" />
-                <InputGroupAddon>
-                  <Shield />
-                </InputGroupAddon>
-              </InputGroup>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Guard</label>
+              <ShiftEntitySearchSelect field="guard_id" value={guardId} onChange={setGuardId} />
             </div>
-
-            {/* Date Filter */}
-            <div className="sm:col-span-4">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FloatingLabelInput
-                    className="text-start h-9"
-                    label="Attendance Date"
-                    value={dateFilter ? format(dateFilter, "MM/dd/yyyy") : ""}
-                    readOnly
-                    postfixIcon={<CalendarIcon />}
-                  />
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateFilter}
-                    onSelect={handleDateChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Site</label>
+              <ShiftEntitySearchSelect field="site_id" value={siteId} onChange={setSiteId} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Status</label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Attendance state</label>
+              <Select value={attendanceState} onValueChange={setAttendanceState}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All states" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All states</SelectItem>
+                  <SelectItem value="not_checked_in">Not checked in</SelectItem>
+                  <SelectItem value="checked_in">Checked in</SelectItem>
+                  <SelectItem value="checked_out">Checked out</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Date from</label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Date to</label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
+            <div className="flex flex-wrap items-end gap-2 sm:col-span-2 xl:col-span-1">
+              <Button onClick={handleApplyFilters} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                Search
+              </Button>
+              <Button variant="outline" onClick={handleClearFilters} disabled={isLoading}>
+                <X className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
             </div>
           </div>
 
@@ -463,7 +481,7 @@ export function DutyAttendanceDataTable({ onAddClick, onViewClick }: DutyAttenda
                           No attendance records found
                         </h3>
                         <p className="text-gray-500 mb-4">
-                          {searchTerm || Object.keys(filters).length > 2
+                          {filters.search || filters.guard_id || filters.site_id || filters.date_from || filters.status
                             ? "Try adjusting your search or filters"
                             : "Get started by creating a new attendance record"}
                         </p>

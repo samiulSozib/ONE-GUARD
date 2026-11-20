@@ -66,6 +66,8 @@ interface GuardAssignmentCreateFormProps {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
+  /** Prefill single-assignment duty when opened from Shift List */
+  preSelectedDutyId?: number;
 }
 
 // Single assignment schema
@@ -105,7 +107,8 @@ export function GuardAssignmentCreateForm({
   trigger,
   isOpen,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  preSelectedDutyId,
 }: GuardAssignmentCreateFormProps) {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
@@ -172,6 +175,13 @@ export function GuardAssignmentCreateForm({
   const bulkFormValues = watchBulk();
 
   // ---- Single Assignment Effects ----
+
+  useEffect(() => {
+    if (isOpen && preSelectedDutyId) {
+      setActiveTab("single");
+      setSingleValue("duty_id", preSelectedDutyId, { shouldValidate: true });
+    }
+  }, [isOpen, preSelectedDutyId, setSingleValue]);
 
   useEffect(() => {
     if (isOpen) {

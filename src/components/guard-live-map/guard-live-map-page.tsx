@@ -10,8 +10,12 @@ import {
   History,
   LocateFixed,
   MapPin,
+  Maximize2,
   Navigation,
+  PanelRightClose,
+  PanelRightOpen,
   RefreshCw,
+  ScanSearch,
   Search,
   ShieldCheck,
   Signal,
@@ -20,6 +24,7 @@ import {
   UserX,
   Wifi,
 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 
@@ -28,11 +33,23 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 import type {
   LiveGuard,
@@ -56,6 +73,9 @@ type GuardFilter =
   | "on_duty"
   | "outside"
   | "moving"
+  | "not_checked_in"
+  | "no_show"
+  | "missing_check_out"
 
 type PanelTab =
   | "overview"
@@ -197,6 +217,43 @@ const formatDateTime = (
   return date.toLocaleString()
 }
 
+/** Attendance / geofence live pin state for map markers. */
+const getAttendanceOperationalStatus = (
+  guard: LiveGuard
+): string | null => {
+  const assignment = guard.current_assignment
+  if (!assignment) return null
+
+  const now = Date.now()
+  const startMs = assignment.start_time
+    ? new Date(assignment.start_time).getTime()
+    : NaN
+  const endMs = assignment.end_time
+    ? new Date(assignment.end_time).getTime()
+    : NaN
+
+  const started = Number.isFinite(startMs) && now >= startMs
+  const ended = Number.isFinite(endMs) && now > endMs
+  const checkIn =
+    guard.attendance?.check_in_time ?? null
+  const checkOut =
+    guard.attendance?.check_out_time ?? null
+  const attended = Boolean(checkIn)
+
+  if (checkOut) return "checked_out"
+  if (attended && ended) return "missing_check_out"
+  if (
+    attended &&
+    guard.location?.duty_location_match === false
+  ) {
+    return "outside"
+  }
+  if (attended) return "on_duty"
+  if (ended) return "no_show"
+  if (started) return "not_checked_in_after_start"
+  return null
+}
+
 const getGuardVisualState = (
   guard: LiveGuard,
   selected: boolean
@@ -209,11 +266,38 @@ const getGuardVisualState = (
     }
   }
 
-  if (guard.online_status !== "online") {
+  const attendanceStatus =
+    getAttendanceOperationalStatus(guard)
+
+  if (attendanceStatus === "outside") {
     return {
-      color: "#64748b",
-      soft: "#e2e8f0",
-      label: "Offline",
+      color: "#dc2626",
+      soft: "#fee2e2",
+      label: "Outside",
+    }
+  }
+
+  if (attendanceStatus === "no_show") {
+    return {
+      color: "#b91c1c",
+      soft: "#fee2e2",
+      label: "No show",
+    }
+  }
+
+  if (attendanceStatus === "missing_check_out") {
+    return {
+      color: "#ea580c",
+      soft: "#ffedd5",
+      label: "Missing out",
+    }
+  }
+
+  if (attendanceStatus === "not_checked_in_after_start") {
+    return {
+      color: "#d97706",
+      soft: "#fef3c7",
+      label: "No check-in",
     }
   }
 
@@ -225,6 +309,22 @@ const getGuardVisualState = (
       color: "#dc2626",
       soft: "#fee2e2",
       label: "Outside",
+    }
+  }
+
+  if (guard.online_status !== "online") {
+    return {
+      color: "#64748b",
+      soft: "#e2e8f0",
+      label: "Offline",
+    }
+  }
+
+  if (attendanceStatus === "on_duty") {
+    return {
+      color: "#059669",
+      soft: "#d1fae5",
+      label: "On duty",
     }
   }
 
@@ -269,12 +369,18 @@ const buildGuardMarkerHtml = (
         ?.distance_from_duty_meters
     )
 
+  const visualLabel = visual.label
+
   const assignmentText =
-    guard.online_status === "online"
-      ? guard.current_assignment
-        ? "On duty"
-        : "Online"
-      : "Offline"
+    visualLabel !== "Selected" &&
+      visualLabel !== "Online" &&
+      visualLabel !== "Offline"
+      ? visualLabel
+      : guard.online_status === "online"
+        ? guard.current_assignment
+          ? "On duty"
+          : "Online"
+        : "Offline"
 
   const distanceText =
     guard.current_assignment &&
@@ -289,9 +395,13 @@ const buildGuardMarkerHtml = (
       ""
 
   const warning =
-    guard.current_assignment &&
-    guard.location
-      ?.duty_location_match === false
+    visualLabel === "Outside" ||
+    visualLabel === "No show" ||
+    visualLabel === "No check-in" ||
+    visualLabel === "Missing out" ||
+    (guard.current_assignment &&
+      guard.location
+        ?.duty_location_match === false)
 
   const moving =
     guard.location?.is_moving === true
@@ -621,11 +731,23 @@ export default function GuardLiveMapPage() {
   const { isConnected } =
     useSocket()
 
+  const searchParams =
+    useSearchParams()
+
   const [filter, setFilter] =
     useState<GuardFilter>("all")
 
   const [search, setSearch] =
     useState("")
+
+  const [siteFilter, setSiteFilter] =
+    useState<string>("all")
+
+  const [followSelected, setFollowSelected] =
+    useState(false)
+
+  const [panelCollapsed, setPanelCollapsed] =
+    useState(false)
 
   const [mapLoaded, setMapLoaded] =
     useState(false)
@@ -669,6 +791,9 @@ export default function GuardLiveMapPage() {
   const hasAutoPositionedRef =
     useRef(false)
 
+  const deepLinkAppliedRef =
+    useRef(false)
+
   useEffect(() => {
     dispatch(
       fetchLiveGuards({
@@ -676,6 +801,66 @@ export default function GuardLiveMapPage() {
       })
     )
   }, [dispatch])
+
+  // Deep link: ?guardId=&filter=
+  useEffect(() => {
+    const filterParam =
+      searchParams.get("filter")
+
+    if (
+      filterParam &&
+      [
+        "all",
+        "online",
+        "offline",
+        "on_duty",
+        "outside",
+        "moving",
+        "not_checked_in",
+        "no_show",
+        "missing_check_out",
+      ].includes(filterParam)
+    ) {
+      setFilter(
+        filterParam as GuardFilter
+      )
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (
+      deepLinkAppliedRef.current ||
+      !guards.length
+    ) {
+      return
+    }
+
+    const guardIdParam =
+      searchParams.get("guardId")
+
+    if (!guardIdParam) {
+      return
+    }
+
+    const guardId = Number(guardIdParam)
+
+    if (!Number.isFinite(guardId)) {
+      return
+    }
+
+    const match = guards.find(
+      (guard) => guard.id === guardId
+    )
+
+    if (!match) {
+      return
+    }
+
+    dispatch(setSelectedGuard(match))
+    setPanelTab("overview")
+    setPanelCollapsed(false)
+    deepLinkAppliedRef.current = true
+  }, [guards, searchParams, dispatch])
 
   useEffect(() => {
     if (
@@ -774,6 +959,41 @@ export default function GuardLiveMapPage() {
     )
   }, [])
 
+  const siteOptions = useMemo(() => {
+    const map = new Map<
+      string,
+      string
+    >()
+
+    guards.forEach((guard) => {
+      const siteId =
+        guard.current_assignment?.site_id
+
+      const siteName =
+        guard.current_assignment
+          ?.site_name
+
+      if (
+        siteId != null &&
+        siteName
+      ) {
+        map.set(
+          String(siteId),
+          siteName
+        )
+      }
+    })
+
+    return Array.from(map.entries())
+      .map(([id, name]) => ({
+        id,
+        name,
+      }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      )
+  }, [guards])
+
   const filteredGuards =
     useMemo(() => {
       const normalizedSearch =
@@ -812,6 +1032,21 @@ export default function GuardLiveMapPage() {
             return false
           }
 
+          if (
+            siteFilter !== "all" &&
+            String(
+              guard.current_assignment
+                ?.site_id ?? ""
+            ) !== siteFilter
+          ) {
+            return false
+          }
+
+          const attendanceStatus =
+            getAttendanceOperationalStatus(
+              guard
+            )
+
           switch (filter) {
             case "online":
               return (
@@ -833,12 +1068,15 @@ export default function GuardLiveMapPage() {
 
             case "outside":
               return (
-                guard.current_assignment !==
-                null &&
-                guard.location !== null &&
-                guard.location
-                  .duty_location_match ===
-                false
+                attendanceStatus ===
+                "outside" ||
+                (guard.current_assignment !==
+                  null &&
+                  guard.location !==
+                  null &&
+                  guard.location
+                    .duty_location_match ===
+                  false)
               )
 
             case "moving":
@@ -846,6 +1084,24 @@ export default function GuardLiveMapPage() {
                 guard.location
                   ?.is_moving ===
                 true
+              )
+
+            case "not_checked_in":
+              return (
+                attendanceStatus ===
+                "not_checked_in_after_start"
+              )
+
+            case "no_show":
+              return (
+                attendanceStatus ===
+                "no_show"
+              )
+
+            case "missing_check_out":
+              return (
+                attendanceStatus ===
+                "missing_check_out"
               )
 
             default:
@@ -857,7 +1113,40 @@ export default function GuardLiveMapPage() {
       guards,
       filter,
       search,
+      siteFilter,
     ])
+
+  const attendanceCounts = useMemo(() => {
+    let notCheckedIn = 0
+    let noShow = 0
+    let missingCheckOut = 0
+
+    guards.forEach((guard) => {
+      const status =
+        getAttendanceOperationalStatus(
+          guard
+        )
+
+      if (
+        status ===
+        "not_checked_in_after_start"
+      ) {
+        notCheckedIn += 1
+      } else if (status === "no_show") {
+        noShow += 1
+      } else if (
+        status === "missing_check_out"
+      ) {
+        missingCheckOut += 1
+      }
+    })
+
+    return {
+      notCheckedIn,
+      noShow,
+      missingCheckOut,
+    }
+  }, [guards])
 
   const mappableGuards =
     useMemo(
@@ -1469,6 +1758,227 @@ export default function GuardLiveMapPage() {
       )
     }
 
+  const fitAllVisible = () => {
+    if (
+      !mapRef.current ||
+      !window.google?.maps
+    ) {
+      return
+    }
+
+    if (mappableGuards.length === 0) {
+      return
+    }
+
+    const bounds =
+      new window.google.maps.LatLngBounds()
+
+    mappableGuards.forEach((guard) => {
+      if (!guard.location) return
+
+      bounds.extend({
+        lat: Number(
+          guard.location.latitude
+        ),
+        lng: Number(
+          guard.location.longitude
+        ),
+      })
+
+      const geofence =
+        guard.current_assignment
+          ?.geofence
+
+      if (
+        mappableGuards.length <= 12 &&
+        geofence &&
+        hasValidCoordinates(
+          geofence.latitude,
+          geofence.longitude
+        )
+      ) {
+        bounds.extend({
+          lat: Number(
+            geofence.latitude
+          ),
+          lng: Number(
+            geofence.longitude
+          ),
+        })
+      }
+    })
+
+    mapRef.current.fitBounds(bounds, {
+      top: 80,
+      right: 80,
+      bottom: 80,
+      left: 80,
+    })
+
+    const zoom = mapRef.current.getZoom()
+
+    if (zoom && zoom > 16) {
+      mapRef.current.setZoom(16)
+    }
+  }
+
+  const jumpToSite = (
+    nextSiteId: string
+  ) => {
+    setSiteFilter(nextSiteId)
+
+    if (nextSiteId === "all") {
+      return
+    }
+
+    // Fit after filter applies on next paint
+    window.setTimeout(() => {
+      if (
+        !mapRef.current ||
+        !window.google?.maps
+      ) {
+        return
+      }
+
+      const siteGuards = guards.filter(
+        (guard) =>
+          String(
+            guard.current_assignment
+              ?.site_id ?? ""
+          ) === nextSiteId &&
+          guard.location &&
+          hasValidCoordinates(
+            guard.location.latitude,
+            guard.location.longitude
+          )
+      )
+
+      if (!siteGuards.length) {
+        const sample = guards.find(
+          (guard) =>
+            String(
+              guard.current_assignment
+                ?.site_id ?? ""
+            ) === nextSiteId
+        )
+
+        const geofence =
+          sample?.current_assignment
+            ?.geofence
+
+        if (
+          geofence &&
+          hasValidCoordinates(
+            geofence.latitude,
+            geofence.longitude
+          )
+        ) {
+          mapRef.current.setCenter({
+            lat: Number(
+              geofence.latitude
+            ),
+            lng: Number(
+              geofence.longitude
+            ),
+          })
+          mapRef.current.setZoom(14)
+        }
+
+        return
+      }
+
+      const bounds =
+        new window.google.maps.LatLngBounds()
+
+      siteGuards.forEach((guard) => {
+        if (!guard.location) return
+        bounds.extend({
+          lat: Number(
+            guard.location.latitude
+          ),
+          lng: Number(
+            guard.location.longitude
+          ),
+        })
+
+        const geofence =
+          guard.current_assignment
+            ?.geofence
+
+        if (
+          geofence &&
+          hasValidCoordinates(
+            geofence.latitude,
+            geofence.longitude
+          )
+        ) {
+          bounds.extend({
+            lat: Number(
+              geofence.latitude
+            ),
+            lng: Number(
+              geofence.longitude
+            ),
+          })
+        }
+      })
+
+      mapRef.current.fitBounds(
+        bounds,
+        {
+          top: 100,
+          right: 100,
+          bottom: 100,
+          left: 100,
+        }
+      )
+    }, 50)
+  }
+
+  // Follow selected guard on live location updates
+  useEffect(() => {
+    if (
+      !followSelected ||
+      !mapLoaded ||
+      !mapRef.current ||
+      !selectedGuardFromStore?.location
+    ) {
+      return
+    }
+
+    if (
+      !hasValidCoordinates(
+        selectedGuardFromStore.location
+          .latitude,
+        selectedGuardFromStore.location
+          .longitude
+      )
+    ) {
+      return
+    }
+
+    mapRef.current.panTo({
+      lat: Number(
+        selectedGuardFromStore.location
+          .latitude
+      ),
+      lng: Number(
+        selectedGuardFromStore.location
+          .longitude
+      ),
+    })
+  }, [
+    followSelected,
+    mapLoaded,
+    selectedGuardFromStore?.id,
+    selectedGuardFromStore?.location
+      ?.latitude,
+    selectedGuardFromStore?.location
+      ?.longitude,
+    selectedGuardFromStore?.location
+      ?.updated_at,
+  ])
+
   const openGoogleMaps = (
     guard: LiveGuard
   ) => {
@@ -1577,6 +2087,29 @@ export default function GuardLiveMapPage() {
       },
 
       {
+        key: "not_checked_in",
+        label: "No check-in",
+        count:
+          attendanceCounts.notCheckedIn,
+        dotClass: "bg-amber-500",
+      },
+
+      {
+        key: "no_show",
+        label: "No show",
+        count: attendanceCounts.noShow,
+        dotClass: "bg-red-600",
+      },
+
+      {
+        key: "missing_check_out",
+        label: "Missing check-out",
+        count:
+          attendanceCounts.missingCheckOut,
+        dotClass: "bg-orange-500",
+      },
+
+      {
         key: "outside",
         label: "Outside Geofence",
         count:
@@ -1636,6 +2169,26 @@ export default function GuardLiveMapPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() =>
+                setPanelCollapsed(
+                  (prev) => !prev
+                )
+              }
+              className="hidden xl:inline-flex"
+            >
+              {panelCollapsed ? (
+                <PanelRightOpen className="mr-2 h-4 w-4" />
+              ) : (
+                <PanelRightClose className="mr-2 h-4 w-4" />
+              )}
+              {panelCollapsed
+                ? "Show panel"
+                : "Hide panel"}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={refresh}
               disabled={isLoading}
             >
@@ -1661,6 +2214,10 @@ export default function GuardLiveMapPage() {
             title="Total Guards"
             value={totalGuards}
             iconClass="bg-blue-50 text-blue-700"
+            active={filter === "all"}
+            onClick={() =>
+              setFilter("all")
+            }
           />
 
           <MetricCard
@@ -1670,6 +2227,10 @@ export default function GuardLiveMapPage() {
             title="Online Now"
             value={totalOnline}
             iconClass="bg-emerald-50 text-emerald-700"
+            active={filter === "online"}
+            onClick={() =>
+              setFilter("online")
+            }
           />
 
           <MetricCard
@@ -1679,6 +2240,10 @@ export default function GuardLiveMapPage() {
             title="On Duty"
             value={totalOnDuty}
             iconClass="bg-blue-50 text-blue-700"
+            active={filter === "on_duty"}
+            onClick={() =>
+              setFilter("on_duty")
+            }
           />
 
           <MetricCard
@@ -1690,6 +2255,10 @@ export default function GuardLiveMapPage() {
               totalOutsideGeofence
             }
             iconClass="bg-red-50 text-red-600"
+            active={filter === "outside"}
+            onClick={() =>
+              setFilter("outside")
+            }
           />
 
           <MetricCard
@@ -1699,6 +2268,10 @@ export default function GuardLiveMapPage() {
             title="Offline"
             value={totalOffline}
             iconClass="bg-slate-100 text-slate-700"
+            active={filter === "offline"}
+            onClick={() =>
+              setFilter("offline")
+            }
           />
 
           <Card className="border-zinc-200 shadow-sm">
@@ -1800,22 +2373,54 @@ export default function GuardLiveMapPage() {
                 )}
               </div>
 
-              <div className="relative w-full xl:w-[360px]">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-
-                <Input
-                  value={search}
-                  onChange={(
-                    event
-                  ) =>
-                    setSearch(
-                      event.target
-                        .value
-                    )
+              <div className="flex w-full flex-col gap-2 sm:flex-row xl:w-auto xl:min-w-[420px]">
+                <Select
+                  value={siteFilter}
+                  onValueChange={
+                    jumpToSite
                   }
-                  placeholder="Search guard, ID or site..."
-                  className="h-9 bg-white pl-9"
-                />
+                >
+                  <SelectTrigger className="h-9 w-full bg-white sm:w-[200px]">
+                    <SelectValue placeholder="Jump to site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All sites
+                    </SelectItem>
+                    {siteOptions.map(
+                      (site) => (
+                        <SelectItem
+                          key={
+                            site.id
+                          }
+                          value={
+                            site.id
+                          }
+                        >
+                          {site.name}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <div className="relative w-full xl:w-[220px]">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+
+                  <Input
+                    value={search}
+                    onChange={(
+                      event
+                    ) =>
+                      setSearch(
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder="Search guard, ID or site..."
+                    className="h-9 bg-white pl-9"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -1827,9 +2432,15 @@ export default function GuardLiveMapPage() {
           </div>
         )}
 
-        <div className="grid min-h-[720px] gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
+        <div
+          className={`grid min-h-[720px] gap-4 ${
+            panelCollapsed
+              ? "xl:grid-cols-1"
+              : "xl:grid-cols-[minmax(0,1fr)_390px]"
+          }`}
+        >
           <Card className="relative overflow-hidden border-zinc-200 shadow-sm">
-            <div className="absolute left-3 top-3 z-30 rounded-xl border border-zinc-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
+            <div className="absolute left-3 top-3 z-30 max-w-[calc(100%-1.5rem)] rounded-xl border border-zinc-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
               <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-zinc-700">
                 <LegendDot
                   color="bg-emerald-500"
@@ -1837,8 +2448,18 @@ export default function GuardLiveMapPage() {
                 />
 
                 <LegendDot
+                  color="bg-amber-500"
+                  label="No check-in"
+                />
+
+                <LegendDot
                   color="bg-red-600"
-                  label="Outside Geofence"
+                  label="Outside / No show"
+                />
+
+                <LegendDot
+                  color="bg-orange-500"
+                  label="Missing out"
                 />
 
                 <LegendDot
@@ -1855,26 +2476,86 @@ export default function GuardLiveMapPage() {
               </div>
             </div>
 
-            {selectedGuardFromStore?.location && (
-              <div className="absolute bottom-4 right-3 z-30">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  onClick={
-                    centerSelectedGuard
-                  }
-                  className="h-10 w-10 rounded-xl border bg-white shadow-md hover:bg-zinc-50"
-                >
-                  <Crosshair className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <div className="absolute bottom-4 right-3 z-30 flex flex-col gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={fitAllVisible}
+                    disabled={
+                      mappableGuards.length ===
+                      0
+                    }
+                    className="h-10 w-10 rounded-xl border bg-white shadow-md hover:bg-zinc-50"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  Fit all visible guards
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() =>
+                      setFollowSelected(
+                        (prev) => !prev
+                      )
+                    }
+                    disabled={
+                      !selectedGuardFromStore
+                    }
+                    className={`h-10 w-10 rounded-xl border shadow-md ${
+                      followSelected
+                        ? "border-[#a4081f] bg-[#a4081f] text-white hover:bg-[#8b071b]"
+                        : "bg-white hover:bg-zinc-50"
+                    }`}
+                  >
+                    <ScanSearch className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  {followSelected
+                    ? "Following selected guard"
+                    : "Follow selected guard"}
+                </TooltipContent>
+              </Tooltip>
+
+              {selectedGuardFromStore?.location && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={
+                        centerSelectedGuard
+                      }
+                      className="h-10 w-10 rounded-xl border bg-white shadow-md hover:bg-zinc-50"
+                    >
+                      <Crosshair className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    Recenter selected
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
 
             <div
               ref={
                 mapContainerRef
               }
-              className="h-[720px] w-full bg-zinc-100"
+              className={`w-full bg-zinc-100 ${
+                panelCollapsed
+                  ? "h-[820px]"
+                  : "h-[720px]"
+              }`}
             />
 
             {!mapLoaded &&
@@ -1917,7 +2598,11 @@ export default function GuardLiveMapPage() {
               )}
           </Card>
 
-          <Card className="overflow-hidden border-zinc-200 shadow-sm">
+          <Card
+            className={`overflow-hidden border-zinc-200 shadow-sm ${
+              panelCollapsed ? "hidden" : ""
+            }`}
+          >
             <CardContent className="h-full p-0">
               {selectedGuardFromStore ? (
                 <SelectedGuardPanel
@@ -2030,14 +2715,29 @@ function MetricCard({
   title,
   value,
   iconClass,
+  active,
+  onClick,
 }: {
   icon: ReactNode
   title: string
   value: number
   iconClass: string
+  active?: boolean
+  onClick?: () => void
 }) {
   return (
-    <Card className="border-zinc-200 shadow-sm">
+    <Card
+      className={`border-zinc-200 shadow-sm transition ${
+        onClick
+          ? "cursor-pointer hover:border-zinc-300 hover:bg-zinc-50/80"
+          : ""
+      } ${
+        active
+          ? "ring-2 ring-[#a4081f]/30 border-[#a4081f]/40"
+          : ""
+      }`}
+      onClick={onClick}
+    >
       <CardContent className="flex items-center gap-3 p-4">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClass}`}

@@ -73,7 +73,9 @@ import {
     updateAssignmentStatus,
     getStatusDisplay,
     getStatusColor,
+    getStatusBadgeVariant,
 } from '@/store/slices/guardAssignmentSlice';
+import type { GuardAssignmentStatus } from '@/app/types/guardAssignment';
 import {
     fetchAssignmentSummary,
     fetchAssignmentLogs,
@@ -84,33 +86,23 @@ import { GuardAssignmentEditForm } from '@/components/guard-assignment/guard-ass
 import { ReplaceGuardDialog } from '@/components/guard-assignment/replace-guard-dialog';
 import Swal from 'sweetalert2';
 
-// Define the status type
-type AssignmentStatus = 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
+const ALL_STATUSES: GuardAssignmentStatus[] = ['active', 'completed', 'cancelled', 'replaced'];
 
-// Status configuration - using the same config as data table
-const statusConfig: Record<AssignmentStatus, { label: string; color: string }> = {
-    assigned: { label: 'Assigned', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-    accepted: { label: 'Accepted', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-    checked_in: { label: 'Checked In', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
-    on_duty: { label: 'On Duty', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' },
-    completed: { label: 'Completed', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' },
-    late: { label: 'Late', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
-    no_show: { label: 'No Show', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
-    cancelled: { label: 'Cancelled', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
-    replaced: { label: 'Replaced', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' }
+const normalizeAssignmentStatus = (status: string | undefined): GuardAssignmentStatus => {
+    if (!status || status === 'assigned') return 'active';
+    return status as GuardAssignmentStatus;
 };
 
-// Status badge variants for different UI contexts
-const statusBadgeVariant: Record<AssignmentStatus, 'default' | 'destructive' | 'outline' | 'secondary' | 'success' | 'warning'> = {
-    assigned: 'default',
-    accepted: 'success',
-    checked_in: 'secondary',
-    on_duty: 'success',
-    completed: 'outline',
-    late: 'warning',
-    no_show: 'destructive',
-    cancelled: 'destructive',
-    replaced: 'secondary'
+const canChangeToStatus = (currentStatus: string, targetStatus: GuardAssignmentStatus): boolean => {
+    const current = normalizeAssignmentStatus(currentStatus);
+    if (current === targetStatus) return false;
+    const allowed: Record<string, GuardAssignmentStatus[]> = {
+        active: ['completed', 'cancelled', 'replaced'],
+        completed: ['active'],
+        cancelled: ['active'],
+        replaced: ['active'],
+    };
+    return (allowed[current] || ALL_STATUSES).includes(targetStatus);
 };
 
 // Profile Image Component with fallback
@@ -270,11 +262,12 @@ export default function GuardAssignmentViewPage() {
         }
     };
 
-    const handleStatusUpdate = async (newStatus: AssignmentStatus) => {
+    const handleStatusUpdate = async (newStatus: GuardAssignmentStatus) => {
         if (!currentAssignment) return;
 
         const statusDisplay = getStatusDisplay(newStatus);
-        const currentStatusDisplay = getStatusDisplay(currentAssignment.status as AssignmentStatus);
+        const normalizedCurrent = normalizeAssignmentStatus(currentAssignment.status);
+        const currentStatusDisplay = getStatusDisplay(normalizedCurrent);
 
         const result = await Swal.fire({
             title: `Update Status to ${statusDisplay}?`,
@@ -282,7 +275,7 @@ export default function GuardAssignmentViewPage() {
                 <div class="text-left">
                     <p class="mb-2">You are about to change the assignment status from:</p>
                     <div class="flex items-center justify-center gap-2 p-2 bg-gray-50 rounded-lg mb-2">
-                        <span class="px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(currentAssignment.status as AssignmentStatus)}">
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(normalizedCurrent)}">
                             ${currentStatusDisplay}
                         </span>
                         <span class="text-gray-400">→</span>
@@ -483,15 +476,14 @@ export default function GuardAssignmentViewPage() {
         };
     };
 
-    // Get available statuses (all except current)
     const getAvailableStatuses = () => {
         if (!currentAssignment?.status) return [];
-        const currentStatus = currentAssignment.status as AssignmentStatus;
-        return Object.entries(statusConfig)
-            .filter(([status]) => status !== currentStatus)
-            .map(([status, config]) => ({
-                status: status as AssignmentStatus,
-                ...config
+        return ALL_STATUSES
+            .filter((status) => canChangeToStatus(currentAssignment.status as string, status))
+            .map((status) => ({
+                status,
+                label: getStatusDisplay(status),
+                color: getStatusColor(status),
             }));
     };
 
@@ -547,7 +539,7 @@ export default function GuardAssignmentViewPage() {
         );
     }
 
-    const currentStatus = currentAssignment.status as AssignmentStatus;
+    const currentStatus = normalizeAssignmentStatus(currentAssignment.status);
     const availableStatuses = getAvailableStatuses();
     const siteTimezone = currentAssignment.duty?.site?.timezone || 'UTC';
     const timeDiff = getTimeDifference(siteTimezone);
@@ -685,7 +677,7 @@ export default function GuardAssignmentViewPage() {
                                     </CardDescription>
                                 </div>
                                 <Badge
-                                    variant={statusBadgeVariant[currentStatus] || 'default'}
+                                    variant={getStatusBadgeVariant(currentStatus) as 'default' | 'destructive' | 'outline' | 'secondary'}
                                     className="text-sm px-3 py-1"
                                 >
                                     {getStatusDisplay(currentStatus)}

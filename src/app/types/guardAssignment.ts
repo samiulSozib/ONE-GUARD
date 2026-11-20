@@ -3,15 +3,13 @@
 import { Duty } from "./duty";
 import { Guard } from "./guard";
 
-// Status type definition
+/**
+ * Stored assignment lifecycle (API / DB).
+ * Live check-in / on-duty / late are computed elsewhere (Shift List / Shift Ops).
+ */
 export type GuardAssignmentStatus =
-  | 'assigned'
-  | 'accepted'
-  | 'checked_in'
-  | 'on_duty'
+  | 'active'
   | 'completed'
-  | 'late'
-  | 'no_show'
   | 'cancelled'
   | 'replaced';
 
@@ -21,7 +19,7 @@ export interface GuardAssignment {
   duty_id: number;
   start_date: string;
   end_date: string;
-  status: GuardAssignmentStatus;
+  status: GuardAssignmentStatus | string;
   guard?: {
     id: number;
     user_id: number;
@@ -57,6 +55,7 @@ export interface GuardAssignmentParams {
   site_location_id?: number;
   date_from?: string;
   date_to?: string;
+  timing?: 'current' | 'upcoming' | 'past' | string;
 }
 
 export interface GuardAssignmentState {
@@ -74,19 +73,16 @@ export interface GuardAssignmentState {
   successMessage: string | null;
 }
 
-// Single assignment - only guard_id and duty_id are needed
 export interface CreateGuardAssignmentDto {
   guard_id: number;
   duty_id: number;
 }
 
-// Update assignment
 export interface UpdateGuardAssignmentDto {
   guard_id: number;
   duty_id: number;
 }
 
-// Bulk Schedule DTO
 export interface BulkScheduleDto {
   duty_schedule_id: number;
   guard_ids: number[];
@@ -111,20 +107,17 @@ export interface BulkScheduleResponse {
   }>;
 }
 
-// Replace Guard DTO
 export interface ReplaceGuardDto {
   assignment_id: number;
   replacement_guard_id: number;
   scope: 'this_duty' | 'this_and_future';
 }
 
-// Cancel Assignment DTO
 export interface CancelAssignmentDto {
   assignment_id: number;
   scope: 'this_duty' | 'this_and_future';
 }
 
-// Change Status DTO
 export interface ChangeAssignmentStatusDto {
   status: GuardAssignmentStatus;
 }

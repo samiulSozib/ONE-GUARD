@@ -27,7 +27,9 @@ import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { Client } from "@/app/types/client"
 import { Site } from "@/app/types/site"
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
+import { EntityFieldWithCreate } from "../shared/entity-field-with-create"
+import { ClientCreateForm } from "@/components/clients/client-create-form"
+import { CreateSiteWithClientForm } from "@/components/clients/create-site-with-client-form"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -37,7 +39,7 @@ interface ClientContractCreateFormProps {
     trigger: ReactNode
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
-    onSuccess?: () => void
+    onSuccess?: (contract?: any) => void
     preSelectedClient?: number
 }
 
@@ -110,6 +112,9 @@ export function ClientContractCreateForm({
 
     const [clientSearch, setClientSearch] = useState("")
     const [siteSearch, setSiteSearch] = useState("")
+    const [clientCreateOpen, setClientCreateOpen] = useState(false)
+    const [siteCreateOpen, setSiteCreateOpen] = useState(false)
+    const [siteCreateIndex, setSiteCreateIndex] = useState<number | null>(null)
 
     const [startDate, setStartDate] = useState<Date | undefined>(new Date())
     const [endDate, setEndDate] = useState<Date | undefined>()
@@ -294,7 +299,7 @@ export function ClientContractCreateForm({
                 setEffectiveDate(undefined)
                 setClientSearch("")
                 setSiteSearch("")
-                onSuccess?.()
+                onSuccess?.(result.payload)
                 onOpenChange?.(false)
             } else {
                 throw result.payload
@@ -377,6 +382,7 @@ export function ClientContractCreateForm({
     }
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
                 {trigger}
@@ -398,67 +404,47 @@ export function ClientContractCreateForm({
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Client *
-                                </Label>
-                                {/* <SearchableDropdownWithIcon
-                                    value={formValues.client_id?.toString() || ""}
-                                    onValueChange={(value) => {
-                                        setValue("client_id", Number(value))
-                                        // Clear validation error when field is filled
+                            <EntityFieldWithCreate
+                                label="Client"
+                                required
+                                error={validationErrors.client_id}
+                                createTitle="Create new client"
+                                onCreateClick={() => setClientCreateOpen(true)}
+                                dropdownProps={{
+                                    value: formValues.client_id || "",
+                                    onValueChange: (value) => {
+                                        setValue("client_id", Number(value), { shouldValidate: true })
                                         if (validationErrors.client_id) {
                                             setValidationErrors(prev => ({ ...prev, client_id: "" }))
                                         }
-                                    }}
-                                    options={clients?.map((client: Client) => ({
-                                        value: client.id,
-                                        label: `${client.company_name || client.full_name} (${client.client_code})`
-                                    })) || []}
-                                    onSearch={setClientSearch}
-                                    placeholder="Select client"
-                                    disabled={isLoading || clientsLoading || !!preSelectedClient}
-                                    isLoading={clientsLoading}
-                                    emptyMessage={clientSearch ? "No clients found" : "No clients available"}
-                                    searchPlaceholder="Search clients..."
-                                    icon={User}
-                                    iconPosition="left"
-                                /> */}
-                                <SearchableDropdownWithIcon
-                                    value={formValues.client_id || ""}
-                                    onValueChange={(value) => {
-                                        setValue("client_id", Number(value), { shouldValidate: true })
-                                    }}
-                                    options={clients.map((client: Client) => ({
+                                    },
+                                    options: clients.map((client: Client) => ({
                                         value: client.id,
                                         label: `${client.full_name} (${client.client_code})`,
                                         ...client
-                                    }))}
-                                    onSearch={(search) => {
+                                    })),
+                                    onSearch: (search) => {
                                         setClientSearch(search)
                                         dispatch(fetchClients({
                                             page: 1,
                                             per_page: 10,
                                             search: search
                                         }))
-                                    }}
-                                    placeholder="Select client"
-                                    disabled={isLoading || clientsLoading}
-                                    isLoading={clientsLoading}
-                                    emptyMessage={clientSearch ? "No clients found" : "No clients available"}
-                                    searchPlaceholder="Search clients..."
-                                    icon={Users}
-                                    iconPosition="left"
-                                    displayValue={(value, options) => {
+                                    },
+                                    placeholder: "Select client",
+                                    disabled: isLoading || clientsLoading || !!preSelectedClient,
+                                    isLoading: clientsLoading,
+                                    emptyMessage: clientSearch ? "No clients found" : "No clients available",
+                                    searchPlaceholder: "Search clients...",
+                                    icon: Users,
+                                    iconPosition: "left",
+                                    displayValue: (value, options) => {
                                         if (!value) return "Select client"
                                         const option = options.find(opt => opt.value === value)
                                         return option?.label || "Select client"
-                                    }}
-                                />
-                                {validationErrors.client_id && (
-                                    <p className="text-sm text-red-500 mt-1">{validationErrors.client_id}</p>
-                                )}
-                            </div>
+                                    },
+                                }}
+                            />
 
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -946,29 +932,41 @@ export function ClientContractCreateForm({
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2 md:col-span-2">
-                                            <Label className="text-sm font-medium">
-                                                Select Existing Site (Optional)
-                                            </Label>
-                                            <SearchableDropdownWithIcon
-                                                value={formValues.sites?.[index]?.site_id?.toString() || ""}
-                                                onValueChange={(value) => {
+                                        <EntityFieldWithCreate
+                                            className="md:col-span-2"
+                                            label="Select Existing Site (Optional)"
+                                            createTitle="Create new site"
+                                            onCreateClick={() => {
+                                                setSiteCreateIndex(index)
+                                                setSiteCreateOpen(true)
+                                            }}
+                                            dropdownProps={{
+                                                value: formValues.sites?.[index]?.site_id?.toString() || "",
+                                                onValueChange: (value) => {
                                                     setValue(`sites.${index}.site_id`, Number(value))
-                                                }}
-                                                options={sites?.map((site: Site) => ({
+                                                },
+                                                options: sites?.map((site: Site) => ({
                                                     value: site.id,
                                                     label: `${site.site_name} (${site.address || 'No address'})`
-                                                })) || []}
-                                                onSearch={setSiteSearch}
-                                                placeholder="Select existing site or create new"
-                                                disabled={isLoading || sitesLoading}
-                                                isLoading={sitesLoading}
-                                                emptyMessage={siteSearch ? "No sites found" : "No sites available"}
-                                                searchPlaceholder="Search sites..."
-                                                icon={Building}
-                                                iconPosition="left"
-                                            />
-                                        </div>
+                                                })) || [],
+                                                onSearch: (search) => {
+                                                    setSiteSearch(search)
+                                                    dispatch(fetchSites({
+                                                        page: 1,
+                                                        per_page: 10,
+                                                        is_active: true,
+                                                        search,
+                                                    }))
+                                                },
+                                                placeholder: "Select existing site or create new",
+                                                disabled: isLoading || sitesLoading,
+                                                isLoading: sitesLoading,
+                                                emptyMessage: siteSearch ? "No sites found" : "No sites available",
+                                                searchPlaceholder: "Search sites...",
+                                                icon: Building,
+                                                iconPosition: "left",
+                                            }}
+                                        />
 
                                         <div className="space-y-2">
                                             <Label className="text-sm font-medium">
@@ -1114,5 +1112,30 @@ export function ClientContractCreateForm({
                 </form>
             </DialogContent>
         </Dialog>
+
+        <ClientCreateForm
+            trigger={<div />}
+            isOpen={clientCreateOpen}
+            onOpenChange={setClientCreateOpen}
+            onSuccess={() => {
+                dispatch(fetchClients({ page: 1, per_page: 100 }))
+                setClientCreateOpen(false)
+            }}
+        />
+
+        <CreateSiteWithClientForm
+            trigger={<div />}
+            isOpen={siteCreateOpen}
+            onOpenChange={setSiteCreateOpen}
+            onSuccess={(site) => {
+                dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }))
+                if (site?.id && siteCreateIndex !== null) {
+                    setValue(`sites.${siteCreateIndex}.site_id`, site.id)
+                }
+                setSiteCreateOpen(false)
+                setSiteCreateIndex(null)
+            }}
+        />
+        </>
     )
 }

@@ -110,7 +110,7 @@ interface CreateSiteFormProps {
   trigger: React.ReactNode
   isOpen?: boolean
   onOpenChange?: (open: boolean) => void
-  onSuccess?: () => void
+  onSuccess?: (site?: any) => void
   clientId: number
 }
 
@@ -364,7 +364,7 @@ export function CreateSiteForm({
           `Site "${formData.site_name}" has been created successfully.`
         )
         resetForm()
-        onSuccess?.()
+        onSuccess?.(result.payload)
         setOpen(false)
       } else {
         throw result.payload

@@ -20,13 +20,25 @@ import { liveTrackingService } from "@/service/liveTracking.service"
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
-const normalizeGuard = (guard: LiveGuard): LiveGuard => {
+const normalizeGuard = (
+  guard: LiveGuard,
+  previous?: LiveGuard | null
+): LiveGuard => {
+  const attendance =
+    guard.attendance !== undefined
+      ? guard.attendance
+      : previous?.attendance ?? null
+
   if (!guard.current_assignment) {
-    return guard
+    return {
+      ...guard,
+      attendance,
+    }
   }
 
   return {
     ...guard,
+    attendance,
     current_assignment: {
       ...guard.current_assignment,
 

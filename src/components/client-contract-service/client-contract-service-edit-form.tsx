@@ -34,6 +34,10 @@ import SweetAlertService from "@/lib/sweetAlert";
 import { DialogActionFooter } from "../shared/dialog-action-footer";
 import { Switch } from "../ui/switch";
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon";
+import { EntityFieldWithCreate } from "../shared/entity-field-with-create";
+import { ClientContractCreateForm } from "@/components/client-contract/client-contract-create-form";
+import { CompanyServiceCreateForm } from "@/components/company-service/company-service-create-form";
+import { CompanyServiceBillingMethodCreateForm } from "@/components/company-service-billing-method/company-service-billing-method-create-form";
 import {
   Building,
   CreditCard,
@@ -200,6 +204,9 @@ export function ClientContractServiceEditForm({
   const [serviceSearch, setServiceSearch] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
   const [billingMethodSearch, setBillingMethodSearch] = useState("");
+  const [contractCreateOpen, setContractCreateOpen] = useState(false);
+  const [serviceCreateOpen, setServiceCreateOpen] = useState(false);
+  const [billingMethodCreateOpen, setBillingMethodCreateOpen] = useState(false);
 
   const {
     register,
@@ -541,6 +548,7 @@ export function ClientContractServiceEditForm({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         {trigger}
@@ -564,41 +572,40 @@ export function ClientContractServiceEditForm({
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Contract & Contract Site */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Contract *
-                </Label>
-                <SearchableDropdownWithIcon
-                  value={formValues.contract_id || ""}
-                  onValueChange={(value) => {
+              <EntityFieldWithCreate
+                label="Contract"
+                required
+                error={errors.contract_id?.message}
+                createTitle="Create contract"
+                onCreateClick={() => setContractCreateOpen(true)}
+                dropdownProps={{
+                  value: formValues.contract_id || "",
+                  onValueChange: (value) => {
                     const contractId = Number(value);
                     setValue("contract_id", contractId, { shouldValidate: true });
                     setValue("client_contract_site_id", 0);
-                  }}
-                  options={contracts.map((contract: ClientContract) => ({
+                  },
+                  options: contracts.map((contract: ClientContract) => ({
                     value: contract.id,
                     label: `${contract.contract_number} - ${contract.name}`,
                     ...contract
-                  }))}
-                  onSearch={(search) => {
+                  })),
+                  onSearch: (search) => {
                     setContractSearch(search);
                     dispatch(fetchContracts({
                       page: 1,
                       per_page: 10,
                       search: search
                     }));
-                  }}
-                  placeholder="Select contract"
-                  disabled={isLoading || isFetching}
-                  emptyMessage={contractSearch ? "No contracts found" : "No contracts available"}
-                  searchPlaceholder="Search contracts..."
-                  icon={FileText}
-                  iconPosition="left"
-                />
-                {errors.contract_id && (
-                  <p className="text-sm text-red-500 mt-1">{errors.contract_id.message}</p>
-                )}
-              </div>
+                  },
+                  placeholder: "Select contract",
+                  disabled: isLoading || isFetching,
+                  emptyMessage: contractSearch ? "No contracts found" : "No contracts available",
+                  searchPlaceholder: "Search contracts...",
+                  icon: FileText,
+                  iconPosition: "left",
+                }}
+              />
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -639,21 +646,23 @@ export function ClientContractServiceEditForm({
             </div>
 
             {/* Company Service */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Company Service *
-              </Label>
-              <SearchableDropdownWithIcon
-                value={formValues.company_service_id || ""}
-                onValueChange={(value) => {
+            <EntityFieldWithCreate
+              label="Company Service"
+              required
+              error={errors.company_service_id?.message}
+              createTitle="Create company service"
+              onCreateClick={() => setServiceCreateOpen(true)}
+              dropdownProps={{
+                value: formValues.company_service_id || "",
+                onValueChange: (value) => {
                   setValue("company_service_id", Number(value), { shouldValidate: true });
-                }}
-                options={companyServices.map((service: CompanyService) => ({
+                },
+                options: companyServices.map((service: CompanyService) => ({
                   value: service.id,
                   label: `${service.name} (${service.code})`,
                   ...service
-                }))}
-                onSearch={(search) => {
+                })),
+                onSearch: (search) => {
                   setServiceSearch(search);
                   dispatch(fetchCompanyServices({
                     page: 1,
@@ -661,36 +670,35 @@ export function ClientContractServiceEditForm({
                     is_active: true,
                     search: search
                   }));
-                }}
-                placeholder="Select service"
-                disabled={isLoading || isFetching}
-                emptyMessage={serviceSearch ? "No services found" : "No services available"}
-                searchPlaceholder="Search services..."
-                icon={Package}
-                iconPosition="left"
-              />
-              {errors.company_service_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.company_service_id.message}</p>
-              )}
-            </div>
+                },
+                placeholder: "Select service",
+                disabled: isLoading || isFetching,
+                emptyMessage: serviceSearch ? "No services found" : "No services available",
+                searchPlaceholder: "Search services...",
+                icon: Package,
+                iconPosition: "left",
+              }}
+            />
 
             {/* Billing & Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Billing Method *
-                </Label>
-                <SearchableDropdownWithIcon
-                  value={formValues.company_service_billing_method_id || ""}
-                  onValueChange={(value) => {
+              <EntityFieldWithCreate
+                label="Billing Method"
+                required
+                error={errors.company_service_billing_method_id?.message}
+                createTitle="Create billing method"
+                onCreateClick={() => setBillingMethodCreateOpen(true)}
+                dropdownProps={{
+                  value: formValues.company_service_billing_method_id || "",
+                  onValueChange: (value) => {
                     setValue("company_service_billing_method_id", Number(value), { shouldValidate: true });
-                  }}
-                  options={companyServiceBillingMethods.map((method: CompanyServiceBillingMethod) => ({
+                  },
+                  options: companyServiceBillingMethods.map((method: CompanyServiceBillingMethod) => ({
                     value: method.id,
                     label: method.name,
                     ...method
-                  }))}
-                  onSearch={(search) => {
+                  })),
+                  onSearch: (search) => {
                     setBillingMethodSearch(search);
                     dispatch(fetchCompanyServiceBillingMethods({
                       page: 1,
@@ -698,18 +706,15 @@ export function ClientContractServiceEditForm({
                       is_active: true,
                       search: search
                     }));
-                  }}
-                  placeholder="Select billing method"
-                  disabled={isLoading || isFetching}
-                  emptyMessage={billingMethodSearch ? "No billing methods found" : "No billing methods available"}
-                  searchPlaceholder="Search billing methods..."
-                  icon={CreditCard}
-                  iconPosition="left"
-                />
-                {errors.company_service_billing_method_id && (
-                  <p className="text-sm text-red-500 mt-1">{errors.company_service_billing_method_id.message}</p>
-                )}
-              </div>
+                  },
+                  placeholder: "Select billing method",
+                  disabled: isLoading || isFetching,
+                  emptyMessage: billingMethodSearch ? "No billing methods found" : "No billing methods available",
+                  searchPlaceholder: "Search billing methods...",
+                  icon: CreditCard,
+                  iconPosition: "left",
+                }}
+              />
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1009,5 +1014,36 @@ export function ClientContractServiceEditForm({
         )}
       </DialogContent>
     </Dialog>
+
+    <ClientContractCreateForm
+      trigger={<div />}
+      isOpen={contractCreateOpen}
+      onOpenChange={setContractCreateOpen}
+      onSuccess={() => {
+        dispatch(fetchContracts({ page: 1, per_page: 100 }));
+        setContractCreateOpen(false);
+      }}
+    />
+
+    <CompanyServiceCreateForm
+      trigger={<div />}
+      isOpen={serviceCreateOpen}
+      onOpenChange={setServiceCreateOpen}
+      onSuccess={() => {
+        dispatch(fetchCompanyServices({ page: 1, per_page: 100, is_active: true }));
+        setServiceCreateOpen(false);
+      }}
+    />
+
+    <CompanyServiceBillingMethodCreateForm
+      trigger={<div />}
+      isOpen={billingMethodCreateOpen}
+      onOpenChange={setBillingMethodCreateOpen}
+      onSuccess={() => {
+        dispatch(fetchCompanyServiceBillingMethods({ page: 1, per_page: 100, is_active: true }));
+        setBillingMethodCreateOpen(false);
+      }}
+    />
+    </>
   );
 }

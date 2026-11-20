@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building, MessageCircleIcon, User as UserIcon } from "lucide-react";
+import { Building, FileText, MessageCircleIcon, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tabs,
@@ -15,6 +15,7 @@ import {
 import PersonalInformation from "./tabContents/personal-information";
 import { Message } from "./tabContents/message";
 import { Site } from "./tabContents/site";
+import InvoiceManagement from "@/components/invoice/invoice-management";
 import { Client } from "@/app/types/client";
 
 interface ViewClientContentProps {
@@ -34,6 +35,12 @@ export default function ViewClientContent({ client }: ViewClientContentProps) {
       label: "Sites", 
       icon: <Building size={16}/>, 
       shortLabel: "Sites" 
+    },
+    {
+      value: "billing",
+      label: "Billing",
+      icon: <FileText size={16} />,
+      shortLabel: "Billing",
     },
     { 
       value: "message", 
@@ -180,6 +187,16 @@ export default function ViewClientContent({ client }: ViewClientContentProps) {
 
             <TabsContent value="sites" className="m-2">
               <Site client={client}/>
+            </TabsContent>
+
+            <TabsContent value="billing" className="m-0">
+              {client.id ? (
+                <InvoiceManagement clientId={client.id} />
+              ) : (
+                <div className="p-4 text-sm text-muted-foreground">
+                  Client id missing for billing.
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="message" className="m-2">

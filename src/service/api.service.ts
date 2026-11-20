@@ -79,8 +79,12 @@ export const authService = {
     localStorage.removeItem('user');
   },
 
-  getProfile: () =>
-    handleApiResponse(api.get<ApiResponse<User>>('/profile')),
+  getProfile: async (): Promise<User> => {
+    const body = await handleApiResponse<{ user: User }>(
+      api.get<ApiResponse<{ user: User }>>('/auth/me')
+    );
+    return body.user;
+  },
 };
 
 

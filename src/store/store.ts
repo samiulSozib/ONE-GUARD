@@ -41,6 +41,8 @@ import schedulingReducer from './slices/schedulingSlice';
 import attendancePolicyReducer from './slices/attendancePolicy.slice';
 import telegramReducer from './slices/telegramSlice';
 import patrolVisitReducer from './slices/patrolVisitSlice';
+import timesheetReducer from './slices/timesheetSlice';
+import invoiceReducer from './slices/invoiceSlice';
 
 export const store = configureStore({
   reducer: {
@@ -85,6 +87,8 @@ export const store = configureStore({
     scheduling: schedulingReducer,
     telegram: telegramReducer,
     patrolVisits: patrolVisitReducer,
+    timesheet: timesheetReducer,
+    invoice: invoiceReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

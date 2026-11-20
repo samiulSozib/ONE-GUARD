@@ -64,7 +64,7 @@ import { useAppSelector } from '@/hooks/useAppSelector';
 import {
     fetchDuty,
     deleteDuty,
-    toggleDutyStatus,
+    updateDutyWorkflowStatus,
     clearCurrentDuty,
 } from '@/store/slices/dutySlice';
 import SweetAlertService from '@/lib/sweetAlert';
@@ -332,7 +332,7 @@ export default function DutyViewPage() {
         if (result.isConfirmed) {
             setIsUpdating(true);
             try {
-                await dispatch(toggleDutyStatus({
+                await dispatch(updateDutyWorkflowStatus({
                     id: currentDuty.id,
                     status: newStatus
                 })).unwrap();

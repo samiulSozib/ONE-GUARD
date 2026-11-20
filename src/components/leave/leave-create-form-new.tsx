@@ -29,7 +29,9 @@ import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { useAppSelector } from "@/hooks/useAppSelector"
 import { Site } from "@/app/types/site"
 import { Guard } from "@/app/types/guard"
-import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
+import { EntityFieldWithCreate } from "../shared/entity-field-with-create"
+import { GuardCreateForm } from "@/components/guard/guard-create-form"
+import { CreateSiteWithClientForm } from "@/components/clients/create-site-with-client-form"
 import { CustomTimePicker } from "../ui/custom-time-picker"
 import {
     Select,
@@ -110,6 +112,8 @@ export function LeaveCreateForm({
 
     // Search states for comboboxes
     const [guardSearch, setGuardSearch] = useState("")
+    const [guardCreateOpen, setGuardCreateOpen] = useState(false)
+    const [siteCreateOpen, setSiteCreateOpen] = useState(false)
     const [siteSearch, setSiteSearch] = useState("")
 
     // Date states
@@ -336,6 +340,7 @@ export function LeaveCreateForm({
     }
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
                 {trigger}
@@ -355,62 +360,62 @@ export function LeaveCreateForm({
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             {/* Guard Selection */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Guard <span className="text-red-500">*</span>
-                                </Label>
-                                <SearchableDropdownWithIcon
-                                    value={formValues.guard_id || ""}
-                                    onValueChange={(value) => {
+                            <EntityFieldWithCreate
+                                label="Guard"
+                                required
+                                error={errors.guard_id?.message}
+                                createTitle="Create new guard"
+                                onCreateClick={() => setGuardCreateOpen(true)}
+                                dropdownProps={{
+                                    value: formValues.guard_id || "",
+                                    onValueChange: (value) => {
                                         setValue("guard_id", Number(value), { shouldValidate: true })
-                                    }}
-                                    options={guards.map((guard: Guard) => ({
+                                    },
+                                    options: guards.map((guard: Guard) => ({
                                         value: guard.id,
                                         label: formatGuardDisplay(guard),
                                         ...guard
-                                    }))}
-                                    onSearch={(search) => {
+                                    })),
+                                    onSearch: (search) => {
                                         setGuardSearch(search)
                                         dispatch(fetchGuards({
                                             page: 1,
                                             per_page: 10,
                                             search: search
                                         }))
-                                    }}
-                                    placeholder="Select guard"
-                                    disabled={isLoading || guardsLoading}
-                                    isLoading={guardsLoading}
-                                    emptyMessage={guardSearch ? "No guards found" : "No guards available"}
-                                    searchPlaceholder="Search guards by name or code..."
-                                    icon={User}
-                                    iconPosition="left"
-                                    displayValue={(value, options) => {
+                                    },
+                                    placeholder: "Select guard",
+                                    disabled: isLoading || guardsLoading,
+                                    isLoading: guardsLoading,
+                                    emptyMessage: guardSearch ? "No guards found" : "No guards available",
+                                    searchPlaceholder: "Search guards by name or code...",
+                                    icon: User,
+                                    iconPosition: "left",
+                                    displayValue: (value, options) => {
                                         if (!value) return "Select guard"
                                         const option = options.find(opt => opt.value === value)
                                         return option?.label || "Select guard"
-                                    }}
-                                />
-                                {errors.guard_id && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.guard_id.message}</p>
-                                )}
-                            </div>
+                                    },
+                                }}
+                            />
 
-                            {/* Site Selection */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Site <span className="text-red-500">*</span>
-                                </Label>
-                                <SearchableDropdownWithIcon
-                                    value={formValues.site_id || ""}
-                                    onValueChange={(value) => {
+                            <EntityFieldWithCreate
+                                label="Site"
+                                required
+                                error={errors.site_id?.message}
+                                createTitle="Create new site"
+                                onCreateClick={() => setSiteCreateOpen(true)}
+                                dropdownProps={{
+                                    value: formValues.site_id || "",
+                                    onValueChange: (value) => {
                                         setValue("site_id", Number(value), { shouldValidate: true })
-                                    }}
-                                    options={sites.map((site: Site) => ({
+                                    },
+                                    options: sites.map((site: Site) => ({
                                         value: site.id,
                                         label: formatSiteDisplay(site),
                                         ...site
-                                    }))}
-                                    onSearch={(search) => {
+                                    })),
+                                    onSearch: (search) => {
                                         setSiteSearch(search)
                                         dispatch(fetchSites({
                                             page: 1,
@@ -418,24 +423,21 @@ export function LeaveCreateForm({
                                             is_active: true,
                                             search: search
                                         }))
-                                    }}
-                                    placeholder="Select site"
-                                    disabled={isLoading || sitesLoading}
-                                    isLoading={sitesLoading}
-                                    emptyMessage={siteSearch ? "No sites found" : "No sites available"}
-                                    searchPlaceholder="Search sites by name or code..."
-                                    icon={Briefcase}
-                                    iconPosition="left"
-                                    displayValue={(value, options) => {
+                                    },
+                                    placeholder: "Select site",
+                                    disabled: isLoading || sitesLoading,
+                                    isLoading: sitesLoading,
+                                    emptyMessage: siteSearch ? "No sites found" : "No sites available",
+                                    searchPlaceholder: "Search sites by name or code...",
+                                    icon: Briefcase,
+                                    iconPosition: "left",
+                                    displayValue: (value, options) => {
                                         if (!value) return "Select site"
                                         const option = options.find(opt => opt.value === value)
                                         return option?.label || "Select site"
-                                    }}
-                                />
-                                {errors.site_id && (
-                                    <p className="text-sm text-red-500 mt-1">{errors.site_id.message}</p>
-                                )}
-                            </div>
+                                    },
+                                }}
+                            />
 
                             {/* Leave Type Dropdown */}
                             <div className="space-y-2">
@@ -619,5 +621,29 @@ export function LeaveCreateForm({
                 </form>
             </DialogContent>
         </Dialog>
+
+        <GuardCreateForm
+            trigger={<div />}
+            isOpen={guardCreateOpen}
+            onOpenChange={setGuardCreateOpen}
+            onSuccess={() => {
+                dispatch(fetchGuards({ page: 1, per_page: 100 }))
+                setGuardCreateOpen(false)
+            }}
+        />
+
+        <CreateSiteWithClientForm
+            trigger={<div />}
+            isOpen={siteCreateOpen}
+            onOpenChange={setSiteCreateOpen}
+            onSuccess={(site) => {
+                dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }))
+                if (site?.id) {
+                    setValue("site_id", site.id, { shouldValidate: true })
+                }
+                setSiteCreateOpen(false)
+            }}
+        />
+        </>
     )
 }

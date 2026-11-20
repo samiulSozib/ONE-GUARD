@@ -73,8 +73,10 @@ import {
   fetchAssignments,
   deleteAssignment,
   updateAssignmentStatus,
+  getStatusDisplay,
+  getStatusColor,
 } from "@/store/slices/guardAssignmentSlice";
-import { GuardAssignment, GuardAssignmentParams } from "@/app/types/guardAssignment";
+import { GuardAssignment, GuardAssignmentParams, GuardAssignmentStatus } from "@/app/types/guardAssignment";
 
 // Components
 import { DeleteDialog } from "../../shared/delete-dialog";
@@ -83,30 +85,35 @@ import Swal from 'sweetalert2';
 import { useRouter } from "next/navigation";
 import { GuardAssignmentEditForm } from "@/components/guard-assignment/guard-assignment-edit-form";
 
-// Define the status type
-type AssignmentStatus = 'assigned' | 'accepted' | 'checked_in' | 'on_duty' | 'completed' | 'late' | 'no_show' | 'cancelled' | 'replaced';
-// Define the action type
 interface StatusAction {
-  status: AssignmentStatus;
+  status: GuardAssignmentStatus;
   label: string;
   icon: React.ElementType;
   color: string;
 }
 
-// Status colors mapping
-const assignmentStatusColors: Record<AssignmentStatus, string> = {
-  "assigned": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "accepted": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "checked_in": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  "on_duty": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-  "completed": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-  "late": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  "no_show": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  "cancelled": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  "replaced": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+/** DB/API assignment lifecycle only */
+const ALL_STATUSES: GuardAssignmentStatus[] = [
+  'active',
+  'completed',
+  'cancelled',
+  'replaced',
+];
+
+const statusActionConfig: Record<GuardAssignmentStatus, { label: string; icon: React.ElementType; color: string }> = {
+  active: { label: 'Mark Rostered', icon: Flag, color: 'text-blue-600' },
+  completed: { label: 'Mark Completed', icon: CheckCheck, color: 'text-gray-600' },
+  cancelled: { label: 'Cancel Assignment', icon: Ban, color: 'text-orange-600' },
+  replaced: { label: 'Mark Replaced', icon: RefreshCw, color: 'text-indigo-600' },
 };
 
-const defaultStatusColor = "bg-gray-100 text-gray-800";
+const statusOptions = [
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Rostered" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "replaced", label: "Replaced" },
+];
 
 interface GuardAssignmentDataTableProps {
     guard_id:number;
@@ -267,28 +274,21 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
   };
 
   // Handle assignment status update
-  const handleStatusUpdate = async (e: React.MouseEvent, assignment: GuardAssignment, newStatus: AssignmentStatus) => {
+  const handleStatusUpdate = async (e: React.MouseEvent, assignment: GuardAssignment, newStatus: GuardAssignmentStatus) => {
     e.stopPropagation();
 
-    const statusDisplay = newStatus.charAt(0).toUpperCase() + newStatus.slice(1).replace('_', ' ');
+    const statusDisplay = getStatusDisplay(newStatus);
 
-    // Confirmation dialog with 5 second timer
     const result = await Swal.fire({
       title: `Mark Assignment as ${statusDisplay}`,
       text: `Are you sure you want to mark this assignment as ${statusDisplay}? This confirmation will expire in 5 seconds.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor:
-        newStatus === 'assigned' ? '#3b82f6' :      // blue
-          newStatus === 'accepted' ? '#22c55e' :      // green
-            newStatus === 'checked_in' ? '#a855f7' :    // purple
-              newStatus === 'on_duty' ? '#10b981' :       // emerald
-                newStatus === 'completed' ? '#6b7280' :     // gray
-                  newStatus === 'late' ? '#eab308' :          // yellow
-                    newStatus === 'no_show' ? '#ef4444' :       // red
-                      newStatus === 'cancelled' ? '#f97316' :     // orange
-                        newStatus === 'replaced' ? '#8b5cf6' :      // indigo
-                          '#6b7280',                                   // default gray
+        newStatus === 'active' ? '#3b82f6' :
+        newStatus === 'completed' ? '#6b7280' :
+        newStatus === 'cancelled' ? '#f97316' :
+        newStatus === 'replaced' ? '#8b5cf6' : '#6b7280',
       cancelButtonColor: '#6b7280',
       confirmButtonText: `Yes, mark as ${statusDisplay}`,
       cancelButtonText: 'Cancel',
@@ -449,45 +449,31 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
     setEditDialogOpen(true);
   };
 
-  // Check if status can be changed to target status - NOW ALLOWING ALL TRANSITIONS
-  const canChangeTo = (currentStatus: AssignmentStatus, targetStatus: AssignmentStatus): boolean => {
-    if (currentStatus === targetStatus) return false;
-    
-    // Allow all status transitions - you can change from any status to any other status
-    return true;
+  const canChangeTo = (currentStatus: string, targetStatus: GuardAssignmentStatus): boolean => {
+    const current = (currentStatus === 'assigned' ? 'active' : currentStatus) as GuardAssignmentStatus;
+    if (current === targetStatus) return false;
+    const allowed: Record<string, GuardAssignmentStatus[]> = {
+      active: ['completed', 'cancelled', 'replaced'],
+      completed: ['active'],
+      cancelled: ['active'],
+      replaced: ['active'],
+    };
+    return (allowed[current] || ALL_STATUSES).includes(targetStatus);
   };
 
-  // Get available actions based on current status
-  const getAvailableActions = (currentStatus: AssignmentStatus): StatusAction[] => {
+  const getAvailableActions = (currentStatus: GuardAssignmentStatus): StatusAction[] => {
     const actions: StatusAction[] = [];
 
-    // Add all possible status actions
-    if (canChangeTo(currentStatus, 'assigned')) {
-      actions.push({ status: 'assigned', label: 'Mark as Assigned', icon: Flag, color: 'text-blue-600' });
-    }
-    if (canChangeTo(currentStatus, 'accepted')) {
-      actions.push({ status: 'accepted', label: 'Accept Assignment', icon: CheckCircle, color: 'text-green-600' });
-    }
-    if (canChangeTo(currentStatus, 'checked_in')) {
-      actions.push({ status: 'checked_in', label: 'Check In', icon: MapPin, color: 'text-purple-600' });
-    }
-    if (canChangeTo(currentStatus, 'on_duty')) {
-      actions.push({ status: 'on_duty', label: 'Start Duty', icon: PlayCircle, color: 'text-emerald-600' });
-    }
-    if (canChangeTo(currentStatus, 'completed')) {
-      actions.push({ status: 'completed', label: 'Mark Completed', icon: CheckCheck, color: 'text-gray-600' });
-    }
-    if (canChangeTo(currentStatus, 'late')) {
-      actions.push({ status: 'late', label: 'Mark Late', icon: Clock, color: 'text-yellow-600' });
-    }
-    if (canChangeTo(currentStatus, 'no_show')) {
-      actions.push({ status: 'no_show', label: 'No Show', icon: XCircle, color: 'text-red-600' });
-    }
-    if (canChangeTo(currentStatus, 'cancelled')) {
-      actions.push({ status: 'cancelled', label: 'Cancel Assignment', icon: Ban, color: 'text-orange-600' });
-    }
-    if (canChangeTo(currentStatus, 'replaced')) {
-      actions.push({ status: 'replaced', label: 'Replace Guard', icon: RefreshCw, color: 'text-indigo-600' });
+    for (const status of ALL_STATUSES) {
+      if (canChangeTo(currentStatus, status)) {
+        const config = statusActionConfig[status];
+        actions.push({
+          status,
+          label: config.label,
+          icon: config.icon,
+          color: config.color,
+        });
+      }
     }
 
     return actions;
@@ -520,27 +506,6 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
     } catch (error) {
       return "N/A";
     }
-  };
-
-  // Get status display text
-  const getStatusDisplay = (status: string = 'assigned'): string => {
-    const statusMap: Record<string, string> = {
-      'assigned': 'Assigned',
-      'accepted': 'Accepted',
-      'checked_in': 'Checked In',
-      'on_duty': 'On Duty',
-      'completed': 'Completed',
-      'late': 'Late',
-      'no_show': 'No Show',
-      'cancelled': 'Cancelled',
-      'replaced': 'Replaced',
-    };
-    return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
-  };
-
-  // Get status color
-  const getStatusColor = (status: string = 'assigned'): string => {
-    return assignmentStatusColors[status as AssignmentStatus] || defaultStatusColor;
   };
 
   // Pagination handlers
@@ -641,7 +606,6 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
               </InputGroup>
             </div>
 
-            {/* Status Filter - Updated with all statuses */}
             <div className="sm:col-span-4">
               <Select value={statusFilter} onValueChange={handleStatusFilter}>
                 <SelectTrigger className="w-full">
@@ -650,16 +614,11 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Status</SelectLabel>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="checked_in">Checked In</SelectItem>
-                    <SelectItem value="on_duty">On Duty</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="late">Late</SelectItem>
-                    <SelectItem value="no_show">No Show</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="replaced">Replaced</SelectItem>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -752,7 +711,7 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
                   </TableRow>
                 ) : (
                   assignments.map((assignment: GuardAssignment) => {
-                    const currentStatus = (assignment.status || 'assigned') as AssignmentStatus;
+                    const currentStatus = (assignment.status === 'assigned' ? 'active' : (assignment.status || 'active')) as GuardAssignmentStatus;
                     const availableActions = getAvailableActions(currentStatus);
 
                     return (
@@ -866,10 +825,10 @@ export function Assignment({guard_id, onAddClick, onViewClick }: GuardAssignment
                               rounded-full 
                               text-xs 
                               font-medium
-                              ${getStatusColor(assignment.status)}
+                              ${getStatusColor(currentStatus)}
                             `}
                           >
-                            {getStatusDisplay(assignment.status)}
+                            {getStatusDisplay(currentStatus)}
                           </span>
                         </TableCell>
 

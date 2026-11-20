@@ -103,6 +103,50 @@ export const deleteDuty = createAsyncThunk(
   }
 );
 
+/** Update duty workflow status (pending | approved | completed) */
+export const updateDutyWorkflowStatus = createAsyncThunk(
+  "duty/updateWorkflowStatus",
+  async (
+    { id, status }: { id: number; status: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await dutyService.updateWorkflowStatus(id, status);
+      if (response?.item) return response.item;
+      const refreshed = await dutyService.getDuty(id);
+      return refreshed.item;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update duty workflow status";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+/** Enable / disable duty (is_active) */
+export const setDutyActive = createAsyncThunk(
+  "duty/setActive",
+  async (
+    { id, is_active }: { id: number; is_active: boolean },
+    { rejectWithValue }
+  ) => {
+    try {
+      await dutyService.setActive(id, is_active);
+      const refreshed = await dutyService.getDuty(id);
+      return refreshed.item;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update duty active flag";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+/** @deprecated Prefer updateDutyWorkflowStatus */
 export const toggleDutyStatus = createAsyncThunk(
   "duty/toggleStatus",
   async (
@@ -110,11 +154,12 @@ export const toggleDutyStatus = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-       await dutyService.toggleStatus(id, status);
-       const updatedDuty=await dutyService.getDuty(id)
-       return updatedDuty.item
+      const response = await dutyService.updateWorkflowStatus(id, status);
+      if (response?.item) return response.item;
+      const updatedDuty = await dutyService.getDuty(id);
+      return updatedDuty.item;
     } catch (error: unknown) {
-      console.log(error)
+      console.log(error);
       const message =
         error instanceof Error
           ? error.message
@@ -224,8 +269,32 @@ const dutySlice = createSlice({
         );
       })
 
-      // Toggle status
+      // Workflow / active status updates
       .addCase(toggleDutyStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.duties.findIndex(
+          (duty) => duty.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.duties[index] = action.payload;
+        }
+        if (state.currentDuty?.id === action.payload.id) {
+          state.currentDuty = action.payload;
+        }
+      })
+      .addCase(updateDutyWorkflowStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.duties.findIndex(
+          (duty) => duty.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.duties[index] = action.payload;
+        }
+        if (state.currentDuty?.id === action.payload.id) {
+          state.currentDuty = action.payload;
+        }
+      })
+      .addCase(setDutyActive.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.duties.findIndex(
           (duty) => duty.id === action.payload.id

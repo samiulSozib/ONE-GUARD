@@ -30,13 +30,27 @@ export interface DutyAttendanceParams {
 
   guard_id?: number;
   duty_id?: number;
-  
-  status?: string;
+  site_id?: number;
+  site_location_id?: number;
 
+  status?: string;
+  attendance_state?: "not_checked_in" | "checked_in" | "checked_out" | string;
+
+  date_from?: string;
+  date_to?: string;
+  start_date?: string;
+  end_date?: string;
+
+  include_guard?: boolean;
+  include_duty?: boolean;
+  include_site?: boolean;
+  include_site_location?: boolean;
 
   sort_by?: string;
   sort_order?: "asc" | "desc";
 }
+
+export type DutyAttendanceExportFormat = "csv" | "excel" | "pdf";
 
 
 export interface DutyAttendanceState {

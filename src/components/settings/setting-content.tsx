@@ -1,17 +1,13 @@
 "use client";
 
 import {
-  FileIcon,
-  Key,
-  MessagesSquareIcon,
-  QrCode,
-  UserIcon,
   BellRing,
   ShieldCheck,
   Settings2,
   Loader2,
   RotateCcw,
   Save,
+  MessageCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -30,12 +26,9 @@ import {
 } from "@/store/slices/settingsSlice";
 import SweetAlertService from "@/lib/sweetAlert";
 
-import General from "./tabContents/general";
-import TwilioSettings from "./tabContents/twilio-settings";
-import TwoFactorAuthentication from "./tabContents/two-factor-authentication";
-import ChangePassword from "./tabContents/chang-password";
 import NotificationGroups from "@/components/settings/tabContents/notification-groups";
 import AttendancePolicyGroup from "@/components/settings/tabContents/attendance-policy-group";
+import WhatsAppBusinessSettings from "@/components/settings/tabContents/whatsapp-business-settings";
 
 export default function SettingContent() {
   const dispatch = useAppDispatch();
@@ -69,6 +62,10 @@ export default function SettingContent() {
   );
   const attendanceGroup = useMemo(
     () => groups.find((g) => g.group === "attendance_policy"),
+    [groups]
+  );
+  const whatsappGroup = useMemo(
+    () => groups.find((g) => g.group === "whatsapp_business"),
     [groups]
   );
 
@@ -128,6 +125,13 @@ export default function SettingContent() {
       icon: <Settings2 className="h-4 w-4" />,
       shortLabel: "Policy",
       badge: attendanceGroup?.items.length,
+    },
+    {
+      value: "whatsapp-business",
+      label: "WhatsApp",
+      icon: <MessageCircle className="h-4 w-4" />,
+      shortLabel: "WhatsApp",
+      badge: whatsappGroup?.items.length,
     },
   ];
 
@@ -215,6 +219,22 @@ export default function SettingContent() {
               />
             ) : (
               <EmptyState label="No attendance policy settings found." />
+            )}
+          </TabsContent>
+
+          {/* WhatsApp Business Cloud API */}
+          <TabsContent value="whatsapp-business" className="m-0">
+            {isLoading ? (
+              <LoadingState label="Loading WhatsApp settings…" />
+            ) : whatsappGroup ? (
+              <WhatsAppBusinessSettings
+                group={whatsappGroup}
+                values={values}
+                onChange={handleChange}
+                disabled={isSaving}
+              />
+            ) : (
+              <EmptyState label="No WhatsApp settings found. Run WhatsAppBusinessSettingsSeeder." />
             )}
           </TabsContent>
         </div>

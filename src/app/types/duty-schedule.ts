@@ -27,6 +27,8 @@ export interface DutySchedule {
   end_time: string;
   guards_required: number;
   required_hours: number;
+  guard_pay_basis: 'per_shift' | 'per_hour' | 'per_visit' | null;
+  guard_pay_rate: number | null;
   mandatory_check_in_time: string | null;
   generated_until: string | null;
   status: 'active' | 'inactive' | 'draft' | string;
@@ -68,6 +70,8 @@ export interface CreateDutyScheduleDto {
   end_time: string;
   guards_required: number;
   required_hours?: number;
+  guard_pay_basis?: 'per_shift' | 'per_hour' | 'per_visit' | null;
+  guard_pay_rate?: number | null;
   mandatory_check_in_time?: string | null;
   status?: 'active' | 'inactive' | 'draft' | string;
   is_active?: boolean;
@@ -96,6 +100,8 @@ export interface UpdateDutyScheduleDto {
   end_time?: string;
   guards_required?: number;
   required_hours?: number;
+  guard_pay_basis?: 'per_shift' | 'per_hour' | 'per_visit' | null;
+  guard_pay_rate?: number | null;
   mandatory_check_in_time?: string | null;
   status?: 'active' | 'inactive' | 'draft' | string;
   is_active?: boolean;

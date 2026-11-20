@@ -3,8 +3,30 @@ import api, { handleApiResponse } from "./api.service";
 import { 
   DutyAttendance, 
   DutyAttendanceParams,
-  CreateDutyAttendanceDto 
+  CreateDutyAttendanceDto,
+  DutyAttendanceExportFormat,
 } from "@/app/types/dutyAttendance";
+
+function buildQueryParams(
+  filters: Partial<DutyAttendanceParams>
+): Record<string, string | number | boolean> {
+  return Object.fromEntries(
+    Object.entries(filters).filter(
+      ([, value]) => value !== undefined && value !== null && value !== ""
+    )
+  ) as Record<string, string | number | boolean>;
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+}
 
 export const dutyAttendanceService = {
   // Get all attendances
@@ -77,4 +99,31 @@ export const dutyAttendanceService = {
     handleApiResponse(
       api.post<ApiResponse<{item: DutyAttendance}>>(`/admin/duty-attendances/${id}/check-out`, data)
     ),
+
+  exportAttendances: async (
+    format: DutyAttendanceExportFormat,
+    filters: DutyAttendanceParams = {}
+  ): Promise<void> => {
+    const response = await api.get(`/admin/duty-attendances/export/${format}`, {
+      params: buildQueryParams(filters),
+      responseType: "blob",
+      headers: { Accept: "*/*" },
+    });
+
+    const blob = response.data as Blob;
+    if (blob.type.includes("application/json") || blob.type.includes("text/json")) {
+      const text = await blob.text();
+      let message = "Export failed.";
+      try {
+        const json = JSON.parse(text);
+        message = json.message || json.errors?.message || message;
+      } catch {
+        message = text || message;
+      }
+      throw new Error(message);
+    }
+
+    const ext = format === "excel" ? "xlsx" : format;
+    downloadBlob(blob, `one-guard-duty-attendances.${ext}`);
+  },
 };
