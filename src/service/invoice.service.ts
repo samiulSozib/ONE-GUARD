@@ -68,13 +68,28 @@ export const invoiceService = {
       api.put<ApiResponse<InvoiceDetail>>(`${INVOICES_URL}/${id}`, data)
     ),
 
-  updateStatus: (id: number, status: InvoiceStatus, notes?: string | null) =>
+  updateStatus: (
+    id: number,
+    status: InvoiceStatus,
+    notes?: string | null
+  ): Promise<InvoiceDetail> =>
     handleApiResponse(
-      api.patch(`${INVOICES_URL}/${id}/status`, { status, notes })
+      api.patch<ApiResponse<InvoiceDetail>>(
+        `${INVOICES_URL}/${id}/status`,
+        { status, notes }
+      )
     ),
 
-  recordPayment: (id: number, data: RecordPaymentDto) =>
-    handleApiResponse(api.post(`${INVOICES_URL}/${id}/payments`, data)),
+  recordPayment: (
+    id: number,
+    data: RecordPaymentDto
+  ): Promise<InvoiceDetail> =>
+    handleApiResponse(
+      api.post<ApiResponse<InvoiceDetail>>(
+        `${INVOICES_URL}/${id}/payments`,
+        data
+      )
+    ),
 
   deleteInvoice: (id: number) =>
     handleApiResponse(api.delete(`${INVOICES_URL}/${id}`)),

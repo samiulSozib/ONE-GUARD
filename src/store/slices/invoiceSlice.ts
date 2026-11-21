@@ -97,12 +97,13 @@ export const updateInvoice = createAsyncThunk(
   }
 );
 
-export const updateInvoiceStatus = createAsyncThunk(
+export const updateInvoiceStatus = createAsyncThunk<
+  InvoiceDetail,
+  { id: number; status: InvoiceStatus; notes?: string | null },
+  { rejectValue: string }
+>(
   "invoice/updateStatus",
-  async (
-    payload: { id: number; status: InvoiceStatus; notes?: string | null },
-    { rejectWithValue }
-  ) => {
+  async (payload, { rejectWithValue }) => {
     try {
       return await invoiceService.updateStatus(
         payload.id,
@@ -115,12 +116,13 @@ export const updateInvoiceStatus = createAsyncThunk(
   }
 );
 
-export const recordInvoicePayment = createAsyncThunk(
+export const recordInvoicePayment = createAsyncThunk<
+  InvoiceDetail,
+  { id: number; data: RecordPaymentDto },
+  { rejectValue: string }
+>(
   "invoice/recordPayment",
-  async (
-    payload: { id: number; data: RecordPaymentDto },
-    { rejectWithValue }
-  ) => {
+  async (payload, { rejectWithValue }) => {
     try {
       return await invoiceService.recordPayment(payload.id, payload.data);
     } catch (e: any) {

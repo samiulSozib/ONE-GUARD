@@ -63,7 +63,7 @@ const normalizeGuard = (
 const normalizeGuards = (
   guards: LiveGuard[] = []
 ): LiveGuard[] => {
-  return guards.map(normalizeGuard)
+  return guards.map((guard) => normalizeGuard(guard))
 }
 
 const recalculateLiveCounters = (
