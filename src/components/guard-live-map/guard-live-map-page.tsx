@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   Battery,
+  Bell,
   Building2,
   Clock3,
   Crosshair,
@@ -11,6 +12,7 @@ import {
   LocateFixed,
   MapPin,
   Maximize2,
+  Megaphone,
   Navigation,
   PanelRightClose,
   PanelRightOpen,
@@ -65,6 +67,7 @@ import {
   fetchLiveGuards,
   setSelectedGuard,
 } from "@/store/slices/liveTrackingSlice"
+import { NotifyGuardsDialog } from "@/components/guard-live-map/notify-guards-dialog"
 
 type GuardFilter =
   | "all"
@@ -757,6 +760,12 @@ export default function GuardLiveMapPage() {
 
   const [panelTab, setPanelTab] =
     useState<PanelTab>("overview")
+
+  const [notifyOpen, setNotifyOpen] =
+    useState(false)
+
+  const [notifySeedIds, setNotifySeedIds] =
+    useState<number[]>([])
 
   const mapContainerRef =
     useRef<HTMLDivElement | null>(
@@ -2189,6 +2198,23 @@ export default function GuardLiveMapPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => {
+                setNotifySeedIds(
+                  selectedGuard
+                    ? [selectedGuard.id]
+                    : []
+                )
+                setNotifyOpen(true)
+              }}
+              disabled={filteredGuards.length === 0}
+            >
+              <Megaphone className="mr-2 h-4 w-4" />
+              Notify
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={refresh}
               disabled={isLoading}
             >
@@ -2621,6 +2647,12 @@ export default function GuardLiveMapPage() {
                   onOpenGoogleMaps={
                     openGoogleMaps
                   }
+                  onNotify={(guard) => {
+                    setNotifySeedIds([
+                      guard.id,
+                    ])
+                    setNotifyOpen(true)
+                  }}
                   history={
                     locationHistory
                   }
@@ -2706,6 +2738,13 @@ export default function GuardLiveMapPage() {
           </Card>
         </div>
       </div>
+
+      <NotifyGuardsDialog
+        open={notifyOpen}
+        onOpenChange={setNotifyOpen}
+        guards={filteredGuards}
+        initialSelectedIds={notifySeedIds}
+      />
     </div>
   )
 }
@@ -2792,6 +2831,7 @@ function SelectedGuardPanel({
   onTabChange,
   onViewHistory,
   onOpenGoogleMaps,
+  onNotify,
   history,
   historyTotal,
   historyLoading,
@@ -2805,6 +2845,7 @@ function SelectedGuardPanel({
   onOpenGoogleMaps: (
     guard: LiveGuard
   ) => void
+  onNotify: (guard: LiveGuard) => void
   history: LocationHistoryPoint[]
   historyTotal: number
   historyLoading: boolean
@@ -3468,6 +3509,15 @@ function SelectedGuardPanel({
           <ExternalLink className="mr-2 h-4 w-4" />
 
           Google Maps
+        </Button>
+
+        <Button
+          variant="outline"
+          className="col-span-2"
+          onClick={() => onNotify(guard)}
+        >
+          <Bell className="mr-2 h-4 w-4" />
+          Notify this guard
         </Button>
       </div>
     </div>

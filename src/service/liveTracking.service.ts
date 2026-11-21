@@ -6,7 +6,10 @@ import {
   LiveTrackingResponse, 
   LocationHistoryResponse,
   LiveTrackingParams, 
-  LiveGuard
+  LiveGuard,
+  LiveMapNotifyDefaults,
+  LiveMapNotifyPayload,
+  LiveMapNotifyResult,
 } from "@/app/types/liveTracking";
 
 export const liveTrackingService = {
@@ -34,5 +37,20 @@ export const liveTrackingService = {
   getGuardLiveLocation: (guardId: number) =>
     handleApiResponse(
       api.get<ApiResponse<{ guard: LiveGuard }>>(`/admin/live-tracking/guards/${guardId}`)
+    ),
+
+  getNotifyDefaults: () =>
+    handleApiResponse(
+      api.get<ApiResponse<LiveMapNotifyDefaults>>(
+        "/admin/live-tracking/notify-defaults"
+      )
+    ),
+
+  notifyGuards: (payload: LiveMapNotifyPayload) =>
+    handleApiResponse(
+      api.post<ApiResponse<LiveMapNotifyResult>>(
+        "/admin/live-tracking/notify",
+        payload
+      )
     ),
 };

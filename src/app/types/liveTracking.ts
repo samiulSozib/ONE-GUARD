@@ -186,3 +186,60 @@ export interface LiveTrackingParams {
   page?: number
   per_page?: number
 }
+
+export type LiveMapNotifyReason =
+  | "check_in_reminder"
+  | "return_to_post"
+  | "safety_alert"
+  | "motivation"
+  | "shift_update"
+  | "custom"
+
+export interface LiveMapNotifyReasonPreset {
+  key: LiveMapNotifyReason
+  label: string
+  title: string
+  message: string
+}
+
+export interface LiveMapNotifyDefaults {
+  whatsapp_configured: boolean
+  reasons: LiveMapNotifyReasonPreset[]
+  max_guards: number
+}
+
+export interface LiveMapNotifyChannels {
+  fcm?: boolean
+  inbox?: boolean
+  whatsapp?: boolean
+}
+
+export interface LiveMapNotifyPayload {
+  guard_ids: number[]
+  reason: LiveMapNotifyReason
+  title: string
+  message: string
+  channels?: LiveMapNotifyChannels
+}
+
+export interface LiveMapNotifyGuardResult {
+  guard_id: number
+  fcm: boolean
+  inbox: boolean
+  whatsapp: "sent" | "skipped" | "failed" | string
+  error: string | null
+}
+
+export interface LiveMapNotifyResult {
+  summary: {
+    requested: number
+    fcm_ok: number
+    inbox_ok: number
+    whatsapp_ok: number
+    whatsapp_skipped: number
+    whatsapp_failed?: number
+    missing_guards?: number
+  }
+  whatsapp_configured: boolean
+  results: LiveMapNotifyGuardResult[]
+}
