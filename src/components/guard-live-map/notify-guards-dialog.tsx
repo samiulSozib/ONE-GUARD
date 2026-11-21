@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   LiveGuard,
   LiveMapNotifyReason,
@@ -289,8 +288,8 @@ export function NotifyGuardsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="border-b px-5 py-4 text-left">
+      <DialogContent className="flex h-[min(90vh,760px)] w-[95vw] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Megaphone className="h-5 w-5 text-[#a4081f]" />
             Notify guards
@@ -301,7 +300,7 @@ export function NotifyGuardsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-140px)] flex-1 px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
           <div className="space-y-5 pb-2">
             <div className="space-y-2">
               <Label className="text-sm font-medium">
@@ -359,7 +358,7 @@ export function NotifyGuardsDialog({
                   </Button>
                 </div>
               </div>
-              <div className="max-h-44 overflow-y-auto rounded-lg border border-zinc-200">
+              <div className="max-h-36 overflow-y-auto overscroll-contain rounded-lg border border-zinc-200">
                 {guards.length === 0 ? (
                   <p className="p-3 text-sm text-muted-foreground">
                     No guards in the current filter.
@@ -531,9 +530,9 @@ export function NotifyGuardsDialog({
               </p>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
-        <div className="flex items-center justify-end gap-2 border-t px-5 py-3">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-5 py-3">
           <Button
             type="button"
             variant="outline"
