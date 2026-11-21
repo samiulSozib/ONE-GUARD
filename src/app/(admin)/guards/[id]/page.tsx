@@ -54,12 +54,15 @@ export default function GuardDetailsPage() {
         ).unwrap();
 
         // Normalize profile_data from profile for older view components.
+        const resultWithProfile = result as Guard & {
+          profile?: Guard["profile_data"];
+        };
         const normalized: Guard = {
           ...result,
           profile_data:
-            (result as Guard & { profile?: Guard["profile_data"] }).profile_data ||
-            (result as Guard & { profile?: Guard["profile_data"] }).profile ||
-            null,
+            resultWithProfile.profile_data ??
+            resultWithProfile.profile ??
+            undefined,
         };
 
         if (!cancelled) setGuard(normalized);
