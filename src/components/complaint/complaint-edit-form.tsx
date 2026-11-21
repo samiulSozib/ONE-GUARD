@@ -22,7 +22,7 @@
 // import { zodResolver } from "@hookform/resolvers/zod"
 // import { useForm } from "react-hook-form"
 // import { z } from "zod"
-// import SweetAlertService from "@/lib/sweetAlert"
+// import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 // import { DialogActionFooter } from "../shared/dialog-action-footer"
 // import { useAppSelector } from "@/hooks/useAppSelector"
 // import { Site } from "@/app/types/site"
@@ -849,6 +849,7 @@
 //                             isSubmitting={isLoading}
 //                             submitColor="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
 //                             onSubmit={handleSubmit(onSubmit)}
+//                             onCancel={handleCancel}
 //                         />
 //                     </form>
 //                 )}

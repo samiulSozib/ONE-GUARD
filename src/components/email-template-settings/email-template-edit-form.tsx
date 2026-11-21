@@ -19,7 +19,7 @@ import { EmailTemplate, EmailTemplateCategory, UpdateEmailTemplateDto } from "@/
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import {
     Select,
@@ -256,6 +256,9 @@ export function EmailTemplateEditForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
+            if (shouldSuppressDialogClose()) {
+                return;
+            }
             const hasChanges = JSON.stringify(formValues) !== JSON.stringify({
                 name: template?.name,
                 subject: template?.subject,
@@ -267,12 +270,7 @@ export function EmailTemplateEditForm({
             })
 
             if (hasChanges) {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         onOpenChange?.(false)

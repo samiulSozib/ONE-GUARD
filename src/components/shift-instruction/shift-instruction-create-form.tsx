@@ -22,7 +22,7 @@ import { fetchAssignments } from "@/store/slices/guardAssignmentSlice"
 import { fetchGuards } from "@/store/slices/guardSlice"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { Switch } from "../ui/switch"
 import { Badge } from "../ui/badge"
@@ -235,12 +235,7 @@ export function ShiftInstructionCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 onOpenChange?.(false)
@@ -250,12 +245,7 @@ export function ShiftInstructionCreateForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open && formValues.title?.trim()) {
-            SweetAlertService.confirm(
-                'Discard Changes?',
-                'You have unsaved changes. Are you sure you want to close?',
-                'Yes, discard',
-                'No, keep'
-            ).then((result) => {
+            SweetAlertService.confirmDiscard().then((result) => {
                 if (result.isConfirmed) {
                     reset()
                     onOpenChange?.(false)
@@ -534,6 +524,7 @@ export function ShiftInstructionCreateForm({
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                         onSubmit={handleSubmit(onSubmit)}
+                    onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>

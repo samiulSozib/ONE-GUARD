@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { useAppSelector } from "@/hooks/useAppSelector"
 import { Site } from "@/app/types/site"
@@ -314,12 +314,7 @@ export function ComplaintCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 setSiteSearch("")
@@ -349,12 +344,7 @@ export function ComplaintCreateForm({
                 setClientSearch("")
                 onOpenChange?.(false)
             } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         setSiteSearch("")
@@ -802,6 +792,7 @@ export function ComplaintCreateForm({
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
                         onSubmit={handleSubmit(onSubmit)}
+                    onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>

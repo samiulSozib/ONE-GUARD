@@ -17,7 +17,7 @@ import { GuardType } from "@/app/types/guard-type"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { Switch } from "@/components/ui/switch"
 
@@ -126,12 +126,7 @@ export function GuardTypeCreateForm({
         }
 
         // Has data, show confirmation
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 onOpenChange?.(false)
@@ -156,12 +151,7 @@ export function GuardTypeCreateForm({
                 onOpenChange?.(false)
             } else {
                 // Has unsaved changes, show confirmation
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         onOpenChange?.(false)
@@ -278,6 +268,7 @@ export function GuardTypeCreateForm({
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                         onSubmit={handleSubmit(onSubmit)}
+                    onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>

@@ -9,7 +9,7 @@ import {
   fetchPolicyScope,
   updatePolicyScope,
 } from "@/store/slices/attendancePolicy.slice";
-import SweetAlertService from "@/lib/sweetAlert";
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert";
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 
 export default function AttendancePolicyTopCard() {

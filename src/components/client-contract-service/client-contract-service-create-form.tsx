@@ -55,9 +55,9 @@ const pricingTypes = [
   { value: "fixed", label: "Fixed" },
 ];
 
-// Discount types
+// Discount types — must match InvoiceService (`percent` | `fixed`)
 const discountTypes = [
-  { value: "percentage", label: "Percentage" },
+  { value: "percent", label: "Percentage" },
   { value: "fixed", label: "Fixed Amount" },
 ];
 
@@ -248,8 +248,11 @@ export function ClientContractServiceCreateForm({
       dispatch(fetchCompanyServices({ page: 1, per_page: 100, is_active: true }));
       dispatch(fetchSites({ page: 1, per_page: 100, is_active: true }));
       dispatch(fetchCompanyServiceBillingMethods({ page: 1, per_page: 100, is_active: true }));
+      if (defaultContractId) {
+        setValue("contract_id", defaultContractId, { shouldValidate: true });
+      }
     }
-  }, [isOpen, dispatch]);
+  }, [isOpen, dispatch, defaultContractId, setValue]);
 
   // Load contract sites when contract is selected
   useEffect(() => {
@@ -489,7 +492,52 @@ export function ClientContractServiceCreateForm({
             dropdownProps={{
               value: formValues.company_service_id || "",
               onValueChange: (value) => {
-                setValue("company_service_id", Number(value), { shouldValidate: true });
+                const serviceId = Number(value);
+                setValue("company_service_id", serviceId, {
+                  shouldValidate: true,
+                });
+
+                const selected = companyServices.find(
+                  (service: CompanyService) => service.id === serviceId
+                );
+                if (!selected) return;
+
+                // Seed catalog defaults; admin can override for this contract.
+                if (selected.default_selling_rate != null) {
+                  setValue(
+                    "selling_rate",
+                    String(selected.default_selling_rate),
+                    { shouldValidate: true }
+                  );
+                }
+                if (selected.default_internal_cost != null) {
+                  setValue(
+                    "internal_cost",
+                    String(selected.default_internal_cost),
+                    { shouldValidate: true }
+                  );
+                }
+                if (selected.default_quantity != null) {
+                  setValue("quantity", Number(selected.default_quantity), {
+                    shouldValidate: true,
+                  });
+                }
+                if (selected.company_service_billing_method_id) {
+                  setValue(
+                    "company_service_billing_method_id",
+                    selected.company_service_billing_method_id,
+                    { shouldValidate: true }
+                  );
+                }
+                if (selected.currency_id) {
+                  setValue("currency_id", selected.currency_id, {
+                    shouldValidate: true,
+                  });
+                }
+                setValue(
+                  "requires_attendance",
+                  Boolean(selected.requires_attendance)
+                );
               },
               options: companyServices.map((service: CompanyService) => ({
                 value: service.id,

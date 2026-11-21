@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, SubmitHandler } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { SearchableDropdownWithIcon } from "../ui/searchable-dropdown-with-icon"
@@ -398,12 +398,7 @@ export function IncidentCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 setIncidentDate(new Date())
@@ -429,12 +424,7 @@ export function IncidentCreateForm({
                 setIncidentTime(format(new Date(), 'HH:mm'))
                 onOpenChange?.(false)
             } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         setIncidentDate(new Date())
@@ -915,7 +905,7 @@ export function IncidentCreateForm({
                         submitText="Create Incident"
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
-                        //onCancel={handleCancel}
+                        onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>

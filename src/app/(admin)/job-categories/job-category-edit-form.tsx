@@ -17,7 +17,7 @@ import { JobCategory, UpdateJobCategoryDto } from "@/app/types/jobCategories"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { Input } from "@/components/ui/input"
 import { FloatingLabelInput } from "@/components/ui/floating-input"
 import { FloatingLabelTextarea } from "@/components/ui/floating-textarea"
@@ -129,18 +129,16 @@ export function JobCategoryEditForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
+            if (shouldSuppressDialogClose()) {
+                return;
+            }
             const hasChanges = 
                 formValues.name !== category.name ||
                 formValues.description !== (category.description || "") ||
                 formValues.sort_order !== (category.sort_order?.toString() || "")
 
             if (hasChanges) {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         onOpenChange?.(false)

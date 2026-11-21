@@ -22,7 +22,7 @@ export interface ClientContractService {
   overtime_rate: number | null;
   holiday_rate: number | null;
   night_rate: number | null;
-  discount_type: 'percentage' | 'fixed' | null;
+  discount_type: 'percent' | 'percentage' | 'fixed' | null;
   discount_value: number | null;
   is_package: boolean;
   requires_attendance: boolean;
@@ -48,6 +48,10 @@ export interface ClientContractService {
     site_specific_rate: number | null;
     is_primary: boolean;
     is_active: boolean;
+    site?: {
+      id: number;
+      site_name?: string | null;
+    } | null;
   };
   site_location?: SiteLocation | null;
   billing_method?: CompanyServiceBillingMethod;
@@ -70,7 +74,7 @@ export interface CreateClientContractServiceDto {
   overtime_rate?: number | null;
   holiday_rate?: number | null;
   night_rate?: number | null;
-  discount_type?: 'percentage' | 'fixed' | null;
+  discount_type?: 'percent' | 'percentage' | 'fixed' | null;
   discount_value?: number | null;
   requires_attendance?: boolean;
   is_active?: boolean;
@@ -95,7 +99,7 @@ export interface UpdateClientContractServiceDto {
   overtime_rate?: number | null;
   holiday_rate?: number | null;
   night_rate?: number | null;
-  discount_type?: 'percentage' | 'fixed' | null;
+  discount_type?: 'percent' | 'percentage' | 'fixed' | null;
   discount_value?: number | null;
   requires_attendance?: boolean;
   is_active?: boolean;

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { cn } from "@/lib/utils"
 import { createDutyTimeType } from "@/store/slices/dutyTimeTypesSlice"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -134,12 +134,7 @@ export function DutyTimeTypeCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 onOpenChange?.(false)
@@ -149,6 +144,9 @@ export function DutyTimeTypeCreateForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
+            if (shouldSuppressDialogClose()) {
+                return;
+            }
             const hasData = formValues.title.trim() ||
                 formValues.description?.trim() ||
                 formValues.start_time !== "09:00" ||
@@ -156,12 +154,7 @@ export function DutyTimeTypeCreateForm({
                 !formValues.is_active
 
             if (hasData) {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         onOpenChange?.(false)
@@ -271,6 +264,7 @@ export function DutyTimeTypeCreateForm({
                         isSubmitting={isLoading}
                         submitColor="bg-blue-600 hover:bg-blue-700"
                         onSubmit={handleSubmit(onSubmit)}
+                    onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>

@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { useAppSelector } from "@/hooks/useAppSelector"
@@ -387,12 +387,7 @@ export function DutyAttendanceCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 setCheckInDate(new Date())
@@ -420,12 +415,7 @@ export function DutyAttendanceCreateForm({
                 setUseCurrentLocation(false)
                 onOpenChange?.(false)
             } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         setCheckInDate(new Date())
@@ -852,7 +842,8 @@ export function DutyAttendanceCreateForm({
                             isSubmitting={isLoading}
                             submitColor="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                             onSubmit={handleSubmit(onSubmit)}
-                        />
+                        onCancel={handleCancel}
+                    />
                     </form>
                 </DialogContent>
             </Dialog>

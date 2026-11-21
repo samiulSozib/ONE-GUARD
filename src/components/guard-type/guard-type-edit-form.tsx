@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 
 interface GuardTypeEditFormProps {
@@ -182,12 +182,7 @@ export function GuardTypeEditForm({
                 onOpenChange?.(false)
             } else {
                 // Has unsaved changes, show confirmation
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         onOpenChange?.(false)
                     } else {

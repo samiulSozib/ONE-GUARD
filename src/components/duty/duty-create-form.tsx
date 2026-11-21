@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { useAppDispatch } from "@/hooks/useAppDispatch"
 import { useAppSelector } from "@/hooks/useAppSelector"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { cn } from "@/lib/utils"
 import { fetchClients } from "@/store/slices/clientSlice"
 import { createDuty } from "@/store/slices/dutySlice"
@@ -468,12 +468,7 @@ export function DutyCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 setStartDate(undefined)
@@ -507,12 +502,7 @@ export function DutyCreateForm({
                 setSelectedSiteTimezone(undefined)
                 onOpenChange?.(false)
             } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         setStartDate(undefined)
@@ -1069,7 +1059,8 @@ export function DutyCreateForm({
                             isSubmitting={isLoading}
                             submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                             onSubmit={handleSubmit(onSubmit)}
-                        />
+                        onCancel={handleCancel}
+                    />
                     </form>
                 </DialogContent>
             </Dialog>

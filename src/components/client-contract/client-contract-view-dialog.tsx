@@ -35,10 +35,12 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Package,
 } from "lucide-react";
 import { ClientContract } from "@/app/types/clientContract";
 import { format } from "date-fns";
 import { clientContractService } from "@/service/clientContract.service";
+import { ContractServicesPanel } from "@/components/client-contract/contract-services-panel";
 
 // Status colors mapping
 const contractStatusColors: Record<string, string> = {
@@ -331,10 +333,17 @@ export function ClientContractViewDialog({
                     Sites ({contract?.sites?.length || 0})
                   </TabsTrigger>
                   <TabsTrigger
+                    value="services"
+                    className="px-3 sm:px-4 py-2 text-xs sm:text-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none"
+                  >
+                    <Package className="mr-1 hidden h-3.5 w-3.5 sm:inline" />
+                    Services
+                  </TabsTrigger>
+                  <TabsTrigger
                     value="financial"
                     className="px-3 sm:px-4 py-2 text-xs sm:text-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none"
                   >
-                    Financial
+                    Terms
                   </TabsTrigger>
                   <TabsTrigger
                     value="legal"
@@ -531,17 +540,9 @@ export function ClientContractViewDialog({
                                         <p className="text-xs text-gray-500">Address</p>
                                         <p className="text-sm">{siteData.site?.address || "N/A"}</p>
                                       </div>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                          <p className="text-xs text-gray-500">Guards Required</p>
-                                          <p className="text-sm font-medium">{siteData.pivot?.guards_required || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Rate</p>
-                                          <p className="text-sm font-medium">
-                                            {formatCurrency(siteData.pivot?.site_specific_rate)}
-                                          </p>
-                                        </div>
+                                      <div>
+                                        <p className="text-xs text-gray-500">Guards Required</p>
+                                        <p className="text-sm font-medium">{siteData.pivot?.guards_required || 0}</p>
                                       </div>
                                       {siteData.site?.site_instruction && (
                                         <div>
@@ -635,18 +636,13 @@ export function ClientContractViewDialog({
                                 <p className="text-xs text-gray-500">Address</p>
                                 <p className="text-sm">{siteData.site?.address || "N/A"}</p>
                               </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <p className="text-xs text-gray-500">Guards Required</p>
-                                  <p className="text-sm font-medium">{siteData.pivot?.guards_required || 0}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-gray-500">Site Specific Rate</p>
-                                  <p className="text-sm font-medium">
-                                    {formatCurrency(siteData.pivot?.site_specific_rate)}
-                                  </p>
-                                </div>
+                              <div>
+                                <p className="text-xs text-gray-500">Guards Required</p>
+                                <p className="text-sm font-medium">{siteData.pivot?.guards_required || 0}</p>
                               </div>
+                              <p className="text-xs text-muted-foreground">
+                                Sell rates are managed on the Services tab for this contract.
+                              </p>
                               {siteData.site?.latitude && siteData.site?.longitude && (
                                 <div>
                                   <p className="text-xs text-gray-500">Coordinates</p>
@@ -682,55 +678,32 @@ export function ClientContractViewDialog({
                   )}
                 </TabsContent>
 
+                <TabsContent value="services" className="p-4 sm:p-6 space-y-4 sm:space-y-6 m-0">
+                  {contractId ? (
+                    <ContractServicesPanel
+                      contractId={contractId}
+                      currency={contract?.currency}
+                    />
+                  ) : null}
+                </TabsContent>
+
                 <TabsContent value="financial" className="p-4 sm:p-6 space-y-4 sm:space-y-6 m-0">
                   <Card>
                     <CardHeader className="pb-2 sm:pb-3">
                       <CardTitle className="text-sm sm:text-base font-semibold flex items-center gap-2">
                         <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                        Financial Details
+                        Billing Terms
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
+                      <p className="mb-4 text-sm text-muted-foreground">
+                        Unit sell rates live on the Services tab. This contract only stores currency and payment terms.
+                      </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500">Contract Value</p>
-                          <p className="text-base sm:text-lg font-semibold">
-                            {formatCurrency(contract?.contract_value, contract?.currency)}
-                          </p>
-                        </div>
                         <div>
                           <p className="text-xs text-gray-500">Currency</p>
                           <p className="text-sm sm:text-base font-medium">{contract?.currency || "USD"}</p>
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Hourly Rate</p>
-                          <p className="text-sm sm:text-base font-medium">
-                            {formatCurrency(contract?.hourly_rate, contract?.currency)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Overtime Rate</p>
-                          <p className="text-sm sm:text-base font-medium">
-                            {formatCurrency(contract?.overtime_rate, contract?.currency)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Holiday Rate</p>
-                          <p className="text-sm sm:text-base font-medium">
-                            {formatCurrency(contract?.holiday_rate, contract?.currency)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Admin Fee</p>
-                          <p className="text-sm sm:text-base font-medium">
-                            {contract?.admin_fee_percentage ? `${contract.admin_fee_percentage}%` : "N/A"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <Separator className="my-4" />
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-xs text-gray-500">Billing Cycle</p>
                           <p className="text-sm sm:text-base font-medium capitalize">

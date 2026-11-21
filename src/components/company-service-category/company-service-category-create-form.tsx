@@ -239,7 +239,8 @@ export function CompanyServiceCategoryCreateForm({
             isSubmitting={isLoading}
             submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
             onSubmit={handleSubmit(onSubmit)}
-          />
+          onCancel={handleCancel}
+                    />
         </form>
       </DialogContent>
     </Dialog>

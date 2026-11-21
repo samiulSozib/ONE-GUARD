@@ -22,7 +22,7 @@ import { fetchSites } from "@/store/slices/siteSlice"
 import { CreateClientContractDto, CreateClientContractSite } from "@/app/types/clientContract"
 import { cn } from "@/lib/utils"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
-import SweetAlertService from "@/lib/sweetAlert"
+import SweetAlertService, { shouldSuppressDialogClose } from "@/lib/sweetAlert"
 import { format } from "date-fns"
 import { DialogActionFooter } from "../shared/dialog-action-footer"
 import { Client } from "@/app/types/client"
@@ -328,12 +328,7 @@ export function ClientContractCreateForm({
             return
         }
 
-        SweetAlertService.confirm(
-            'Discard Changes?',
-            'You have unsaved changes. Are you sure you want to close?',
-            'Yes, discard',
-            'No, keep'
-        ).then((result) => {
+        SweetAlertService.confirmDiscard().then((result) => {
             if (result.isConfirmed) {
                 reset()
                 setValidationErrors({})
@@ -348,6 +343,9 @@ export function ClientContractCreateForm({
 
     const handleDialogOpenChange = (open: boolean) => {
         if (!open) {
+            if (shouldSuppressDialogClose()) {
+                return;
+            }
             const hasData = formValues.client_id || formValues.name || formValues.notes
 
             if (!hasData) {
@@ -359,12 +357,7 @@ export function ClientContractCreateForm({
                 setEffectiveDate(undefined)
                 onOpenChange?.(false)
             } else {
-                SweetAlertService.confirm(
-                    'Discard Changes?',
-                    'You have unsaved changes. Are you sure you want to close?',
-                    'Yes, discard',
-                    'No, keep'
-                ).then((result) => {
+                SweetAlertService.confirmDiscard().then((result) => {
                     if (result.isConfirmed) {
                         reset()
                         setValidationErrors({})
@@ -644,81 +637,21 @@ export function ClientContractCreateForm({
                         </CardContent>
                     </Card>
 
-                    {/* Financial Information - All Optional */}
+                    {/* Billing currency only — unit rates live on contract services */}
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
                                 <DollarSign className="h-5 w-5 text-gray-500" />
-                                Financial Information
+                                Billing Currency
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
+                            <p className="mb-4 text-sm text-muted-foreground">
+                                Sell rates, overtime, and package prices are set on each{" "}
+                                <span className="font-medium text-foreground">contract service</span>{" "}
+                                after the contract is created — not on the contract itself.
+                            </p>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Contract Value
-                                    </Label>
-                                    <FloatingLabelInput
-                                        label="Enter amount..."
-                                        type="number"
-                                        step="0.01"
-                                        {...register("contract_value")}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Hourly Rate
-                                    </Label>
-                                    <FloatingLabelInput
-                                        label="Enter rate..."
-                                        type="number"
-                                        step="0.01"
-                                        {...register("hourly_rate")}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Overtime Rate
-                                    </Label>
-                                    <FloatingLabelInput
-                                        label="Enter rate..."
-                                        type="number"
-                                        step="0.01"
-                                        {...register("overtime_rate")}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Holiday Rate
-                                    </Label>
-                                    <FloatingLabelInput
-                                        label="Enter rate..."
-                                        type="number"
-                                        step="0.01"
-                                        {...register("holiday_rate")}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Admin Fee (%)
-                                    </Label>
-                                    <FloatingLabelInput
-                                        label="Enter percentage..."
-                                        type="number"
-                                        step="0.01"
-                                        {...register("admin_fee_percentage")}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Currency
@@ -1029,19 +962,6 @@ export function ClientContractCreateForm({
                                             />
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <Label className="text-sm font-medium">
-                                                Site Specific Rate
-                                            </Label>
-                                            <FloatingLabelInput
-                                                label="Enter rate..."
-                                                type="number"
-                                                step="0.01"
-                                                {...register(`sites.${index}.pivot.site_specific_rate`, { valueAsNumber: true })}
-                                                disabled={isLoading}
-                                            />
-                                        </div>
-
                                         <div className="flex items-center space-x-2 pt-6">
                                             <Controller
                                                 control={control}
@@ -1107,7 +1027,7 @@ export function ClientContractCreateForm({
                         isSubmitting={isLoading}
                         submitColor="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                         onSubmit={handleSubmit(onSubmit)}
-                    //onCancel={handleCancel}
+                        onCancel={handleCancel}
                     />
                 </form>
             </DialogContent>
