@@ -195,8 +195,25 @@
 }
 
 
-.swal-top-layer {
-  z-index: 9999 !important;
+/* Sit above Radix Dialog (z-50) so Discard / confirm buttons stay clickable */
+.swal2-container {
+  z-index: 100000 !important;
+  pointer-events: auto !important;
+}
+
+.swal2-container .swal2-popup {
+  pointer-events: auto !important;
+}
+
+.swal2-container.swal-top-layer {
+  z-index: 100000 !important;
+  pointer-events: auto !important;
+}
+
+.swal2-container.swal-top-layer .swal2-popup,
+.swal2-popup.swal-top-layer {
+  pointer-events: auto !important;
+  z-index: 100001 !important;
 }
 
 
